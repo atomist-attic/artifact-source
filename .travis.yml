@@ -1,0 +1,30 @@
+language: java
+install: true
+script: bash ./travis-build.bash
+jdk:
+- oraclejdk8
+branches:
+  except:
+  - /\+travis\d+$/
+env:
+  global:
+  - CI_DEPLOY_USERNAME=travis-mvn-deploy
+  - secure: R4TZQGBDWEAi/El4Fw/P9FSOwaar6ukLNubW1Njhv5pl+Z4jmnGVwHc/fI3Hv8Jz3wsFM4OkFHrsjyLgOwcsckHnqzJtOuCgdw2x9yft2yF6rV+scwglDKV6ipBYymb3Y8owLNV/acL5/uyNFbdcovbxCRZdXPNymfWg/huDJNMkDlyV+y4QYTr6sF1gl6j1bGDW2HdaI2YXorUQXS7EZeMcydMj86kXkIgOMAwCvDLPzB/3NFbt1e5ux8biHNgmOZHyg8TNlFRedivK1GmLj6dkt9PjLu03geTAqU0wrLTYY7VbV4rcLSvmFCMykwyQ36xiRRkPMOaPOPnnaiDEqq2yBdPrWhaVRgPcnqhqGT8MWa8jmCT0vCFoor3vM3G6yhnpDLClD+5PapF2iD6H5qWu/q1gM3Q6xvNNtG+JdY7r3oPpbIIb1s8l+eNasQLA/Y6S8pFEuW0D/lSMtfAjz5Jzcnm5XGabuNEse2bZ8XTlmpOiaXrhFQPIDLUbvYUsMmKMMj0ux9BHfsmKpPh/VHRE6KTlPZ0Q0CxNzccQRqLChF0fXabCn1Iev6R+9FoajVLaCzZv94nEDbw2ZTx+1NaEidFhd0Tl/+QsYHNiDd4b32J7TRPsBSXaUCSKbChN6l2wcpf9MfW/qGrp4+IkG6MRLmQv8Qkl5JZDKmfEU4k=
+notifications:
+  email: false
+  webhooks:
+    on_success: always
+    on_failure: always
+    on_start: always
+    urls:
+    - https://webhook.atomist.com/travis
+cache:
+  directories:
+  - $HOME/.m2
+deploy:
+  provider: releases
+  api_key:
+    secure: Gt4MN0tPDZquvDqu99Pf647cqHl6j75Cx9NQ+/Qnk8sKT7YwBgqgEz7piHqq0c9vBYdV1/QiHwCyhnj/CdxotuGXZA0B6r6WgTgcBtkNYKPiZCbOyG4AMY2AXNX+COHEq79MhYFFC4XoVog5QDaw/7QfJrUg8aNoRcH/5HQ0ZpnOzxprbhsobUOWRPuhcLdb2F3foYw468YnvEHBog5qBuY7KvRcvkNGNt6PQFm2W+wssBUMLWAdIlE7Y6B/dV1kxvoCN/g3/yq3P6qcdXLDVSmbAgltsoqtvMs5USsYcwPM9gABhtBjspTy6lhEwPzq7uxdDB3W4l5AaXscoHfd4/QhUsAn78JyInsKKSX4rnwfSWq8iG99jtJs5gXWn8twpCFjx1mXa/01HS084/2HEcF3zN68jmRuIAn/7i0IzYe3NllFuekPDSHaW0cDgCrShsTjQFeV/drXWKDSVzaZ5oWDP4j5jf/2Sl52iTUP+7CAdPlX2Q3cKVnl1fparw8NuGlmwrz3+aC+8E6x2NObWI37+L2PjDyieAMuGPPTFDCrd9he3bBJZQzDsVPJo3xUeLzQeGTR0wt62QG6SSc6U/SfmI1w2F+FyWlsFBvalmqDQ3UC3SZXPB+0s/zAKbq+1aKzkVOFZRguBmw+pRhoLWPUe+LzwoB+y3t4CXHrpCI=
+  on:
+    tags: true
+    condition: $TRAVIS_TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+$
