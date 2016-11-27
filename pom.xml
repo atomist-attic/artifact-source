@@ -178,7 +178,7 @@
     </build>
     <repositories>
         <repository>
-            <id>atomist-release</id>
+            <id>public-atomist-release</id>
             <name>Atomist Release</name>
             <url>https://atomist.jfrog.io/atomist/libs-release</url>
             <snapshots>
@@ -186,7 +186,7 @@
             </snapshots>
         </repository>
         <repository>
-            <id>atomist-snapshots</id>
+            <id>public-atomist-snapshots</id>
             <name>Atomist Snapshots</name>
             <url>https://atomist.jfrog.io/atomist/libs-snapshot</url>
             <snapshots>
@@ -196,12 +196,12 @@
     </repositories>
     <distributionManagement>
         <repository>
-            <id>atomist-release</id>
+            <id>public-atomist-release</id>
             <name>Atomist Release</name>
             <url>https://atomist.jfrog.io/atomist/libs-release-local</url>
         </repository>
         <snapshotRepository>
-            <id>atomist-snapshots</id>
+            <id>public-atomist-snapshots</id>
             <name>Atomist Snapshots</name>
             <url>https://atomist.jfrog.io/atomist/libs-snapshot-local</url>
         </snapshotRepository>
