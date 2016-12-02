@@ -48,7 +48,7 @@ object ZipFileArtifactSourceReader {
             val pathName = convertPath(entry.getName)
             val file = Paths.get(pathName).toFile
             if (file.isDirectory || entry.isDirectory || entry.isUnixSymlink) {
-              val split = splitPath(pathName)
+              val split = splitPath(pathName).toSeq
               val name = split.last
               val pathElements = split.seq.dropRight(1)
               EmptyDirectoryArtifact(name, pathElements)

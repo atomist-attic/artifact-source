@@ -54,7 +54,7 @@ class StringFileArtifactTest extends FlatSpec with Matchers {
   it should "remove opening / from artifacts in nested path" in {
     val (path, contents) = (Paths.get("src", "main", "java", "Hello.java").toString, "contents")
     val withoutSlash = StringFileArtifact(path, contents)
-    val withSlash = StringFileArtifact(File.separator + path, contents)
+    val withSlash = StringFileArtifact("/" + path, contents)
     withSlash.path should equal(path)
     withSlash should equal(withoutSlash)
     withSlash.pathElements.length should equal(3)
