@@ -1,6 +1,7 @@
 package com.atomist.source
 
 import com.atomist.source.FileArtifact.DefaultMode
+import com.atomist.util.PathUtils._
 
 /**
   * Simple artifact class containing content.
@@ -17,7 +18,7 @@ case class StringFileArtifact(
 
   def this(name: String, path: String, content: String, mode: Int) =
     this(name = name,
-      pathElements = if (path == null || "".equals(path)) Nil else path.split("/").toSeq,
+      pathElements = if (path == null || "".equals(path)) Nil else splitPath(path).toSeq,
       content = content,
       mode = mode,
       None)
@@ -26,13 +27,13 @@ case class StringFileArtifact(
     * For example, name=filename path=com/mypackage content=filecontent
     */
   def this(name: String, path: String, content: String) =
-    this(name, path, content, DefaultMode)
+    this(name, convertPath(path), content, DefaultMode)
 
   def this(name: String, pathElements: Seq[String], content: String) =
-    this(name, pathElements, content, DefaultMode, None)
+    this(name, convertPaths(pathElements), content, DefaultMode, None)
 
   def this(name: String, pathElements: Seq[String], content: String, mode: Int) =
-    this(name, pathElements, content, mode, None)
+    this(name, convertPaths(pathElements), content, mode, None)
 
   def this(fa: FileArtifact) =
     this(name = fa.name, pathElements = fa.pathElements, content = fa.content, mode = fa.mode, fa.uniqueId)

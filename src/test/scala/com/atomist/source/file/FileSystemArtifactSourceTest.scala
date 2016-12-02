@@ -50,7 +50,6 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val aFile = files.head.asInstanceOf[FileArtifact]
     aFile.contentLength should be > 0
     isBinaryContent(aFile.content) shouldBe true
-    aFile.mode should be(FileArtifact.DefaultMode)
   }
 
   it should "find single binary executable file" in {

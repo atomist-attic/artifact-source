@@ -3,6 +3,7 @@ package com.atomist.source
 import java.io.ByteArrayInputStream
 
 import com.atomist.source.FileArtifact.DefaultMode
+import com.atomist.util.PathUtils._
 import com.atomist.util.Utils.withCloseable
 import org.apache.commons.io.IOUtils
 
@@ -21,7 +22,7 @@ case class ByteArrayFileArtifact(
 
   def this(name: String, path: String, content: Array[Byte], mode: Int) =
     this(name = name,
-      pathElements = if (path == null || "".equals(path)) Nil else path.split("/").toSeq,
+      pathElements = if (path == null || "".equals(path)) Nil else splitPath(path).toSeq,
       bytes = content,
       mode,
       None)
@@ -30,10 +31,10 @@ case class ByteArrayFileArtifact(
     this(name, path, content, DefaultMode)
 
   def this(name: String, pathElements: Seq[String], content: Array[Byte]) =
-    this(name, pathElements, content, DefaultMode, None)
+    this(name, convertPaths(pathElements), content, DefaultMode, None)
 
   def this(name: String, pathElements: Seq[String], content: Array[Byte], mode: Int) =
-    this(name, pathElements, content, mode, None)
+    this(name, convertPaths(pathElements), content, mode, None)
 
   def this(fa: FileArtifact) =
     this(name = fa.name, pathElements = fa.pathElements,

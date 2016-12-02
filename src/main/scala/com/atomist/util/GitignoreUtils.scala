@@ -42,7 +42,7 @@ object GitignoreUtils {
       FileUtils.readLines(file, Charset.defaultCharset()).asScala
         .filter(line => !(line.startsWith("#") || line.isEmpty))
         .map(line => {
-          val pattern = if (line.endsWith("/")) line.dropRight(1) else line
+          val pattern = if (line.endsWith(File.separator)) line.dropRight(1) else line
           pathMatchers += fs.getPathMatcher(s"glob:**/$pattern")
         })
     })

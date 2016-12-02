@@ -1,8 +1,10 @@
 package com.atomist.source
 
+import java.io.File
 import java.util.function.{Function => JFunction}
 
 import com.atomist.source.ArtifactSource.FileFilter
+import com.atomist.util.PathUtils._
 
 import scala.collection.mutable.ListBuffer
 
@@ -280,7 +282,8 @@ trait ArtifactSource extends RootArtifactContainer {
     * @param path Path of file to remove, if found
     * @return an ArtifactSource
     */
-  def delete(path: String): ArtifactSource = filter(d => true, f => !f.path.equals(path))
+  def delete(path: String): ArtifactSource =
+    filter(d => true, f => !f.path.equals(convertPath(path)))
 
   /**
     * Remove the file with the given path, if found
@@ -303,12 +306,12 @@ trait ArtifactSource extends RootArtifactContainer {
       val dir = findDirectory(path)
       if (dir.isDefined) {
         // TODO this is fragile
-        val pathTok = path.split("/")
-        ArtifactSource.repathed(getIdString + "/" + path, dir.get.allFiles, a => a.pathElements.drop(pathTok.length))
+        val pathTok = splitPath(path)
+        ArtifactSource.repathed(getIdString + File.separator + path, dir.get.allFiles, a => a.pathElements.drop(pathTok.length))
       } else if (findFile(path).isDefined)
         throw new IllegalArgumentException(s"Cannot drill into directory '$path': It's a file not a directory")
       else
-        new EmptyArtifactSource(this.id + "/" + path)
+        new EmptyArtifactSource(this.id + File.separator + path)
     }
   }
 
@@ -323,9 +326,9 @@ trait ArtifactSource extends RootArtifactContainer {
     if (path == null || "".equals(path))
       this
     else {
-      val pathTok = path.split("/")
+      val pathTok = splitPath(path)
       val newPathElements = pathTok.toSeq
-      repathed(path + "/" + getIdString, a => newPathElements ++ a.pathElements)
+      repathed(path + File.separator + getIdString, a => newPathElements ++ a.pathElements)
     }
   }
 

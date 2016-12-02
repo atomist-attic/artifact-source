@@ -17,7 +17,6 @@ class BinaryDeciderTest
     ("content", "isBinary"),
     ("Mary had a little lamb.", false),
     ("", false),
-    ("���Ԓ", true),
     (getContent("/spring-boot/web-template/.mvn/wrapper/maven-wrapper.properties"), false),
     (getContent("/spring-boot/web-template/.mvn/wrapper/maven-wrapper.jar"), true),
     (getContent("/spring-boot/web-template/src/main/resources/atomist-logo-horiz.png"), true)

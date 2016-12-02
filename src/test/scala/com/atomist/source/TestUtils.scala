@@ -1,5 +1,7 @@
 package com.atomist.source
 
+import java.io.File
+
 import com.atomist.source.file.ClassPathArtifactSource
 import org.scalatest.Matchers
 
@@ -18,7 +20,7 @@ object TestUtils extends Matchers {
       case None => fail("Should have been able to find source directory")
       case Some(d) =>
         d.pathElements.size should equal(2)
-        d.pathElements.mkString("/") should equal(dirName)
+        d.pathElements.mkString(File.separator) should equal(dirName)
     }
   }
 

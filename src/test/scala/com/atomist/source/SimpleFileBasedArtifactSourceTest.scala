@@ -1,5 +1,7 @@
 package com.atomist.source
 
+import java.io.File
+
 import scala.collection.JavaConversions._
 
 class SimpleFileBasedArtifactSourceTest extends CommonTests {
@@ -30,9 +32,9 @@ class SimpleFileBasedArtifactSourceTest extends CommonTests {
     val f1 = StringFileArtifact("name", pathElements, "some content")
     val fbac = new SimpleFileBasedArtifactSource("", f1)
     fbac.findFile("name") should not be defined
-    fbac.findFile(s"${pathElements.mkString("/")}/name") shouldBe defined
-    fbac.findFile(s"${pathElements.mkString("/")}/name").get should equal(f1)
-    fbac.allDirectories.map(d => d.path).containsAll(Set("some", "some/path")) shouldBe true
+    fbac.findFile(s"${pathElements.mkString(File.separator)}/name") shouldBe defined
+    fbac.findFile(s"${pathElements.mkString(File.separator)}/name").get should equal(f1)
+    fbac.allDirectories.map(d => d.path).containsAll(Set("some", s"some${File.separator}path")) shouldBe true
     fbac.allDirectories.size should equal(2)
 
     fbac.directories.isEmpty shouldBe false
@@ -42,7 +44,7 @@ class SimpleFileBasedArtifactSourceTest extends CommonTests {
     val pathElements = Seq("some", "path")
     val f1 = StringFileArtifact("name", pathElements, "some content")
     val fbac = new SimpleFileBasedArtifactSource("", f1)
-    val targetDir = fbac.findDirectory("some/path")
+    val targetDir = fbac.findDirectory(s"some${File.separator}path")
     targetDir shouldBe defined
     withClue(s"expectation about ${targetDir.get}, source files=${ArtifactSourceUtils.prettyListFiles(fbac)}") {
       targetDir.get.files.size should equal(1)

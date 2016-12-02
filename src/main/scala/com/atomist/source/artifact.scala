@@ -1,8 +1,9 @@
 package com.atomist.source
 
-import java.io.{ByteArrayInputStream, InputStream}
+import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.charset.Charset
 
+import com.atomist.util.PathUtils
 import com.atomist.util.Utils.withCloseable
 import org.apache.commons.io.IOUtils
 
@@ -44,7 +45,7 @@ trait FileArtifact extends Artifact {
     */
   def isCached: Boolean = false
 
-  override def path = (if (pathElements.nonEmpty) pathElements.mkString("/") + "/" else "") + name
+  override def path = (if (pathElements.nonEmpty) pathElements.mkString(File.separator) + File.separator else "") + name
 
   /**
     * May not be efficient if streamed.
@@ -130,14 +131,12 @@ trait NonStreamedFileArtifact extends FileArtifact {
 
 trait DirectoryArtifact extends Artifact with ArtifactContainer {
 
-  override def path = if (pathElements.nonEmpty) pathElements.mkString("/") else ""
+  override def path = if (pathElements.nonEmpty) pathElements.mkString(File.separator) else ""
 
   override final def parentPathElements = pathElements dropRight 1
 
-  override protected def relativeToFullPath(pathElements: Seq[String]): Seq[String] = {
-    val fullPath = this.pathElements ++ pathElements
-    fullPath
-  }
+  override protected def relativeToFullPath(pathElements: Seq[String]): Seq[String] =
+    this.pathElements ++ pathElements
 
   override def toString =
     s"${getClass.getSimpleName}(${System.identityHashCode(this)}):path(${pathElements.size})='${pathElements.mkString(",")}';" +
@@ -158,13 +157,13 @@ object NameAndPathElements {
     if (pathName.isEmpty)
       throw new IllegalArgumentException("Path may not be empty")
 
-    val stripped = if (pathName.startsWith("/")) pathName.substring(1) else pathName
+    val stripped = if (PathUtils.convertPath(pathName).startsWith(File.separator)) pathName.substring(1) else pathName
     if (stripped.isEmpty)
       throw new IllegalArgumentException("Path may not contain only /")
 
-    val splitPath = stripped.split("/")
+    val splitPath = PathUtils.splitPath(stripped).toSeq
     val name = splitPath.last
-    val pathElements = splitPath.dropRight(1).toSeq
+    val pathElements = splitPath.dropRight(1)
     NameAndPathElements(name, pathElements)
   }
 }

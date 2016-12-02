@@ -5,6 +5,7 @@ import java.nio.file._
 
 import com.atomist.source._
 import com.atomist.util.GitignoreUtils
+import com.atomist.util.PathUtils._
 
 import scala.language.postfixOps
 
@@ -69,7 +70,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
 
     // Remove path above root
     protected val pathElementsFromFile: Seq[String] = {
-      val elts = f.getPath.replace(root.getPath, "").split("/").toSeq
+      val elts = splitPath(f.getPath.replace(root.getPath, "")).toSeq
       if (elts.nonEmpty && elts.head.equals("")) elts.drop(1) else elts
     }
   }
@@ -100,7 +101,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
 
     override def inputStream() = new FileInputStream(f)
 
-    override def mode = if (Files.isExecutable(f.toPath)) FileArtifact.ExecutableMode else FileArtifact.DefaultMode
+    override def mode = if (Files.isExecutable(f.toPath) || f.canExecute) FileArtifact.ExecutableMode else FileArtifact.DefaultMode
 
     override def toString = s"Name: '$name':path: '$path' wrapping $f - ${getClass.getSimpleName}"
   }
@@ -112,7 +113,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
 object ClassPathArtifactSource {
 
   def toArtifactSource(resource: String): ArtifactSource = {
-    val f = classPathResourceToFile(resource)
+    val f = classPathResourceToFile(convertPath(resource))
     val fsasid = FileSystemArtifactSourceIdentifier(f)
     new FileSystemArtifactSource(fsasid)
   }

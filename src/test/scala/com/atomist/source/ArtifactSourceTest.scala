@@ -1,5 +1,7 @@
 package com.atomist.source
 
+import java.io.File
+
 import org.scalatest.Matchers
 
 /**
@@ -21,12 +23,12 @@ class ArtifactSourceTest extends CommonTests {
 
   it should "known directory path element should contain name" in {
     val introspectorSource = SpringBootSource
-    val dirName = "src/main"
+    val dirName = s"src${File.separator}main"
     introspectorSource.findDirectory(dirName) match {
       case None => fail("Should have been able to find source directory")
       case Some(d) =>
         d.pathElements.size should equal(2)
-        d.pathElements.mkString("/") should equal(dirName)
+        d.pathElements.mkString(File.separator) should equal(dirName)
     }
   }
 
@@ -103,7 +105,7 @@ object ArtifactSourceTest extends Matchers {
       case None => fail("Should have been able to find source directory")
       case Some(d) =>
         d.pathElements.size should equal(2)
-        d.pathElements.mkString("/") should equal(dirName)
+        d.pathElements.mkString(File.separator) should equal(dirName)
     }
   }
 

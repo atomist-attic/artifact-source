@@ -6,6 +6,7 @@ import java.nio.file.Paths
 
 import com.atomist.source.{FileArtifact, _}
 import com.atomist.util.BinaryDecider
+import com.atomist.util.PathUtils._
 import com.atomist.util.Utils.withCloseable
 import org.apache.commons.compress.archivers.zip.{AsiExtraField, ZipFile}
 import org.apache.commons.io.{FileUtils, IOUtils}
@@ -44,10 +45,10 @@ object ZipFileArtifactSourceReader {
       val artifactsRead: Seq[Artifact] =
         zipFile.getEntries().asScala
           .map(entry => {
-            val pathName = entry.getName
+            val pathName = convertPath(entry.getName)
             val file = Paths.get(pathName).toFile
             if (file.isDirectory || entry.isDirectory || entry.isUnixSymlink) {
-              val split = pathName.split("/")
+              val split = splitPath(pathName)
               val name = split.last
               val pathElements = split.seq.dropRight(1)
               EmptyDirectoryArtifact(name, pathElements)

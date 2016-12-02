@@ -1,5 +1,8 @@
 package com.atomist.source
 
+import java.io.File
+
+import com.atomist.util.PathUtils._
 import org.scalatest.{FlatSpec, Matchers}
 
 class ArtifactSourceFilterTest extends FlatSpec with Matchers {
@@ -16,7 +19,8 @@ class ArtifactSourceFilterTest extends FlatSpec with Matchers {
     result.findFile("name") shouldBe defined
     val filtered = result.filter(d => true, f => !f.name.equals("name"))
     filtered.allFiles.size should equal(1)
-    filtered.allDirectories.map(_.path).sorted should equal(Seq("my", "my/other", "my/other/path").sorted)
+    filtered.allDirectories.map(_.path).sorted should
+      equal(convertPaths(Seq("my", "my/other", "my/other/path")).sorted)
   }
 
   it should "filter file in root" in {
@@ -33,7 +37,6 @@ class ArtifactSourceFilterTest extends FlatSpec with Matchers {
     filtered.allDirectories.size should equal(3)
   }
 
-
   it should "filter directory outside root" in {
     val as = EmptyArtifactSource("erer")
     val f1 = StringFileArtifact("name", Nil, "contents")
@@ -42,12 +45,13 @@ class ArtifactSourceFilterTest extends FlatSpec with Matchers {
     val result = as plus Seq(f1, f2, f3)
 
     result.directories.map(d => d.path).toSet should equal(Set("my"))
-    result.allDirectories.map(d => d.path).seq.sorted should equal(Seq("my", "my/new", "my/new/path").sorted)
+    result.allDirectories.map(d => d.path).seq.sorted should
+      equal(convertPaths(Seq("my", "my/new", "my/new/path")).sorted)
 
     result.allFiles.size should equal(3)
     result.allDirectories.size should equal(3)
     result.findFile("name") shouldBe defined
-    val filtered = result.filter(d => !d.path.equals("my/new"), f => true)
+    val filtered = result.filter(d => !d.path.equals(s"my${File.separator}new"), f => true)
     filtered.allFiles.size should equal(1)
     filtered.allDirectories.size should equal(1)
   }

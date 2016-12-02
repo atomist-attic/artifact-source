@@ -1,5 +1,8 @@
 package com.atomist.source
 
+import java.io.File
+
+import com.atomist.util.PathUtils._
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.JavaConversions._
@@ -39,8 +42,8 @@ abstract class CommonTests extends FlatSpec with Matchers {
     as.findFile("name") should not be defined
     val as2 = as plus f1
     as2.findFile("name") should not be defined
-    as2.findFile(s"${pathElements.mkString("/")}/name") shouldBe defined
-    as2.findFile(s"${pathElements.mkString("/")}/name").get should equal(f1)
+    as2.findFile(s"${pathElements.mkString(File.separator)}/name") shouldBe defined
+    as2.findFile(s"${pathElements.mkString(File.separator)}/name").get should equal(f1)
   }
 
   it should "find file in root" in {
@@ -137,8 +140,8 @@ abstract class CommonTests extends FlatSpec with Matchers {
     val d = EmptyDirectoryArtifact(dirName, Seq("newFolder"))
     val result = as2 + d
     result.allFiles.size should equal(as2.allFiles.size)
-    result.allDirectories.map(_.path).sorted should equal(
-      Seq("my", "my/new", "my/new/path", "my/other", "my/other/path", "newFolder", "newFolder/dirxxx").sorted)
+    result.allDirectories.map(_.path).sorted should
+      equal(convertPaths(Seq("my", "my/new", "my/new/path", "my/other", "my/other/path", "newFolder", "newFolder/dirxxx")).sorted)
     result.allDirectories.size should equal(as2.allDirectories.size + 2)
     result.findDirectory(s"newFolder/$dirName") shouldBe defined
   }

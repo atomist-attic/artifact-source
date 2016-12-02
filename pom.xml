@@ -113,7 +113,8 @@
                         <phase>process-test-classes</phase>
                         <configuration>
                             <target>
-                                <chmod file="target/test-classes/binary-executable.dat" perm="755"/>
+                                <chmod file="target/test-classes/binary.dat" perm="ugo-x"/>
+                                <chmod file="target/test-classes/binary-executable.dat" perm="ugo+x"/>
                                 <chmod file="target/test-classes/spring-boot/web-template/mvnw" perm="755"/>
                             </target>
                         </configuration>

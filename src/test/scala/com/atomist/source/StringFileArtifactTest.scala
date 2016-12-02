@@ -1,5 +1,9 @@
 package com.atomist.source
 
+import java.io.File
+import java.nio.file.Paths
+
+import com.atomist.util.Utils
 import org.scalatest.{FlatSpec, Matchers}
 
 class StringFileArtifactTest extends FlatSpec with Matchers {
@@ -19,7 +23,7 @@ class StringFileArtifactTest extends FlatSpec with Matchers {
     val pathElements = Seq("com", "atomist")
     val content = ""
     val mode = 100755
-    val sfa = StringFileArtifact(pathName = s"${pathElements.mkString("/")}/$name", content = content)
+    val sfa = StringFileArtifact(pathName = s"${pathElements.mkString(File.separator)}/$name", content = content)
     sfa.name shouldEqual name
     sfa.pathElements.seq shouldEqual pathElements
     sfa shouldEqual StringFileArtifact(name, pathElements, content, mode, None)
@@ -48,9 +52,9 @@ class StringFileArtifactTest extends FlatSpec with Matchers {
   }
 
   it should "remove opening / from artifacts in nested path" in {
-    val (path, contents) = ("src/main/java/Hello.java", "contents")
+    val (path, contents) = (Paths.get("src", "main", "java", "Hello.java").toString, "contents")
     val withoutSlash = StringFileArtifact(path, contents)
-    val withSlash = StringFileArtifact("/" + path, contents)
+    val withSlash = StringFileArtifact(File.separator + path, contents)
     withSlash.path should equal(path)
     withSlash should equal(withoutSlash)
     withSlash.pathElements.length should equal(3)
