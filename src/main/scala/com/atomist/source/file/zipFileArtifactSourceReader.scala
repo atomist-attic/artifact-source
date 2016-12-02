@@ -6,7 +6,6 @@ import java.nio.file.Paths
 
 import com.atomist.source.{FileArtifact, _}
 import com.atomist.util.BinaryDecider
-import com.atomist.util.PathUtils._
 import com.atomist.util.Utils.withCloseable
 import org.apache.commons.compress.archivers.zip.{AsiExtraField, ZipFile}
 import org.apache.commons.io.{FileUtils, IOUtils}
@@ -25,6 +24,8 @@ case class ZipFileInput(is: InputStream) extends ArtifactSourceIdentifier {
   * https://commons.apache.org/proper/commons-compress/zip.html
   */
 object ZipFileArtifactSourceReader {
+
+  private val IsWindows = System.getProperty("os.name").contains("indows")
 
   def fromZipSource(id: ZipFileInput): ArtifactSource = {
     val tmpFile = File.createTempFile("tmp", ".zip")
@@ -45,10 +46,11 @@ object ZipFileArtifactSourceReader {
       val artifactsRead: Seq[Artifact] =
         zipFile.getEntries().asScala
           .map(entry => {
-            val pathName = convertPath(entry.getName)
-            val file = Paths.get(pathName).toFile
+            val pathName = entry.getName
+            val path = if (IsWindows) pathName.replace(":", "_") else pathName
+            val file = Paths.get(path).toFile
             if (file.isDirectory || entry.isDirectory || entry.isUnixSymlink) {
-              val split = splitPath(pathName).toSeq
+              val split = pathName.split("/")
               val name = split.last
               val pathElements = split.seq.dropRight(1)
               EmptyDirectoryArtifact(name, pathElements)

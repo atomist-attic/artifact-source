@@ -2,10 +2,10 @@ package com.atomist.source.file
 
 import java.io.{File, FileInputStream}
 import java.nio.file._
+import java.util.regex.Matcher
 
 import com.atomist.source._
 import com.atomist.util.GitignoreUtils
-import com.atomist.util.PathUtils._
 
 import scala.language.postfixOps
 
@@ -70,7 +70,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
 
     // Remove path above root
     protected val pathElementsFromFile: Seq[String] = {
-      val elts = splitPath(f.getPath.replace(root.getPath, "")).toSeq
+      val elts = f.getPath.replace(root.getPath, "").split(Matcher.quoteReplacement(File.separator)).toSeq
       if (elts.nonEmpty && elts.head.equals("")) elts.drop(1) else elts
     }
   }
@@ -113,7 +113,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
 object ClassPathArtifactSource {
 
   def toArtifactSource(resource: String): ArtifactSource = {
-    val f = classPathResourceToFile(convertPath(resource))
+    val f = classPathResourceToFile(resource)
     val fsasid = FileSystemArtifactSourceIdentifier(f)
     new FileSystemArtifactSource(fsasid)
   }

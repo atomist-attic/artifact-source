@@ -1,7 +1,5 @@
 package com.atomist.source
 
-import java.io.File
-
 /**
   * Implements artifacts() method from allFiles and allDirectories, which must be supplied by subclasses.
   */
@@ -42,7 +40,7 @@ trait DirectoryInferringArtifactContainer extends FileBasedArtifactContainer {
         val thePathsAbove = pathsBelow.flatMap(p => pathsAbove(p))
 
         def str(paths: Set[Seq[String]]) =
-          paths.map(p => p.mkString(File.separator)).mkString("[", ",", "]")
+          paths.map(p => p.mkString("/")).mkString("[", ",", "]")
 
         pathsBelow ++ thePathsAbove
       }

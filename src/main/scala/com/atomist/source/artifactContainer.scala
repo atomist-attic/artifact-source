@@ -1,7 +1,5 @@
 package com.atomist.source
 
-import com.atomist.util.PathUtils._
-
 /**
   * Extended by classes that hold a number of artifacts,
   * whether an ArtifactSource or a DirectoryArtifact.
@@ -35,7 +33,7 @@ trait ArtifactContainer {
     * @param name the name of the directory
     * @return a DirectoryArtifact
     */
-  def findDirectory(name: String): Option[DirectoryArtifact] = findDirectoryByPath(splitPath(name).seq)
+  def findDirectory(name: String): Option[DirectoryArtifact] = findDirectoryByPath(name.split("/").seq)
 
   /**
     * Find a direct child of this directory.
@@ -49,7 +47,7 @@ trait ArtifactContainer {
 
   // TODO what if it's a directory?
   def findFile(pathName: String): Option[FileArtifact] = {
-    val split = splitPath(pathName).toSeq
+    val split = pathName.split("/")
     val name = split.last
     val pathElements = split.seq.dropRight(1)
     findFileByPath(name, pathElements)
@@ -108,6 +106,3 @@ trait RootArtifactContainer extends ArtifactContainer {
 
   override final protected def relativeToFullPath(pathElements: Seq[String]): Seq[String] = pathElements
 }
-
-
-

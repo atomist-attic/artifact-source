@@ -1,14 +1,12 @@
 package com.atomist.source
 
-import java.io.File
-
 import org.scalatest.{FlatSpec, Matchers}
 
 class FileArtifactTest extends FlatSpec with Matchers {
 
   it should "change path of StringFileArtifact" in {
     val sfa = StringFileArtifact("path", "this is the content")
-    val newPath = s"foo${File.separator}bar"
+    val newPath = "foo/bar"
     sfa.withPath(newPath) match {
       case updated: StringFileArtifact =>
         updated.path should equal (newPath)
@@ -18,7 +16,7 @@ class FileArtifactTest extends FlatSpec with Matchers {
 
   it should "change path of ByteArrayFileArtifact" in {
     val sfa = StringFileArtifact("path", "this is the content")
-    val newPath = s"foo${File.separator}bar"
+    val newPath = "foo/bar"
     ByteArrayFileArtifact.toByteArrayFileArtifact(sfa).withPath(newPath) match {
       case updated: ByteArrayFileArtifact =>
         updated.path should equal (newPath)
