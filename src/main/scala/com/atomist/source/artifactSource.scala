@@ -28,7 +28,7 @@ object ArtifactSource {
 
   type ArtifactSourceSplit = (ArtifactSource, ArtifactSource)
 
-  implicit def pimpFileFilter(ff: FileFilter): PimpedFileFilter = new PimpedFileFilter(ff)
+  implicit def enhancedFileFilter(ff: FileFilter): EnhancedFileFilter = new EnhancedFileFilter(ff)
 
   /**
     * Change paths inside this ArtifactSource.
@@ -51,11 +51,11 @@ object ArtifactSource {
     new SimpleFileBasedArtifactSource(fileArtifacts.hashCode.toString, fileArtifacts)
 }
 
-class PimpedFileFilter(ff: FileFilter) extends FileFilter {
+class EnhancedFileFilter(ff: FileFilter) extends FileFilter {
 
   override def apply(f: FileArtifact): Boolean = ff(f)
 
-  def unary_! = new PimpedFileFilter(f => !ff.apply(f))
+  def unary_! = new EnhancedFileFilter(f => !ff.apply(f))
 
   def ||(f2: FileFilter): FileFilter = f => ff(f) || f2(f)
 }
