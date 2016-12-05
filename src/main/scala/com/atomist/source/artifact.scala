@@ -134,10 +134,8 @@ trait DirectoryArtifact extends Artifact with ArtifactContainer {
 
   override final def parentPathElements = pathElements dropRight 1
 
-  override protected def relativeToFullPath(pathElements: Seq[String]): Seq[String] = {
-    val fullPath = this.pathElements ++ pathElements
-    fullPath
-  }
+  override protected def relativeToFullPath(pathElements: Seq[String]): Seq[String] =
+    this.pathElements ++ pathElements
 
   override def toString =
     s"${getClass.getSimpleName}(${System.identityHashCode(this)}):path(${pathElements.size})='${pathElements.mkString(",")}';" +

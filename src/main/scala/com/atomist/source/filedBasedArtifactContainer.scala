@@ -8,10 +8,9 @@ trait FileBasedArtifactContainer extends ArtifactContainer {
   /**
     * Return all artifacts at this level.
     */
-  override lazy val artifacts: Seq[Artifact] = {
+  override lazy val artifacts: Seq[Artifact] =
     // Build from allFiles and directories.
     (allFiles ++ allDirectories).filter(a => relativeToFullPath(Nil).equals(a.parentPathElements))
-  }
 }
 
 /**

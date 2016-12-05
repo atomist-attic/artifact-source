@@ -36,7 +36,7 @@ object ArtifactSource {
     * @param newId new id
     * @param allFiles artifacts (potentially with children) to include
     * @param newPathFor newPathFor
-    * @return an artifact source
+    * @return an ArtifactSource
     */
   def repathed(newId: String, allFiles: Seq[FileArtifact], newPathFor: Artifact => Seq[String]): ArtifactSource = {
     val deltas = allFiles.map(oldFile =>
@@ -367,7 +367,7 @@ trait ArtifactSource extends RootArtifactContainer {
   def edit(fe: FileEditor): ArtifactSource = {
     val fuds = new ListBuffer[FileUpdateDelta]()
     val filesToUse = allFiles map {
-      case oldFile if (fe.canAffect(oldFile)) =>
+      case oldFile if fe.canAffect(oldFile) =>
         val newFile = fe.edit(oldFile)
         if (newFile.equals(oldFile))
           oldFile

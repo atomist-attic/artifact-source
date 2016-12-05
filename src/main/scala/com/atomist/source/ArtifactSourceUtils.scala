@@ -5,13 +5,11 @@ package com.atomist.source
   */
 object ArtifactSourceUtils {
 
-  def prettyPrint(as: ArtifactSource): String = {
-    s"${as.id}\n${prettyPrintArtifacts(as.artifacts, 0)}"
-  }
+  def prettyPrint(as: ArtifactSource): String =
+    s"${as.id}\n${prettyPrintArtifacts(as.artifacts)}"
 
-  def prettyPrintDirectory(da: DirectoryArtifact, depth: Int = 1): String = {
+  def prettyPrintDirectory(da: DirectoryArtifact, depth: Int = 1): String =
     s"${da.name}\n${prettyPrintArtifacts(da.artifacts, depth)}"
-  }
 
   def prettyPrintArtifacts(artifacts: Seq[Artifact], depth: Int = 0): String = {
     artifacts.map {
@@ -22,10 +20,9 @@ object ArtifactSourceUtils {
     }.mkString("\n")
   }
 
-  def prettyListFiles(ac: ArtifactContainer): String = {
+  def prettyListFiles(ac: ArtifactContainer): String =
     s"${ac.totalFileCount} files, ${ac.allDirectories.size} directories. Files:\n\t" +
       ac.allFiles.mkString("\n\t")
-  }
 }
 
 

@@ -122,6 +122,7 @@ object ClassPathArtifactSource {
     val r = getClass.getClassLoader.getResource(resource)
     if (r == null)
       throw ArtifactSourceAccessException(s"No classpath resource at '$resource'")
+
     new File(r.toURI)
   }
 }
