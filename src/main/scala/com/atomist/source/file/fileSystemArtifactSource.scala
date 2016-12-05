@@ -60,7 +60,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
     }).filter {
       case da: LazyFileSystemDirectoryArtifact => da.allFiles.nonEmpty
       case _ => true
-    }.sortBy(a => (a.name, a.pathElements.mkString(",")))
+    }.sortBy(a => (a.name, a.pathElements.mkString("/")))
 
   // Can't extend Artifact as it's a sealed trait, so these
   // methods will become subclass implementations of Artifact methods
