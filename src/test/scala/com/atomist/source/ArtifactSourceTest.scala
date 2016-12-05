@@ -11,7 +11,7 @@ class ArtifactSourceTest extends CommonTests {
 
   override val validSource = ValidSource
 
-  override val emptySource = EmptyArtifactSource("")
+  override val emptySource = EmptyArtifactSource()
 
   it should "find valid directory" in {
     val introspectorSource = SpringBootSource

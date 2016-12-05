@@ -38,7 +38,7 @@ class ArtifactSourceCollisionTest extends FlatSpec with Matchers {
 
     val r = before + toAdd
     val deltas = r Δ before
-    deltas.deltas.size should be >=(2)
+    deltas.deltas.size should be >= 2
     deltas.collisions.size should equal(1)
     val delta = deltas.collisions.head
     delta.path should equal(f1.path)
@@ -55,7 +55,7 @@ class ArtifactSourceCollisionTest extends FlatSpec with Matchers {
     val r = before + toAdd
 
     val deltas = r Δ before
-    deltas.deltas.size should be >=(2)
+    deltas.deltas.size should be >= 2
     deltas.collisions.size should equal(1)
     val delta = deltas.collisions.head
     delta.path should equal(f1.path)
@@ -78,11 +78,11 @@ class ArtifactSourceCollisionTest extends FlatSpec with Matchers {
     val r = before + toAdd
 
     val deltas = r Δ before
-    deltas.deltas.size should be >=(2)
+    deltas.deltas.size should be >= 2
     deltas.collisions.size should equal(0)
 
     val deltas2 = r Δ toAdd
-    deltas2.deltas.size should be >=(2)
+    deltas2.deltas.size should be >= 2
     deltas2.collisions.size should equal(0)
   }
 
@@ -97,7 +97,7 @@ class ArtifactSourceCollisionTest extends FlatSpec with Matchers {
     val r = before + toAdd
 
     val deltas = r Δ before
-    deltas.deltas.size should be >=(2)
+    deltas.deltas.size should be >= 2
     deltas.collisions.size should equal(0)
 
     val deltas2 = r Δ toAdd
