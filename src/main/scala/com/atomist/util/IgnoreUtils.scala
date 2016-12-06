@@ -20,19 +20,12 @@ object IgnoreUtils {
   def ignoredFiles(rootPath: String): List[File] = {
     val pathMatchers = createPathMatchers(rootPath)
     val files = ListBuffer.empty[File]
-
-    def traverse(path: Path) {
-      if (Files.isDirectory(path)) {
-        path.toFile.listFiles().foreach(child => {
-          if (pathMatchers.exists(_.matches(child.toPath))) files += child
-          if (child.isDirectory) traverse(child.toPath)
-        })
-      } else if (pathMatchers.exists(_.matches(path))) {
-        files += path.toFile
+    Files.walkFileTree(Paths.get(rootPath), new SimpleFileVisitor[Path]() {
+      override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+        if (pathMatchers.exists(_.matches(file))) files += file.toFile
+        FileVisitResult.CONTINUE
       }
-    }
-
-    traverse(Paths.get(rootPath))
+    })
     files.toList
   }
 
