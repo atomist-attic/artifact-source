@@ -24,10 +24,10 @@ object IgnoreUtils {
     def traverse(path: Path) {
       if (Files.isDirectory(path)) {
         path.toFile.listFiles().foreach(child => {
-          if (pathMatchers.exists(m => m.matches(child.toPath))) files += child
+          if (pathMatchers.exists(_.matches(child.toPath))) files += child
           if (child.isDirectory) traverse(child.toPath)
         })
-      } else if (pathMatchers.exists(m => m.matches(path))) {
+      } else if (pathMatchers.exists(_.matches(path))) {
         files += path.toFile
       }
     }
@@ -48,9 +48,10 @@ object IgnoreUtils {
   }
 
   private def getIgnoredPaths(path: String, ignoreFileMatcher: PathMatcher): List[String] = {
-    if (Files.exists(Paths.get(path))) {
+    val start = Paths.get(path)
+    if (Files.exists(start)) {
       val paths = ListBuffer.empty[String]
-      Files.walkFileTree(Paths.get(path), new SimpleFileVisitor[Path]() {
+      Files.walkFileTree(start, new SimpleFileVisitor[Path]() {
         override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
           if (ignoreFileMatcher.matches(file)) {
             FileUtils.readLines(file.toFile, Charset.defaultCharset()).asScala
