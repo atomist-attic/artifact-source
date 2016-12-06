@@ -9,13 +9,12 @@ import org.scalatest._
 object FileSystemArtifactSourceTest {
 
   val AtomistTemplatesSource = ClassPathArtifactSource.toArtifactSource("spring-boot")
-
-  private val UserDir = System.getProperty("user.dir")
 }
 
 class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
   import FileSystemArtifactSourceTest._
+  import TestUtils._
 
   it should "handle classpath directory not found" in {
     an[ArtifactSourceException] should be thrownBy (ClassPathArtifactSource toArtifactSource "this is complete nonsense")
@@ -119,7 +118,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   }
 
   it should "ignore files specified in .atomistignore in test source" in {
-    val f = new File(s"$UserDir/src/test/resources/test-atomist-ignore")
+    val f = new File(s"$TestIgnoreFilesRoot/dot-atomistignore")
     val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
     as.artifacts.size should be(3)
     as.allFiles.size should be(3)
@@ -129,7 +128,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   }
 
   it should "ignore files specified in .atomistignore with .gitignore in test source" in {
-    val f = new File(s"$UserDir/src/test/resources/test-atomist-and-gitignore")
+    val f = new File(s"$TestIgnoreFilesRoot/dot-atomistignore-and-gitignore")
     val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
     as.artifacts.size should be(4)
     as.allFiles.size should be(4)
@@ -140,7 +139,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   }
 
   it should "ignore files specified in .gitignore in 1st test source" in {
-    val f = new File(s"$UserDir/src/test/resources/test-gitignore")
+    val f = new File(s"$TestIgnoreFilesRoot/dot-gitignore-1")
     val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
     as.artifacts.size should be(3)
     as.allFiles.size should be(3)
@@ -150,7 +149,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   }
 
   it should "ignore files specified in .gitignore in 2nd test source" in {
-    val f = new File(s"$UserDir/src/test/resources/test-gitignore-1")
+    val f = new File(s"$TestIgnoreFilesRoot/dot-gitignore-2")
     val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
     as.artifacts.size should be(3)
     as.allFiles.size should be(3)
@@ -160,7 +159,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   }
 
   it should "find all files when there is no .gitignore file" in {
-    val f = new File(s"$UserDir/src/test/resources/test-no-gitignore")
+    val f = new File(s"$TestIgnoreFilesRoot/no-dot-gitignore")
     val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
     as.artifacts.size should be(5)
     as.allFiles.size should be(5)

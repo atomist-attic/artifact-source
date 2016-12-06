@@ -10,7 +10,7 @@ import org.apache.commons.io.FileUtils
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
-object IgnoreUtils {
+object IgnoredFilesFinder {
 
   private val GlobalGitignorePath = s"${System.getProperty("user.home")}/.config/git/ignore"
   private val GitignoreFile = ".gitignore"
@@ -31,13 +31,15 @@ object IgnoreUtils {
 
   private def createPathMatchers(path: String): List[PathMatcher] = {
     val fs = FileSystems.getDefault
-    (getIgnoredPaths(path, fs.getPathMatcher(s"glob:**/$AtomistIgnoreFile")) match {
-      case Nil =>
-        val gitignoreFileMatcher = fs.getPathMatcher(s"glob:**/$GitignoreFile")
-        val gitignorePaths = getIgnoredPaths(path, gitignoreFileMatcher)
-        gitignorePaths ++ getIgnoredPaths(GlobalGitignorePath, gitignoreFileMatcher)
-      case other => other ++ PathsIgnoredByDefault
-    }).distinct.map(p => fs.getPathMatcher(s"glob:**/$p"))
+    val matcher = fs.getPathMatcher(s"glob:**/$AtomistIgnoreFile")
+    val paths = if (dotAtomistignoreFilesExists(path, matcher)) {
+      getIgnoredPaths(path, matcher) ++ PathsIgnoredByDefault
+    } else {
+      val gitignoreFileMatcher = fs.getPathMatcher(s"glob:**/$GitignoreFile")
+      val gitignorePaths = getIgnoredPaths(path, gitignoreFileMatcher)
+      gitignorePaths ++ getIgnoredPaths(GlobalGitignorePath, gitignoreFileMatcher)
+    }
+    paths.distinct.map(p => fs.getPathMatcher(s"glob:**/$p"))
   }
 
   private def getIgnoredPaths(path: String, ignoreFileMatcher: PathMatcher): List[String] = {
@@ -57,5 +59,16 @@ object IgnoreUtils {
       })
       paths.toList
     } else Nil
+  }
+
+  private def dotAtomistignoreFilesExists(path: String, matcher: PathMatcher) = {
+    val files = ListBuffer.empty[Path]
+    Files.walkFileTree(Paths.get(path), new SimpleFileVisitor[Path]() {
+      override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+        if (matcher.matches(file)) files += file
+        FileVisitResult.CONTINUE
+      }
+    })
+    files.nonEmpty
   }
 }

@@ -5,7 +5,7 @@ import java.nio.file._
 import java.util.regex.Matcher
 
 import com.atomist.source._
-import com.atomist.util.IgnoreUtils
+import com.atomist.util.IgnoredFilesFinder
 
 import scala.language.postfixOps
 
@@ -42,7 +42,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
 
   private val rootPath = id.rootFile.getPath
 
-  private val ignoredFiles: List[File] = IgnoreUtils.ignoredFiles(rootPath)
+  private val ignoredFiles: List[File] = IgnoredFilesFinder.ignoredFiles(rootPath)
 
   private def matchIgnoredFile(f: File) = ignoredFiles.contains(f)
 

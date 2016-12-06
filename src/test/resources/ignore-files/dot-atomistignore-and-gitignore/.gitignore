@@ -3,4 +3,4 @@ thing1
 thing2
 thing3/**
 thing6/*
-**/.DS_Store
+*.DS_Store
