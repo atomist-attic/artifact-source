@@ -47,19 +47,21 @@ object IgnoreUtils {
     }).distinct.map(p => fs.getPathMatcher(s"glob:**/$p"))
   }
 
-  private def getIgnoredPaths(path: String, ignoreFileMatcher: PathMatcher) = {
-    val paths = ListBuffer.empty[String]
-    Files.walkFileTree(Paths.get(path), new SimpleFileVisitor[Path]() {
-      override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
-        if (ignoreFileMatcher.matches(file)) {
-          FileUtils.readLines(file.toFile, Charset.defaultCharset()).asScala
-            .filterNot(_.startsWith("#"))
-            .filterNot(_.isEmpty)
-            .map(line => paths += (if (line.endsWith("/") || line.endsWith("\\")) line.dropRight(1) else line))
+  private def getIgnoredPaths(path: String, ignoreFileMatcher: PathMatcher): List[String] = {
+    if (Files.exists(Paths.get(path))) {
+      val paths = ListBuffer.empty[String]
+      Files.walkFileTree(Paths.get(path), new SimpleFileVisitor[Path]() {
+        override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+          if (ignoreFileMatcher.matches(file)) {
+            FileUtils.readLines(file.toFile, Charset.defaultCharset()).asScala
+              .filterNot(_.startsWith("#"))
+              .filterNot(_.isEmpty)
+              .map(line => paths += (if (line.endsWith("/") || line.endsWith("\\")) line.dropRight(1) else line))
+          }
+          FileVisitResult.CONTINUE
         }
-        FileVisitResult.CONTINUE
-      }
-    })
-    paths.toList
+      })
+      paths.toList
+    } else Nil
   }
 }
