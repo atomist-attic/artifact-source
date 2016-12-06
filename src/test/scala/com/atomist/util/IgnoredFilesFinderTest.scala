@@ -8,12 +8,12 @@ class IgnoredFilesFinderTest extends FlatSpec with Matchers {
 
   import TestUtils._
 
-  it should "ignore files specified in .atomistignore in test source" in {
+  it should "ignore files specified in .atomistignore" in {
     val files = ignoredFiles(s"$TestIgnoreFilesRoot/dot-atomistignore")
     files.size should be(8)
   }
 
-  it should "find no files with .atomistignore and .gitignore in test source" in {
+  it should "find no files with .atomistignore and .gitignore" in {
     val files = ignoredFiles(s"$TestIgnoreFilesRoot/dot-atomistignore-and-gitignore")
     files shouldBe empty
   }
@@ -33,12 +33,12 @@ class IgnoredFilesFinderTest extends FlatSpec with Matchers {
     files shouldBe empty
   }
 
-  it should "find no files with empty .atomistignore and .gitignore in test source" in {
+  it should "find no files with empty .atomistignore and .gitignore" in {
     val files = ignoredFiles(s"$TestIgnoreFilesRoot/empty-dot-atomistignore-and-gitignore")
     files.size should be(2)
   }
 
-  it should "find no files with empty .atomistignore in subdirectory in test source" in {
+  it should "find no files with empty .atomistignore in subdirectory" in {
     val files = ignoredFiles(s"$TestIgnoreFilesRoot/empty-dot-atomistignore-and-gitignore-2")
     files.size should be(2)
   }
