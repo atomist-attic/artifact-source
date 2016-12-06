@@ -24,7 +24,7 @@ object IgnoredFilesFinder {
     walkTree(rootPath, ignoredFiles)
       .filterNot(_.contains(AtomistIgnoreFile))
       .filterNot(_.contains(GitignoreFile))
-      .map(f => new File(f))
+      .map(new File(_))
   }
 
   private def createPathMatchers(path: String): List[PathMatcher] = {
