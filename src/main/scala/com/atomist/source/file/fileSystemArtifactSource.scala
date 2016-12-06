@@ -5,7 +5,7 @@ import java.nio.file._
 import java.util.regex.Matcher
 
 import com.atomist.source._
-import com.atomist.util.GitignoreUtils
+import com.atomist.util.IgnoreUtils
 
 import scala.language.postfixOps
 
@@ -42,8 +42,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
 
   private val rootPath = id.rootFile.getPath
 
-  private val ignoredFiles: List[File] =
-    GitignoreUtils.ignoredFiles(rootPath, List(s"${System.getProperty("user.home")}/.config/git/ignore"))
+  private val ignoredFiles: List[File] = IgnoreUtils.ignoredFiles(rootPath)
 
   private def matchIgnoredFile(f: File) = ignoredFiles.contains(f)
 

@@ -21,12 +21,5 @@ object ArtifactSourceUtils {
   }
 
   def prettyListFiles(ac: ArtifactContainer): String =
-    s"${ac.totalFileCount} files, ${ac.allDirectories.size} directories. Files:\n\t" +
-      ac.allFiles.mkString("\n\t")
+    s"${ac.totalFileCount} files, ${ac.allDirectories.size} directories. Files:\n\t${ac.allFiles.mkString("\n\t")}"
 }
-
-
-
-
-
-

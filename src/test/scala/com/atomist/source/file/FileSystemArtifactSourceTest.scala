@@ -112,14 +112,35 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     s.findDirectory("xsdfsdfsdfsdf").isDefined shouldBe false
   }
 
-  it should "reject bogus file path" in {
-    val f: File = new File("/this/is/not/a/real.path")
+  it should "reject bogus file rootPath" in {
+    val f: File = new File("/this/is/not/a/real.rootPath")
     val fsid = FileSystemArtifactSourceIdentifier(f)
     an[ArtifactSourceException] should be thrownBy new FileSystemArtifactSource(fsid)
   }
 
+  it should "ignore files specified in .atomistignore in test source" in {
+    val f = new File(s"$UserDir/src/test/resources/test-atomist-ignore")
+    val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
+    as.artifacts.size should be(3)
+    as.allFiles.size should be(3)
+    as.findFile(".atomistignore") shouldBe defined
+    as.findFile(".atomist/manifest.yml") shouldBe defined
+    as.findFile("thing5") shouldBe defined
+  }
+
+  it should "ignore files specified in .atomistignore with .gitignore in test source" in {
+    val f = new File(s"$UserDir/src/test/resources/test-atomist-and-gitignore")
+    val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
+    as.artifacts.size should be(4)
+    as.allFiles.size should be(4)
+    as.findFile(".atomistignore") shouldBe defined
+    as.findFile(".gitignore") shouldBe defined
+    as.findFile(".atomist/manifest.yml") shouldBe defined
+    as.findFile("thing5") shouldBe defined
+  }
+
   it should "ignore files specified in .gitignore in 1st test source" in {
-    val f = new File(s"$UserDir/src/test/resources/test-ignore")
+    val f = new File(s"$UserDir/src/test/resources/test-gitignore")
     val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
     as.artifacts.size should be(3)
     as.allFiles.size should be(3)
@@ -129,7 +150,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   }
 
   it should "ignore files specified in .gitignore in 2nd test source" in {
-    val f = new File(s"$UserDir/src/test/resources/test-ignore-1")
+    val f = new File(s"$UserDir/src/test/resources/test-gitignore-1")
     val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
     as.artifacts.size should be(3)
     as.allFiles.size should be(3)
@@ -138,7 +159,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     as.findFile("thing5") shouldBe defined
   }
 
-  it should "find all files when there is no .gitinore file" in {
+  it should "find all files when there is no .gitignore file" in {
     val f = new File(s"$UserDir/src/test/resources/test-no-gitignore")
     val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
     as.artifacts.size should be(5)
