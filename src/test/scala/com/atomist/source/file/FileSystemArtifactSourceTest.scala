@@ -117,17 +117,18 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     an[ArtifactSourceException] should be thrownBy new FileSystemArtifactSource(fsid)
   }
 
-  it should "ignore files specified in .atomistignore in test source" in {
+  it should "ignore files specified in .atomistignore" in {
     val f = new File(s"$TestIgnoreFilesRoot/dot-atomistignore")
     val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
-    as.artifacts.size should be(3)
-    as.allFiles.size should be(3)
+    as.artifacts.size should be(4)
+    as.allFiles.size should be(4)
     as.findFile(".atomistignore") shouldBe defined
+    as.findFile("thing3/31/.atomistignore") shouldBe defined
     as.findFile(".atomist/manifest.yml") shouldBe defined
     as.findFile("thing5") shouldBe defined
   }
 
-  it should "ignore files specified in .atomistignore with .gitignore in test source" in {
+  it should "ignore files specified in .atomistignore with .gitignore" in {
     val f = new File(s"$TestIgnoreFilesRoot/dot-atomistignore-and-gitignore")
     val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
     as.artifacts.size should be(4)
