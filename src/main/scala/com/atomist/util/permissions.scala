@@ -4,10 +4,9 @@ import java.nio.file.attribute.{PosixFilePermission, PosixFilePermissions}
 import java.util.{Set => JSet}
 
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 object FilePermissions {
-
-  private val ValidChars = List('0', '1', '2', '3', '4', '5', '6', '7')
 
   def toMode(permissions: JSet[PosixFilePermission]): Int = {
     var mode = 0
@@ -35,18 +34,10 @@ object FilePermissions {
   }
 
   def octalToInt(s: String): Int =
-    if (invalidOctalNumber(s)) throw new scala.IllegalArgumentException()
-    else convertOctalToInt(s)
-
-  private def invalidOctalNumber(s: String): Boolean = s.isEmpty || !s.forall(ValidChars.contains(_))
-
-  private def convertOctalToInt(s: String): Int =
-    s.foldRight(0, 0) { (c, acc) =>
-      val index = acc._1
-      val sum = acc._2
-      val x = c.toString.toInt
-      (index + 1, sum + x * Math.pow(8, index).toInt)
-    }._2
+    Try(Integer.parseInt(s, 8)) match {
+      case Success(i) => i
+      case Failure(e) => throw new IllegalArgumentException(e)
+    }
 }
 
 object Permissions {
