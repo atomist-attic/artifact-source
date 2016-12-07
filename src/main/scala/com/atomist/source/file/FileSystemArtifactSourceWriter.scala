@@ -2,9 +2,14 @@ package com.atomist.source.file
 
 import java.io.{BufferedInputStream, File, IOException}
 import java.nio.charset.Charset
+import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermission
 
 import com.atomist.source._
+import com.atomist.util.{FilePermissions, Permissions}
 import org.apache.commons.io.FileUtils
+
+import scala.util.Try
 
 class FileSystemArtifactSourceWriter {
 
@@ -41,8 +46,17 @@ class FileSystemArtifactSourceWriter {
         FileUtils.writeByteArrayToFile(newFile, ba.bytes)
     }
 
-    if (fa.mode == FileArtifact.ExecutableMode && !newFile.setExecutable(true, false)) {
-      throw ArtifactSourceCreationException(s"Couldn't set executable file permissions for file $newFile")
+    val perms = FilePermissions.intToOctal(fa.mode)
+    val posix = Permissions(perms)
+    Try {
+      Files.setPosixFilePermissions(newFile.toPath, posix)
+    } recoverWith {
+      // In case of windows
+      case e: UnsupportedOperationException =>
+        Try {
+          newFile.setExecutable(perms contains PosixFilePermission.OWNER_EXECUTE)
+          newFile.setWritable(perms contains PosixFilePermission.OWNER_WRITE)
+        }
     }
   }
 

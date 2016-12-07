@@ -2,12 +2,14 @@ package com.atomist.source.file
 
 import java.io.{File, FileInputStream}
 import java.nio.file._
+import java.nio.file.attribute.PosixFileAttributes
 import java.util.regex.Matcher
 
 import com.atomist.source._
-import com.atomist.util.IgnoredFilesFinder
+import com.atomist.util.{FilePermissions, IgnoredFilesFinder}
 
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 /**
   * Identifies artifacts on the file system.
@@ -100,27 +102,39 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
 
     override def inputStream() = new FileInputStream(f)
 
-    override def mode = if (Files.isExecutable(f.toPath) || f.canExecute) FileArtifact.ExecutableMode else FileArtifact.DefaultMode
+    override def mode =
+      Try {
+        FilePermissions.toMode(Files.readAttributes(f.toPath, classOf[PosixFileAttributes]).permissions())
+      } match {
+        case Success(mode) => mode
+        case Failure(e: UnsupportedOperationException) =>
+          // In case of windows
+          if (Files.isExecutable(f.toPath) || f.canExecute)
+            FileArtifact.ExecutableMode
+          else
+            FileArtifact.DefaultMode
+        case Failure(e) => throw new IllegalArgumentException(e)
+      }
 
     override def toString = s"Name: '$name':path: '$path' wrapping $f - ${getClass.getSimpleName}"
   }
 }
 
-/**
-  * Loads file artifacts from classpath.
-  */
-object ClassPathArtifactSource {
+  /**
+    * Loads file artifacts from classpath.
+    */
+  object ClassPathArtifactSource {
 
-  def toArtifactSource(resource: String): ArtifactSource = {
-    val f = classPathResourceToFile(resource)
-    val fsasid = FileSystemArtifactSourceIdentifier(f)
-    new FileSystemArtifactSource(fsasid)
-  }
+    def toArtifactSource(resource: String): ArtifactSource = {
+      val f = classPathResourceToFile(resource)
+      val fsasid = FileSystemArtifactSourceIdentifier(f)
+      new FileSystemArtifactSource(fsasid)
+    }
 
-  def classPathResourceToFile(resource: String): File = {
-    val r = getClass.getClassLoader.getResource(resource)
-    if (r == null)
-      throw ArtifactSourceAccessException(s"No classpath resource at '$resource'")
+    def classPathResourceToFile(resource: String): File = {
+      val r = getClass.getClassLoader.getResource(resource)
+      if (r == null)
+        throw ArtifactSourceAccessException(s"No classpath resource at '$resource'")
 
     new File(r.toURI)
   }

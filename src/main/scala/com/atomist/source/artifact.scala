@@ -112,8 +112,8 @@ trait FileArtifact extends Artifact {
 
 object FileArtifact {
 
-  val DefaultMode = 33188 // Octal 100644
-  val ExecutableMode = 33261 // Octal 100755
+  val DefaultMode = 33188
+  val ExecutableMode = 33261
 }
 
 trait StreamedFileArtifact extends FileArtifact {

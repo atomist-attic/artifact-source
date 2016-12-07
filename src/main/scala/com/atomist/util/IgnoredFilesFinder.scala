@@ -31,14 +31,14 @@ object IgnoredFilesFinder {
     val fs = FileSystems.getDefault
     val matcher = fs.getPathMatcher(s"glob:**/$AtomistIgnoreFile")
     val matchedPaths = (file: Path) => if (matcher.matches(file)) List(file.toString) else List.empty
-    val paths = walkTree(path, matchedPaths) match {
+    val ignoredPaths = walkTree(path, matchedPaths) match {
       case paths if paths.nonEmpty => getIgnoredPaths(path, matcher) ++ PathsIgnoredByDefault
       case _ =>
         val gitignoreFileMatcher = fs.getPathMatcher(s"glob:**/$GitignoreFile")
         val gitignorePaths = getIgnoredPaths(path, gitignoreFileMatcher)
         gitignorePaths ++ getIgnoredPaths(GlobalGitignorePath, gitignoreFileMatcher)
     }
-    paths.distinct.map(p => fs.getPathMatcher(s"glob:**/$p"))
+    ignoredPaths.distinct.map(p => fs.getPathMatcher(s"glob:**/$p"))
   }
 
   private def getIgnoredPaths(path: String, matcher: PathMatcher): List[String] = {
