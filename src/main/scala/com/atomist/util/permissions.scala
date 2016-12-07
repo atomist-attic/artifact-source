@@ -3,6 +3,8 @@ package com.atomist.util
 import java.nio.file.attribute.{PosixFilePermission, PosixFilePermissions}
 import java.util.{Set => JSet}
 
+import com.atomist.util.Octal.octalToInt
+
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
@@ -24,6 +26,9 @@ object FilePermissions {
     })
     mode
   }
+}
+
+object Octal {
 
   def intToOctal(i: Int): String = {
     def convertToOctal(n: Int, acc: String): String =
