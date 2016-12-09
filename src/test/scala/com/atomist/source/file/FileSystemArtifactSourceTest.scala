@@ -12,12 +12,17 @@ object FileSystemArtifactSourceTest {
   val AtomistTemplatesSource = ClassPathArtifactSource.toArtifactSource("spring-boot")
 
   def ignoreFiles1ZipId = {
-    val f = ClassPathArtifactSource.classPathResourceToFile("ignore-files-1.zip")
+    val f = ClassPathArtifactSource.classPathResourceToFile("ignore-files/no-dot-git.zip")
     ZipFileInput(new FileInputStream(f))
   }
 
   def ignoreFiles2ZipId = {
-    val f = ClassPathArtifactSource.classPathResourceToFile("ignore-files-2.zip")
+    val f = ClassPathArtifactSource.classPathResourceToFile("ignore-files/dot-git-negated-node_modules.zip")
+    ZipFileInput(new FileInputStream(f))
+  }
+
+  def ignoreFiles3ZipId = {
+    val f = ClassPathArtifactSource.classPathResourceToFile("ignore-files/dot-git-ignored-node_modules.zip")
     ZipFileInput(new FileInputStream(f))
   }
 }
@@ -151,6 +156,18 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
     val as = new FileSystemArtifactSource(fid)
     as.findDirectory(".atomist/node_modules") shouldBe defined
+  }
+
+  it should "handle ignoring files for third test source" in {
+    val zid = ignoreFiles3ZipId
+    val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
+
+    val tmpDir = Files.createTempDirectory(null)
+    val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
+    fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
+
+    val as = new FileSystemArtifactSource(fid)
+    as.findDirectory(".atomist/node_modules") shouldBe empty
   }
 
   private def validateTargetDirectory(s: ArtifactSource): Unit = {

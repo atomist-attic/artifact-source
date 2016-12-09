@@ -33,11 +33,7 @@ object IgnoredFilesFinder {
     Try {
       handleAtomistIgnore(rootPath)
     } match {
-      case Success(matchedPaths) =>
-        if (paths.nonEmpty && matchedPaths.pathsToKeep.nonEmpty)
-          paths --= matchedPaths.pathsToKeep
-
-        paths ++= matchedPaths.matched
+      case Success(matchedPaths) => paths --= matchedPaths.pathsToKeep ++= matchedPaths.matched
       case Failure(e) =>
     }
 
@@ -90,7 +86,7 @@ object IgnoredFilesFinder {
   }
 
   private def createPathMatcher(path: Path, pathToResolve: String) =
-    PathMatcher.createPathMatcher(path.resolve(pathToResolve).toString, null, false)
+    PathMatcher.createPathMatcher(path.resolve(pathToResolve).toString, File.separatorChar, false)
 }
 
 
