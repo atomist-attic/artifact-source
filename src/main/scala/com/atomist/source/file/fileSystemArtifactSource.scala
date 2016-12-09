@@ -7,6 +7,7 @@ import java.util.regex.Matcher
 
 import com.atomist.source._
 import com.atomist.util.{FilePermissions, IgnoredFilesFinder}
+import com.atomist.util.Utils.separatorPattern
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -56,7 +57,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
 
   override lazy val artifacts: Seq[Artifact] =
     (id.rootFile match {
-      case d: File if d.isDirectory => d.listFiles.filterNot(matchIgnoredFile(_)).map(wrap(_)).toSeq
+      case d: File if d.isDirectory => d.listFiles.filterNot(matchIgnoredFile).map(wrap).toSeq
       case f: File => if (matchIgnoredFile(f)) Nil else Seq(wrap(f))
     }).sortBy(a => (a.name, a.pathElements.mkString("/")))
 
@@ -68,7 +69,9 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
 
     // Remove path above root
     protected val pathElementsFromFile: Seq[String] = {
-      val elts = f.getPath.replace(root.getPath, "").split(Matcher.quoteReplacement(File.separator)).toSeq
+      val fixed = f.getPath.replace(root.getPath, "")
+      val sep = Matcher.quoteReplacement(File.separator)
+      val elts = fixed.split(sep).toSeq
       if (elts.nonEmpty && elts.head.equals("")) elts.drop(1) else elts
     }
   }
@@ -83,7 +86,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
     override val pathElements: Seq[String] = pathElementsFromFile
 
     override val artifacts: Seq[Artifact] =
-      dir.listFiles.filterNot(matchIgnoredFile(_)).map(wrap(_))
+      dir.listFiles.filterNot(matchIgnoredFile).map(wrap)
 
     override def toString = s"Name: '$name':path: '$path' wrapping $dir - ${getClass.getSimpleName}"
   }

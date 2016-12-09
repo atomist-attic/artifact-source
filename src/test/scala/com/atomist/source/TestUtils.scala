@@ -12,8 +12,6 @@ object TestUtils extends Matchers {
 
   val SpringBootSource = ClassPathArtifactSource.toArtifactSource("spring-boot/web-template")
 
-  val TestIgnoreFilesRoot = s"${System.getProperty("user.dir")}/src/test/resources/ignore-files"
-
   def validateSourceTree(source: ArtifactSource) {
     val dirName = "src/main"
     source.findDirectory(dirName) match {
