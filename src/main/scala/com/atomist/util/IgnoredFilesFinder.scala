@@ -61,7 +61,7 @@ object IgnoredFilesFinder {
     }
   }
 
-  private def handleAtomistIgnore(rootPath: String): MatchedPaths = {
+  private def handleAtomistIgnore(rootPath: String) = {
     val path = Paths.get(rootPath, ".atomist")
     val paths = Files.walk(path).iterator().toList
 

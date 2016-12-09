@@ -56,12 +56,9 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
 
   override lazy val artifacts: Seq[Artifact] =
     (id.rootFile match {
-      case d: File if d.isDirectory => d.listFiles.filterNot(f => matchIgnoredFile(f)).map(d => wrap(d)).toSeq
+      case d: File if d.isDirectory => d.listFiles.filterNot(matchIgnoredFile(_)).map(wrap(_)).toSeq
       case f: File => if (matchIgnoredFile(f)) Nil else Seq(wrap(f))
-    }).filter {
-      case da: LazyFileSystemDirectoryArtifact => da.allFiles.nonEmpty
-      case _ => true
-    }.sortBy(a => (a.name, a.pathElements.mkString("/")))
+    }).sortBy(a => (a.name, a.pathElements.mkString("/")))
 
   // Can't extend Artifact as it's a sealed trait, so these
   // methods will become subclass implementations of Artifact methods
@@ -86,7 +83,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
     override val pathElements: Seq[String] = pathElementsFromFile
 
     override val artifacts: Seq[Artifact] =
-      dir.listFiles.filterNot(f => matchIgnoredFile(f)).map(f => wrap(f))
+      dir.listFiles.filterNot(matchIgnoredFile(_)).map(wrap(_))
 
     override def toString = s"Name: '$name':path: '$path' wrapping $dir - ${getClass.getSimpleName}"
   }

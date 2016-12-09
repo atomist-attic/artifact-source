@@ -51,7 +51,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   it should "find single image file" in {
     val classpathSource = ClassPathArtifactSource.toArtifactSource("spring-boot/web-template/src/main/resources/atomist-logo-horiz.png")
     val artifacts = classpathSource.artifacts
-    val files = artifacts.filter(a => a.isInstanceOf[FileArtifact])
+    val files = artifacts.filter(_.isInstanceOf[FileArtifact])
     artifacts.size should be > 0
     val aFile = files.head.asInstanceOf[FileArtifact]
     aFile.contentLength should be > 0
@@ -61,7 +61,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   it should "find single binary file" in {
     val classpathSource = ClassPathArtifactSource.toArtifactSource("binary.dat")
     val artifacts = classpathSource.artifacts
-    val files = artifacts.filter(a => a.isInstanceOf[FileArtifact])
+    val files = artifacts.filter(_.isInstanceOf[FileArtifact])
     artifacts.size should be > 0
     val aFile = files.head.asInstanceOf[FileArtifact]
     aFile.contentLength should be > 0
@@ -71,17 +71,21 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   it should "find single binary executable file" in {
     val classpathSource = ClassPathArtifactSource.toArtifactSource("binary-executable.dat")
     val artifacts = classpathSource.artifacts
-    val files = artifacts.filter(a => a.isInstanceOf[FileArtifact])
+    val files = artifacts.filter(_.isInstanceOf[FileArtifact])
     artifacts.size should be > 0
     val aFile = files.head.asInstanceOf[FileArtifact]
     aFile.contentLength should be > 0
     isBinaryContent(aFile.content) shouldBe true
-    // aFile.mode should be(493)
   }
 
   it should "find directory" in {
     val artifacts = AtomistTemplatesSource.artifacts
-    artifacts.exists(f => f.name contains ".vm")
+    artifacts.exists(_.name contains "web-template") shouldBe true
+  }
+
+  it should "find empty directory" in pendingUntilFixed {
+    val artifacts = AtomistTemplatesSource.artifacts
+    artifacts.exists(_.name contains "empty-dir") shouldBe true
   }
 
   it should "find all files via flatten" in {
@@ -91,19 +95,19 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   // TODO some of these tests are more generic ArtifactSource tests
   it should "be able to cache" in {
     val classpathSource = AtomistTemplatesSource
-    classpathSource.allFiles.exists(f => f.isCached) shouldBe false
+    classpathSource.allFiles.exists(_.isCached) shouldBe false
     validateTargetDirectory(classpathSource)
     val cachedCopy = classpathSource.cached
-    cachedCopy.allFiles.exists(f => !f.isCached) shouldBe false
+    cachedCopy.allFiles.exists(!_.isCached) shouldBe false
     validateTargetDirectory(cachedCopy)
   }
 
   it should "be able to filter files" in {
     val s = AtomistTemplatesSource / "atomistTemplates"
     val files = s.allFiles
-    files.exists(f => f.name contains ".vm") shouldBe true
+    files.exists(_.name contains ".vm") shouldBe true
     val filtered = s.filter(d => true, f => !f.name.contains(".vm"))
-    filtered.allFiles.exists(f => f.name contains ".vm") shouldBe false
+    filtered.allFiles.exists(_.name contains ".vm") shouldBe false
     withClue("should leave nothing after filter") {
       filtered.allFiles.isEmpty shouldBe true
     }
@@ -113,7 +117,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val s = AtomistTemplatesSource
     s.allFiles.exists(f => f.name contains "Application") shouldBe true
     val filtered = s.filter(d => !d.name.contains("spring"), f => true)
-    filtered.allFiles.exists(f => f.name contains "Java") shouldBe false
+    filtered.allFiles.exists(_.name contains "Java") shouldBe false
   }
 
   it should "be able to find existing directory" in {
