@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
 
 object IgnoredFilesFinder {
 
-  private val AtomistIgnoreFile = ".ignore"
+  private val AtomistIgnoreFile = "ignore"
 
   private case class MatchedPaths(matched: List[String], pathsToKeep: List[String])
 
