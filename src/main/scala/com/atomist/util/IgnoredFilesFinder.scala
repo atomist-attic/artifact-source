@@ -43,7 +43,7 @@ object IgnoredFilesFinder {
     val paths = ListBuffer.empty[String]
     Try {
       val builder = new FileRepositoryBuilder
-      val repository = builder.setGitDir(new File(rootPath, ".git")).readEnvironment().findGitDir().build()
+      val repository = builder.readEnvironment().findGitDir().build()
       val treeWalk = new TreeWalk(repository)
       treeWalk.addTree(new FileTreeIterator(repository))
       while (treeWalk.next()) {

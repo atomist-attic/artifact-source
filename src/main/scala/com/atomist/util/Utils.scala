@@ -61,10 +61,9 @@ object Utils {
   def withCloseable[C <: Closeable](f: Unit => C)(block: C => Unit): Unit =
     withCloseable[C, Unit](f)(block)
 
-  def separatorPattern ={
+  def separatorPattern =
     File.separator match {
       case """\""" => s"""\\${File.separator}"""
       case _ => File.separator
     }
-  }
 }
