@@ -90,7 +90,7 @@ trait ArtifactSource extends RootArtifactContainer {
   /**
     * Timestamp of latest change to these artifacts.
     *
-    * @return timestamp
+    * @return a timestamp
     */
   def lastModified: Long = throw new UnsupportedOperationException
 

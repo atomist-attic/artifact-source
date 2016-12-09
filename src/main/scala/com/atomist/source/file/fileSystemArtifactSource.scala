@@ -124,8 +124,7 @@ object ClassPathArtifactSource {
 
   def toArtifactSource(resource: String): ArtifactSource = {
     val f = classPathResourceToFile(resource)
-    val fsasid = FileSystemArtifactSourceIdentifier(f)
-    new FileSystemArtifactSource(fsasid)
+    new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
   }
 
   def classPathResourceToFile(resource: String): File = {

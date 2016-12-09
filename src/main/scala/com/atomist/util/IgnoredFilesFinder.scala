@@ -10,7 +10,6 @@ import org.eclipse.jgit.ignore.internal.PathMatcher
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.eclipse.jgit.treewalk.{FileTreeIterator, TreeWalk, WorkingTreeIterator}
 
-import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -63,7 +62,7 @@ object IgnoredFilesFinder {
 
   private def handleAtomistIgnore(rootPath: String) = {
     val path = Paths.get(rootPath, ".atomist")
-    val paths = Files.walk(path).iterator().toList
+    val paths = Files.walk(path).iterator().asScala.toList
 
     val patterns = readIgnoreFile(path)
 
