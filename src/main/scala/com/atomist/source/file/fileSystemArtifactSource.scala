@@ -7,7 +7,6 @@ import java.util.regex.Matcher
 
 import com.atomist.source._
 import com.atomist.util.{FilePermissions, IgnoredFilesFinder}
-import com.atomist.util.Utils.separatorPattern
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}

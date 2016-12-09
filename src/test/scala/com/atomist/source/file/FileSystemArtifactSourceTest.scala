@@ -4,25 +4,26 @@ import java.io.{File, FileInputStream}
 import java.nio.file.Files
 
 import com.atomist.source._
+import com.atomist.source.file.ClassPathArtifactSource.{classPathResourceToFile, toArtifactSource}
 import com.atomist.util.BinaryDecider.isBinaryContent
 import org.scalatest._
 
 object FileSystemArtifactSourceTest {
 
-  val AtomistTemplatesSource = ClassPathArtifactSource.toArtifactSource("spring-boot")
+  val AtomistTemplatesSource = toArtifactSource("spring-boot")
 
   def ignoreFiles1ZipId = {
-    val f = ClassPathArtifactSource.classPathResourceToFile("ignore-files/no-dot-git.zip")
+    val f = classPathResourceToFile("ignore-files/no-dot-git.zip")
     ZipFileInput(new FileInputStream(f))
   }
 
   def ignoreFiles2ZipId = {
-    val f = ClassPathArtifactSource.classPathResourceToFile("ignore-files/dot-git-negated-node_modules.zip")
+    val f = classPathResourceToFile("ignore-files/dot-git-negated-node_modules.zip")
     ZipFileInput(new FileInputStream(f))
   }
 
   def ignoreFiles3ZipId = {
-    val f = ClassPathArtifactSource.classPathResourceToFile("ignore-files/dot-git-ignored-node_modules.zip")
+    val f = classPathResourceToFile("ignore-files/dot-git-ignored-node_modules.zip")
     ZipFileInput(new FileInputStream(f))
   }
 }
@@ -34,11 +35,11 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   val fWriter = new FileSystemArtifactSourceWriter
 
   it should "handle classpath directory not found" in {
-    an[ArtifactSourceException] should be thrownBy (ClassPathArtifactSource toArtifactSource "this is complete nonsense")
+    an[ArtifactSourceException] should be thrownBy toArtifactSource("this is complete nonsense")
   }
 
   it should "find single file and verify contents" in {
-    val classpathSource = ClassPathArtifactSource.toArtifactSource("java-source/HelloWorldService.java")
+    val classpathSource = toArtifactSource("java-source/HelloWorldService.java")
     val artifacts = classpathSource.artifacts
     val files = artifacts.filter(a => a.isInstanceOf[FileArtifact])
     artifacts.size should be > 0
@@ -49,7 +50,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   }
 
   it should "find single image file" in {
-    val classpathSource = ClassPathArtifactSource.toArtifactSource("spring-boot/web-template/src/main/resources/atomist-logo-horiz.png")
+    val classpathSource = toArtifactSource("spring-boot/web-template/src/main/resources/atomist-logo-horiz.png")
     val artifacts = classpathSource.artifacts
     val files = artifacts.filter(_.isInstanceOf[FileArtifact])
     artifacts.size should be > 0
@@ -59,7 +60,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   }
 
   it should "find single binary file" in {
-    val classpathSource = ClassPathArtifactSource.toArtifactSource("binary.dat")
+    val classpathSource = toArtifactSource("binary.dat")
     val artifacts = classpathSource.artifacts
     val files = artifacts.filter(_.isInstanceOf[FileArtifact])
     artifacts.size should be > 0
@@ -69,7 +70,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   }
 
   it should "find single binary executable file" in {
-    val classpathSource = ClassPathArtifactSource.toArtifactSource("binary-executable.dat")
+    val classpathSource = toArtifactSource("binary-executable.dat")
     val artifacts = classpathSource.artifacts
     val files = artifacts.filter(_.isInstanceOf[FileArtifact])
     artifacts.size should be > 0

@@ -3,23 +3,24 @@ package com.atomist.source.file
 import java.io._
 
 import com.atomist.source._
+import com.atomist.source.file.ClassPathArtifactSource.classPathResourceToFile
 import org.apache.commons.io.FileUtils
 import org.scalatest.{FlatSpec, Matchers}
 
 object ZipFileArtifactSourceReaderTest {
 
   def springBootZipFileId = {
-    val f = ClassPathArtifactSource.classPathResourceToFile("springboot1.zip")
+    val f = classPathResourceToFile("springboot1.zip")
     ZipFileInput(new FileInputStream(f))
   }
 
   def springRestServiceZipFileId = {
-    val f = ClassPathArtifactSource.classPathResourceToFile("spring-rest-service.zip")
+    val f = classPathResourceToFile("spring-rest-service.zip")
     ZipFileInput(new FileInputStream(f))
   }
 
   def leinTemplateZileFileId = {
-    val f = ClassPathArtifactSource.classPathResourceToFile("simple-lein-project-1.0.0.zip")
+    val f = classPathResourceToFile("simple-lein-project-1.0.0.zip")
     ZipFileInput(new FileInputStream(f))
   }
 }
