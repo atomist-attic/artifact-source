@@ -3,25 +3,25 @@ package com.atomist.util
 import java.nio.file.attribute.{PosixFilePermission, PosixFilePermissions}
 import java.util.{Set => JSet}
 
-import com.atomist.util.Octal.octalToInt
-
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 object FilePermissions {
 
+  import com.atomist.util.Octal._
+
   def toMode(permissions: JSet[PosixFilePermission]): Int = {
     var mode = 0
     permissions.asScala.foreach(p => {
-      if (p == PosixFilePermission.OWNER_READ) mode |= octalToInt("0400")
-      if (p == PosixFilePermission.OWNER_WRITE) mode |= octalToInt("0200")
-      if (p == PosixFilePermission.OWNER_EXECUTE) mode |= octalToInt("0100")
-      if (p == PosixFilePermission.GROUP_READ) mode |= octalToInt("0040")
-      if (p == PosixFilePermission.GROUP_WRITE) mode |= octalToInt("0020")
-      if (p == PosixFilePermission.GROUP_EXECUTE) mode |= octalToInt("0010")
-      if (p == PosixFilePermission.OTHERS_READ) mode |= octalToInt("0004")
-      if (p == PosixFilePermission.OTHERS_WRITE) mode |= octalToInt("0002")
-      if (p == PosixFilePermission.OTHERS_EXECUTE) mode |= octalToInt("0001")
+      if (p == PosixFilePermission.OWNER_READ) mode |= oct"0400"
+      if (p == PosixFilePermission.OWNER_WRITE) mode |= oct"0200"
+      if (p == PosixFilePermission.OWNER_EXECUTE) mode |= oct"0100"
+      if (p == PosixFilePermission.GROUP_READ) mode |= oct"0040"
+      if (p == PosixFilePermission.GROUP_WRITE) mode |= oct"0020"
+      if (p == PosixFilePermission.GROUP_EXECUTE) mode |= oct"0010"
+      if (p == PosixFilePermission.OTHERS_READ) mode |= oct"0004"
+      if (p == PosixFilePermission.OTHERS_WRITE) mode |= oct"0002"
+      if (p == PosixFilePermission.OTHERS_EXECUTE) mode |= oct"0001"
       else mode |= 0
     })
     mode
@@ -43,6 +43,11 @@ object Octal {
       case Success(i) => i
       case Failure(e) => throw new IllegalArgumentException(e)
     }
+
+  /** Enriches string with `oct` interpolator, parsing string as base 8 integer. */
+  implicit class OctalString(val sc: StringContext) extends AnyVal {
+    def oct(args: Any*) = Integer.parseInt(sc.s(args: _*), 8)
+  }
 }
 
 object Permissions {

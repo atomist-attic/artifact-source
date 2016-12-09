@@ -7,7 +7,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class ZipFileArtifactSourceWriterTest extends FlatSpec with Matchers {
 
-  val zid = ZipFileArtifactSourceReaderTest.SpringBootZipFileId
+  val zid = ZipFileArtifactSourceReaderTest.springBootZipFileId
   val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
   val zw = ZipFileArtifactSourceWriter
 

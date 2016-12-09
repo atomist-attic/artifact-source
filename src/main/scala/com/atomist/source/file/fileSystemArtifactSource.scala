@@ -108,7 +108,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
       } match {
         case Success(mode) => mode
         case Failure(e: UnsupportedOperationException) =>
-          // In case of windows
+          // Windows
           if (Files.isExecutable(f.toPath) || f.canExecute)
             FileArtifact.ExecutableMode
           else
@@ -120,21 +120,21 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
   }
 }
 
-  /**
-    * Loads file artifacts from classpath.
-    */
-  object ClassPathArtifactSource {
+/**
+  * Loads file artifacts from classpath.
+  */
+object ClassPathArtifactSource {
 
-    def toArtifactSource(resource: String): ArtifactSource = {
-      val f = classPathResourceToFile(resource)
-      val fsasid = FileSystemArtifactSourceIdentifier(f)
-      new FileSystemArtifactSource(fsasid)
-    }
+  def toArtifactSource(resource: String): ArtifactSource = {
+    val f = classPathResourceToFile(resource)
+    val fsasid = FileSystemArtifactSourceIdentifier(f)
+    new FileSystemArtifactSource(fsasid)
+  }
 
-    def classPathResourceToFile(resource: String): File = {
-      val r = getClass.getClassLoader.getResource(resource)
-      if (r == null)
-        throw ArtifactSourceAccessException(s"No classpath resource at '$resource'")
+  def classPathResourceToFile(resource: String): File = {
+    val r = getClass.getClassLoader.getResource(resource)
+    if (r == null)
+      throw ArtifactSourceAccessException(s"No classpath resource at '$resource'")
 
     new File(r.toURI)
   }

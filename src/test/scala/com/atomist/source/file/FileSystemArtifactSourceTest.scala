@@ -1,6 +1,7 @@
 package com.atomist.source.file
 
-import java.io.File
+import java.io.{File, FileInputStream}
+import java.nio.file.Files
 
 import com.atomist.source._
 import com.atomist.util.BinaryDecider.isBinaryContent
@@ -9,12 +10,23 @@ import org.scalatest._
 object FileSystemArtifactSourceTest {
 
   val AtomistTemplatesSource = ClassPathArtifactSource.toArtifactSource("spring-boot")
+
+  def ignoreFiles1ZipId = {
+    val f = ClassPathArtifactSource.classPathResourceToFile("ignore-files-1.zip")
+    ZipFileInput(new FileInputStream(f))
+  }
+
+  def ignoreFiles2ZipId = {
+    val f = ClassPathArtifactSource.classPathResourceToFile("ignore-files-2.zip")
+    ZipFileInput(new FileInputStream(f))
+  }
 }
 
 class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
   import FileSystemArtifactSourceTest._
-  import TestUtils._
+
+  val fWriter = new FileSystemArtifactSourceWriter
 
   it should "handle classpath directory not found" in {
     an[ArtifactSourceException] should be thrownBy (ClassPathArtifactSource toArtifactSource "this is complete nonsense")
@@ -117,53 +129,28 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     an[ArtifactSourceException] should be thrownBy new FileSystemArtifactSource(fsid)
   }
 
-  it should "ignore files specified in .atomistignore" in {
-    val f = new File(s"$TestIgnoreFilesRoot/dot-atomistignore")
-    val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
-    as.artifacts.size should be(4)
-    as.allFiles.size should be(4)
-    as.findFile(".atomistignore") shouldBe defined
-    as.findFile("thing3/31/.atomistignore") shouldBe defined
-    as.findFile(".atomist/manifest.yml") shouldBe defined
-    as.findFile("thing5") shouldBe defined
+  it should "handle ignoring files for first test source" in {
+    val zid = ignoreFiles1ZipId
+    val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
+
+    val tmpDir = Files.createTempDirectory(null)
+    val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
+    val file = fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
+
+    val as = new FileSystemArtifactSource(fid)
+    as.findDirectory(".atomist/node_modules") shouldBe defined
   }
 
-  it should "ignore files specified in .atomistignore with .gitignore" in {
-    val f = new File(s"$TestIgnoreFilesRoot/dot-atomistignore-and-gitignore")
-    val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
-    as.artifacts.size should be(4)
-    as.allFiles.size should be(4)
-    as.findFile(".atomistignore") shouldBe defined
-    as.findFile(".gitignore") shouldBe defined
-    as.findFile(".atomist/manifest.yml") shouldBe defined
-    as.findFile("thing5") shouldBe defined
-  }
+  it should "handle ignoring files for second test source" in {
+    val zid = ignoreFiles2ZipId
+    val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
-  it should "ignore files specified in .gitignore in 1st test source" in {
-    val f = new File(s"$TestIgnoreFilesRoot/dot-gitignore-1")
-    val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
-    as.artifacts.size should be(3)
-    as.allFiles.size should be(3)
-    as.findFile(".gitignore") shouldBe defined
-    as.findFile(".atomist/manifest.yml") shouldBe defined
-    as.findFile("thing5") shouldBe defined
-  }
+    val tmpDir = Files.createTempDirectory(null)
+    val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
+    fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
-  it should "ignore files specified in .gitignore in 2nd test source" in {
-    val f = new File(s"$TestIgnoreFilesRoot/dot-gitignore-2")
-    val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
-    as.artifacts.size should be(3)
-    as.allFiles.size should be(3)
-    as.findFile(".gitignore") shouldBe defined
-    as.findFile(".atomist/manifest.yml") shouldBe defined
-    as.findFile("thing5") shouldBe defined
-  }
-
-  it should "find all files when there is no .gitignore file" in {
-    val f = new File(s"$TestIgnoreFilesRoot/no-dot-gitignore")
-    val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f))
-    as.artifacts.size should be(5)
-    as.allFiles.size should be(5)
+    val as = new FileSystemArtifactSource(fid)
+    as.findDirectory(".atomist/node_modules") shouldBe defined
   }
 
   private def validateTargetDirectory(s: ArtifactSource): Unit = {

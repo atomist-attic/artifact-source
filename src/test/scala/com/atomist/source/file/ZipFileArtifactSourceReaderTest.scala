@@ -8,17 +8,17 @@ import org.scalatest.{FlatSpec, Matchers}
 
 object ZipFileArtifactSourceReaderTest {
 
-  def SpringBootZipFileId = {
+  def springBootZipFileId = {
     val f = ClassPathArtifactSource.classPathResourceToFile("springboot1.zip")
     ZipFileInput(new FileInputStream(f))
   }
 
-  def SpringRestServiceZipFileId = {
+  def springRestServiceZipFileId = {
     val f = ClassPathArtifactSource.classPathResourceToFile("spring-rest-service.zip")
     ZipFileInput(new FileInputStream(f))
   }
 
-  def LeinTemplateZileFileId = {
+  def leinTemplateZileFileId = {
     val f = ClassPathArtifactSource.classPathResourceToFile("simple-lein-project-1.0.0.zip")
     ZipFileInput(new FileInputStream(f))
   }
@@ -27,7 +27,7 @@ object ZipFileArtifactSourceReaderTest {
 class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
 
   it should "read zip file with directory after files" in {
-    val zid = ZipFileArtifactSourceReaderTest.LeinTemplateZileFileId
+    val zid = ZipFileArtifactSourceReaderTest.leinTemplateZileFileId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val cljFile = zipSource.findFile("project.clj")
@@ -44,13 +44,13 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
   }
 
   it should "read non-empty zip file and verify directory structure" in {
-    val zid = ZipFileArtifactSourceReaderTest.SpringBootZipFileId
+    val zid = ZipFileArtifactSourceReaderTest.springBootZipFileId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
     TestUtils.directoryPathElementsShouldExistAndContainName(zipSource)
   }
 
   it should "read non-empty zip file and verify contents" in {
-    val zid = ZipFileArtifactSourceReaderTest.SpringBootZipFileId
+    val zid = ZipFileArtifactSourceReaderTest.springBootZipFileId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
     zipSource.allFiles.size should be > 0
     zipSource.allFiles.foreach(f => {
@@ -87,7 +87,7 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
   }
 
   it should "read zip file and verify file permissions" in {
-    val zid = ZipFileArtifactSourceReaderTest.SpringRestServiceZipFileId
+    val zid = ZipFileArtifactSourceReaderTest.springRestServiceZipFileId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
     zipSource.allFiles.size should be > 0
     zipSource.allFiles.foreach(f => {
@@ -108,7 +108,7 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
   }
 
   it should "preserve empty directories" in {
-    val zid = ZipFileArtifactSourceReaderTest.SpringBootZipFileId
+    val zid = ZipFileArtifactSourceReaderTest.springBootZipFileId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val resourceDir = zipSource.findDirectory("src/test/resources")
