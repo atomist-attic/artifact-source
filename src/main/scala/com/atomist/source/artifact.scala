@@ -4,6 +4,8 @@ import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.charset.Charset
 
 import com.atomist.util.Utils.withCloseable
+import com.atomist.util.Utils.separatorPattern
+
 import org.apache.commons.io.IOUtils
 
 /**
@@ -44,7 +46,7 @@ trait FileArtifact extends Artifact {
     */
   def isCached: Boolean = false
 
-  override def path = (if (pathElements.nonEmpty) pathElements.mkString(File.separator) + File.separator else "") + name
+  override def path = (if (pathElements.nonEmpty) pathElements.mkString("/") + "/" else "") + name
 
   /**
     * May not be efficient if streamed.
@@ -130,7 +132,7 @@ trait NonStreamedFileArtifact extends FileArtifact {
 
 trait DirectoryArtifact extends Artifact with ArtifactContainer {
 
-  override def path = if (pathElements.nonEmpty) pathElements.mkString(File.separator) else ""
+  override def path = if (pathElements.nonEmpty) pathElements.mkString("/") else ""
 
   override final def parentPathElements = pathElements dropRight 1
 
