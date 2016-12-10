@@ -1,6 +1,5 @@
 package com.atomist.util
 
-import java.io.File
 import java.util.Optional
 
 import scala.language.{implicitConversions, reflectiveCalls}
@@ -60,10 +59,4 @@ object Utils {
 
   def withCloseable[C <: Closeable](f: Unit => C)(block: C => Unit): Unit =
     withCloseable[C, Unit](f)(block)
-
-  def separatorPattern =
-    File.separator match {
-      case """\""" => s"""\\${File.separator}"""
-      case _ => File.separator
-    }
 }

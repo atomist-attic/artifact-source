@@ -1,11 +1,9 @@
 package com.atomist.source
 
-import java.io.{ByteArrayInputStream, File, InputStream}
+import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.charset.Charset
 
 import com.atomist.util.Utils.withCloseable
-import com.atomist.util.Utils.separatorPattern
-
 import org.apache.commons.io.IOUtils
 
 /**
