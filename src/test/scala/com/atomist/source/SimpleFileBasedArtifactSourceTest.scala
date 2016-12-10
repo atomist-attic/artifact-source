@@ -1,5 +1,7 @@
 package com.atomist.source
 
+import com.atomist.source.ArtifactSourceUtils.prettyListFiles
+
 import scala.collection.JavaConversions._
 
 class SimpleFileBasedArtifactSourceTest extends CommonTests {
@@ -44,7 +46,7 @@ class SimpleFileBasedArtifactSourceTest extends CommonTests {
     val fbac = new SimpleFileBasedArtifactSource("", f1)
     val targetDir = fbac.findDirectory("some/path")
     targetDir shouldBe defined
-    withClue(s"expectation about ${targetDir.get}, source files=${ArtifactSourceUtils.prettyListFiles(fbac)}") {
+    withClue(s"expectation about ${targetDir.get}, source files=${prettyListFiles(fbac)}") {
       targetDir.get.files.size should equal(1)
       targetDir.get.directories.size should equal(0)
       targetDir.get.files.head.name should equal(f1.name)
@@ -75,7 +77,7 @@ class SimpleFileBasedArtifactSourceTest extends CommonTests {
 
     val somePathDir = fbac.findDirectory("some/path")
     somePathDir shouldBe defined
-    withClue(s"expectation about ${somePathDir.get}, source files=${ArtifactSourceUtils.prettyListFiles(fbac)}") {
+    withClue(s"expectation about ${somePathDir.get}, source files=${prettyListFiles(fbac)}") {
       somePathDir.get.files.size should equal(2)
       somePathDir.get.allFiles.size should equal(4)
       somePathDir.get.directories.size should equal(1)
@@ -91,7 +93,7 @@ class SimpleFileBasedArtifactSourceTest extends CommonTests {
     val fbac = new SimpleFileBasedArtifactSource("", f1)
     val targetDir = fbac.findDirectory("some")
     targetDir shouldBe defined
-    withClue(s"expectation about ${targetDir.get}, source files=${ArtifactSourceUtils.prettyListFiles(fbac)}") {
+    withClue(s"expectation about ${targetDir.get}, source files=${prettyListFiles(fbac)}") {
       targetDir.get.files.size should equal(0)
       targetDir.get.directories.size should equal(1)
       targetDir.get.directories.head.name should equal("path")

@@ -139,7 +139,7 @@ object ArtifactSourceTest extends Matchers {
     expected.allFiles.foreach(f => {
       val newFile = actual.findFile(f.path)
       withClue(s"Looking for expected file $f, old artifactSource has ${expected.totalFileCount} files, new artifactSource has ${actual.totalFileCount} files, " +
-        s"list=\n${actual.allFiles.map(f => f.path).mkString("\n")}") {
+        s"list=\n${actual.allFiles.map(_.path).mkString("\n")}") {
         newFile shouldBe defined
         newFile.get.name shouldBe f.name
         newFile.get.pathElements shouldBe f.pathElements

@@ -16,7 +16,7 @@ class ArtifactSourceUnderPathTest extends FlatSpec with Matchers {
     again.totalFileCount should equal(withdrawn.totalFileCount - 1)
 
     // Now check path rebasing
-    withdrawn.directories.map(d => d.name).toSet should equal(Set("new", "other"))
+    withdrawn.directories.map(_.name).toSet should equal(Set("new", "other"))
     again.allFiles.head.parentPathElements.toSet should equal(Set("path"))
   }
 
@@ -64,7 +64,7 @@ class ArtifactSourceUnderPathTest extends FlatSpec with Matchers {
     added1.directories.size should equal(1)
     added1.findDirectory("xx") should be(defined)
     again.findFile("zz/yy/my/new/path/name") should be(defined)
-    added1.directories.map(d => d.name).toSet should equal(Set("xx"))
+    added1.directories.map(_.name).toSet should equal(Set("xx"))
     again.allFiles.head.parentPathElements.toSet should equal(Set("zz", "yy"))
   }
 

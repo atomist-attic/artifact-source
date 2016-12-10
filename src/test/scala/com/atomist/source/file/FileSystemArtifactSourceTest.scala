@@ -177,6 +177,6 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
   private def validateTargetDirectory(s: ArtifactSource): Unit = {
     val files = s.allFiles
-    files.exists(f => f.name contains ".vm")
+    files.exists(_.name contains ".vm")
   }
 }

@@ -23,9 +23,9 @@ object IgnoredFilesFinder {
   def ignoredFiles(rootPath: String): List[File] = {
     val paths = ListBuffer.empty[String]
     Try {
-      paths ++= handleGitignore(rootPath)
+      handleGitignore(rootPath)
     } match {
-      case Success(_) =>
+      case Success(gitignorePaths) => paths ++= gitignorePaths
       case Failure(e) =>
     }
 

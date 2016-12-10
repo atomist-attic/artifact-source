@@ -54,9 +54,7 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
     val zid = ZipFileArtifactSourceReaderTest.springBootZipFileId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
     zipSource.allFiles.size should be > 0
-    zipSource.allFiles.foreach(f => {
-      if (!f.name.equals("application.properties")) f.content.length should be > 0
-    })
+    zipSource.allFiles.foreach(f => if (!f.name.equals("application.properties")) f.content.length should be > 0)
 
     // Look for Java source
     val javaFile = zipSource.findFile("src/main/java/com/example/DemoApplication.java")
@@ -76,9 +74,7 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
     FileUtils.copyInputStreamToFile(jarFile.get.inputStream(), tmpFile)
     val jar = ZipFileInput(new FileInputStream(tmpFile))
     val jarSource = ZipFileArtifactSourceReader.fromZipSource(jar)
-    jarSource.allFiles.foreach(f => {
-      if (f.name.equals("MANIFEST.MF")) f.content.length shouldEqual 298
-    })
+    jarSource.allFiles.foreach(f => if (f.name.equals("MANIFEST.MF")) f.content.length shouldEqual 298)
     tmpFile.delete()
 
     // Look for an executable file and verify executable permission
@@ -91,9 +87,7 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
     val zid = ZipFileArtifactSourceReaderTest.springRestServiceZipFileId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
     zipSource.allFiles.size should be > 0
-    zipSource.allFiles.foreach(f => {
-      if (!f.name.equals("pom.xml")) f.content.length should be > 0
-    })
+    zipSource.allFiles.foreach(f => if (!f.name.equals("pom.xml")) f.content.length should be > 0)
 
     // Look for an non-executable file and verify permissions
     val cmdFile = zipSource.findFile("project/mvnw.cmd")
@@ -111,13 +105,12 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
   it should "preserve empty directories" in {
     val zid = ZipFileArtifactSourceReaderTest.springBootZipFileId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
-
     val resourceDir = zipSource.findDirectory("src/test/resources")
     resourceDir shouldBe defined
   }
 
   private def validateTargetDirectory(s: ArtifactSource): Unit = {
     val files = s.allFiles
-    files.exists(f => f.name contains ".vm")
+    files.exists(_.name contains ".vm")
   }
 }
