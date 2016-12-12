@@ -5,7 +5,7 @@ import java.io.ByteArrayInputStream
 import com.atomist.source.FileArtifact.DefaultMode
 import com.atomist.util.Utils.withCloseable
 import org.apache.commons.io.IOUtils
-
+import com.atomist.util.Utils.StringImprovements
 /**
   * Simple artifact class containing byte array content.
   */
@@ -41,9 +41,9 @@ case class ByteArrayFileArtifact(
 
   override def isCached = true
 
-  override def content = new String(bytes)
+  override def content: String = new String(bytes).toSystem
 
-  def contentLength = bytes.length
+  def contentLength: Int = new String(bytes).toSystem.length
 
   override def inputStream() = new ByteArrayInputStream(bytes)
 
@@ -62,7 +62,7 @@ object ByteArrayFileArtifact {
     ByteArrayFileArtifact(npath.name, npath.pathElements, bytes, mode, None)
   }
 
-  def toByteArrayFileArtifact(fa: FileArtifact) = fa match {
+  def toByteArrayFileArtifact(fa: FileArtifact): ByteArrayFileArtifact = fa match {
     case bafa: ByteArrayFileArtifact => bafa
     case fa: FileArtifact => new ByteArrayFileArtifact(fa)
   }
@@ -70,15 +70,15 @@ object ByteArrayFileArtifact {
   /**
     * Return an updated version of this file.
     */
-  def updated(fa: FileArtifact, newContent: Array[Byte]) =
+  def updated(fa: FileArtifact, newContent: Array[Byte]): ByteArrayFileArtifact =
     toByteArrayFileArtifact(fa).copy(bytes = newContent)
 
   /**
     * Copy the FileArtifact with a new path.
     */
-  def repathed(fa: FileArtifact, pathElements: Seq[String]) =
+  def repathed(fa: FileArtifact, pathElements: Seq[String]): ByteArrayFileArtifact =
     toByteArrayFileArtifact(fa).copy(pathElements = pathElements)
 
-  def withNewUniqueId(fa: FileArtifact, id: String) =
+  def withNewUniqueId(fa: FileArtifact, id: String): ByteArrayFileArtifact =
     toByteArrayFileArtifact(fa).copy(uniqueId = Some(id))
 }

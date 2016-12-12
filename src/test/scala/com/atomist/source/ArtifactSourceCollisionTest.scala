@@ -6,7 +6,7 @@ class ArtifactSourceCollisionTest extends FlatSpec with Matchers {
 
   it should "allow overwrite of file by default" in {
     val f1 = StringFileArtifact("name", "whatever")
-    val f2 = f1.copy(content = "whatever else")
+    val f2 = f1.copy(_content = "whatever else")
 
     val before = new SimpleFileBasedArtifactSource("", f1)
     val r = before + f2
@@ -17,7 +17,7 @@ class ArtifactSourceCollisionTest extends FlatSpec with Matchers {
 
   it should "allow overwrite of file using ArtifactSource by default" in {
     val f1 = StringFileArtifact("name", "whatever")
-    val f2 = f1.copy(content = "whatever else")
+    val f2 = f1.copy(_content = "whatever else")
 
     val before = new SimpleFileBasedArtifactSource("", f1)
     val toAdd = new SimpleFileBasedArtifactSource("", f2)
@@ -30,7 +30,7 @@ class ArtifactSourceCollisionTest extends FlatSpec with Matchers {
 
   it should "detect file collision" in {
     val f1 = StringFileArtifact("name", "whatever")
-    val f2 = f1.copy(content = "whatever else")
+    val f2 = f1.copy(_content = "whatever else")
     val f3 = StringFileArtifact("quite/something/else", "content doesn't matter")
 
     val before = new SimpleFileBasedArtifactSource("", f1)
@@ -46,7 +46,7 @@ class ArtifactSourceCollisionTest extends FlatSpec with Matchers {
 
   it should "detect file collision in different artifact sources" in {
     val f1 = StringFileArtifact("name", "whatever")
-    val f2 = f1.copy(content = "whatever else")
+    val f2 = f1.copy(_content = "whatever else")
     val f3 = StringFileArtifact("quite/something/else", "content doesn't matter")
 
     val before = new SimpleFileBasedArtifactSource("as1", f1)

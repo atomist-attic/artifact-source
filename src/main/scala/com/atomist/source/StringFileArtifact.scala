@@ -1,6 +1,7 @@
 package com.atomist.source
 
 import com.atomist.source.FileArtifact.DefaultMode
+import com.atomist.util.Utils.StringImprovements
 
 /**
   * Simple artifact class containing content.
@@ -8,17 +9,17 @@ import com.atomist.source.FileArtifact.DefaultMode
 case class StringFileArtifact(
                                name: String,
                                pathElements: Seq[String],
-                               override val content: String,
+                               private val _content: String,
                                override val mode: Int,
                                override val uniqueId: Option[String])
   extends NonStreamedFileArtifact {
 
   require(!name.isEmpty, "Name must not be empty")
 
-  def this(name: String, path: String, content: String, mode: Int) =
+  def this(name: String, path: String, _content: String, mode: Int) =
     this(name = name,
       pathElements = if (path == null || "".equals(path)) Nil else path.split("/").toSeq,
-      content = content,
+      _content = _content,
       mode = mode,
       None)
 
@@ -35,13 +36,15 @@ case class StringFileArtifact(
     this(name, pathElements, content, mode, None)
 
   def this(fa: FileArtifact) =
-    this(name = fa.name, pathElements = fa.pathElements, content = fa.content, mode = fa.mode, fa.uniqueId)
+    this(name = fa.name, pathElements = fa.pathElements, _content = fa.content, mode = fa.mode, fa.uniqueId)
 
   override def isCached = true
 
-  def contentLength = content.length
+  def contentLength: Int = _content.toSystem.length
 
-  override def toString = s"${getClass.getSimpleName}:path='[$path]';contentLength=${content.length},mode=$mode,uniqueId=$uniqueId"
+  override def content : String = _content.toSystem
+
+  override def toString = s"${getClass.getSimpleName}:path='[$path]';contentLength=$contentLength,mode=$mode,uniqueId=$uniqueId"
 }
 
 object StringFileArtifact {
@@ -65,7 +68,7 @@ object StringFileArtifact {
   def apply(pathName: String, content: String): StringFileArtifact =
     apply(pathName, content, DefaultMode, None)
 
-  def toStringFileArtifact(fa: FileArtifact) = fa match {
+  def toStringFileArtifact(fa: FileArtifact): StringFileArtifact = fa match {
     case sfa: StringFileArtifact => sfa
     case fa: FileArtifact => new StringFileArtifact(fa)
   }
