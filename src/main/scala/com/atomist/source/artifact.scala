@@ -4,6 +4,8 @@ import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.charset.Charset
 
 import com.atomist.util.Utils.withCloseable
+import com.atomist.util.Utils.StringImprovements
+
 import org.apache.commons.io.IOUtils
 
 /**
@@ -32,7 +34,7 @@ sealed trait Artifact {
 
   def parentPathElements: Seq[String]
 
-  def isInRoot = pathElements.isEmpty
+  def isInRoot: Boolean = pathElements.isEmpty
 }
 
 trait FileArtifact extends Artifact {
@@ -44,7 +46,7 @@ trait FileArtifact extends Artifact {
     */
   def isCached: Boolean = false
 
-  override def path = (if (pathElements.nonEmpty) pathElements.mkString("/") + "/" else "") + name
+  override def path: String = (if (pathElements.nonEmpty) pathElements.mkString("/") + "/" else "") + name
 
   /**
     * May not be efficient if streamed.
@@ -60,7 +62,7 @@ trait FileArtifact extends Artifact {
 
   def mode: Int = DefaultMode
 
-  override final def equals(o: Any) = o match {
+  override final def equals(o: Any): Boolean = o match {
     case fa: FileArtifact =>
       fa.path.equals(this.path) && sameContentsAs(fa)
     case _ => false
@@ -68,7 +70,7 @@ trait FileArtifact extends Artifact {
 
   override def hashCode(): Int = path.hashCode + content.hashCode
 
-  override final def parentPathElements = pathElements
+  override final def parentPathElements: Seq[String] = pathElements
 
   protected def sameContentsAs(fa: FileArtifact): Boolean = {
     val sf1 = StringFileArtifact.toStringFileArtifact(this)
@@ -82,7 +84,7 @@ trait FileArtifact extends Artifact {
   def withContent(newContent: Array[Byte]) =
     ByteArrayFileArtifact(this.name, this.pathElements, newContent, this.mode, this.uniqueId)
 
-  def withPath(pathName: String) = this match {
+  def withPath(pathName: String): FileArtifact = this match {
     case sf: StringFileArtifact =>
       StringFileArtifact(pathName, this.content, this.mode, this.uniqueId)
     case _ =>
@@ -91,7 +93,7 @@ trait FileArtifact extends Artifact {
       base.copy(name = npath.name, pathElements = npath.pathElements)
   }
 
-  def withMode(mode: Int) = this match {
+  def withMode(mode: Int): FileArtifact = this match {
     case sf: StringFileArtifact =>
       StringFileArtifact(this.name, this.pathElements, this.content, mode, this.uniqueId)
     case _ =>
@@ -99,7 +101,7 @@ trait FileArtifact extends Artifact {
       base.copy(mode = mode)
   }
 
-  def withUniqueId(id: String) = this match {
+  def withUniqueId(id: String): FileArtifact = this match {
     case sf: StringFileArtifact =>
       StringFileArtifact(this.name, this.pathElements, this.content, mode, Some(id))
     case _ =>
@@ -118,26 +120,26 @@ object FileArtifact {
 
 trait StreamedFileArtifact extends FileArtifact {
 
-  final override def content =
-    withCloseable(inputStream())(is => IOUtils.toString(is, Charset.defaultCharset()))
+  final override def content: String =
+    withCloseable(inputStream())(is => IOUtils.toString(is, Charset.defaultCharset()).toSystem)
 }
 
 trait NonStreamedFileArtifact extends FileArtifact {
 
   final override def inputStream() =
-    new ByteArrayInputStream(content.getBytes())
+    new ByteArrayInputStream(content.toSystem.getBytes())
 }
 
 trait DirectoryArtifact extends Artifact with ArtifactContainer {
 
-  override def path = if (pathElements.nonEmpty) pathElements.mkString("/") else ""
+  override def path: String = if (pathElements.nonEmpty) pathElements.mkString("/") else ""
 
-  override final def parentPathElements = pathElements dropRight 1
+  override final def parentPathElements: Seq[String] = pathElements dropRight 1
 
   override protected def relativeToFullPath(pathElements: Seq[String]): Seq[String] =
     this.pathElements ++ pathElements
 
-  override def toString =
+  override def toString: String =
     s"${getClass.getSimpleName}(${System.identityHashCode(this)}):path(${pathElements.size})='${pathElements.mkString(",")}';" +
       s"${artifacts.size} artifacts=[${artifacts.map(a => a.name).mkString(",")}]"
 }
