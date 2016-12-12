@@ -57,28 +57,27 @@ object Utils {
   def withCloseable[C <: Closeable](f: Unit => C)(block: C => Unit): Unit =
     withCloseable[C, Unit](f)(block)
 
-  def separatorPattern: String ={
+  def separatorPattern: String =
     File.separator match {
       case """\""" => s"""\\${File.separator}"""
       case _ => File.separator
     }
-  }
 
   implicit class StringImprovements(val s: String) {
+
     /**
-      *  Ensure that string is System specific.
-      *  Clean up is expensive, but we should be sure!
-      *  Currently we only incur costs on windows
-       * @return
+      * Ensure that string is System specific.
+      * Clean up is expensive, but we should be sure!
+      * Currently we only incur costs on Windows
       */
-    def toSystem: String = {
+    def toSystem: String =
       System.lineSeparator() match {
-        case "\r\n" =>  s.toUnix.replaceAll("\\n", "\r\n")
+        case "\r\n" => s.toUnix.replaceAll("\\n", "\r\n")
         case _ => s
       }
-    }
-    def toUnix: String = {
+
+    def toUnix: String =
       s.replaceAll("\\r\\n", "\n").replaceAll("\\r", "\n")
-    }
   }
+
 }
