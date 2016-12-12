@@ -87,5 +87,3 @@ object IgnoredFilesFinder {
   private def createPathMatcher(path: Path, pathToResolve: String) =
     PathMatcher.createPathMatcher(path.resolve(pathToResolve).toString, File.separatorChar, false)
 }
-
-

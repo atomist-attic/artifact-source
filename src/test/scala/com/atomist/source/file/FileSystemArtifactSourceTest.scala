@@ -94,7 +94,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     artifacts.exists(_.name contains "web-template") shouldBe true
   }
 
-  it should "find empty directory" in pendingUntilFixed {
+  it should "find empty directory" in {
     val artifacts = AtomistTemplatesSource.artifacts
     artifacts.exists(_.name contains "empty-dir") shouldBe true
   }
