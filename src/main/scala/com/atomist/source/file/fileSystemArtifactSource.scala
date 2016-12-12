@@ -108,7 +108,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier)
         case Success(mode) => mode
         case Failure(e: UnsupportedOperationException) =>
           // Windows
-          if (Files.isExecutable(f.toPath) || f.canExecute)
+          if (Files.isExecutable(f.toPath))
             FileArtifact.ExecutableMode
           else
             FileArtifact.DefaultMode

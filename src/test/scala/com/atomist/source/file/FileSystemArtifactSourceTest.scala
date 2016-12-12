@@ -1,16 +1,22 @@
 package com.atomist.source.file
 
 import java.io.{File, FileInputStream}
-import java.nio.file.Files
+import java.nio.file.attribute.PosixFileAttributeView
+import java.nio.file.{FileSystems, Files}
 
 import com.atomist.source._
 import com.atomist.source.file.ClassPathArtifactSource.{classPathResourceToFile, toArtifactSource}
 import com.atomist.util.BinaryDecider.isBinaryContent
 import org.scalatest._
 
+import scala.collection.JavaConverters._
+
 object FileSystemArtifactSourceTest {
 
   val AtomistTemplatesSource = toArtifactSource("spring-boot")
+
+  val PosixSupported = FileSystems.getDefault.getFileStores.asScala
+    .exists(_.supportsFileAttributeView(classOf[PosixFileAttributeView]))
 
   def ignoreFiles1ZipId = {
     val f = classPathResourceToFile("ignore-files/no-dot-git.zip")
@@ -47,6 +53,8 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     aFile.contentLength should be > 0
     aFile.content should have size aFile.contentLength
     isBinaryContent(aFile.content) shouldBe false
+    if (PosixSupported)
+      aFile.mode should be(FileArtifact.DefaultMode)
   }
 
   it should "find single image file" in {
@@ -77,6 +85,8 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val aFile = files.head.asInstanceOf[FileArtifact]
     aFile.contentLength should be > 0
     isBinaryContent(aFile.content) shouldBe true
+    if (PosixSupported)
+      aFile.mode should be(FileArtifact.ExecutableMode)
   }
 
   it should "find directory" in {

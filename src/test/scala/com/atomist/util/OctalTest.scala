@@ -25,19 +25,19 @@ class OctalTest extends FlatSpec with Matchers {
     octalToInt("00000000") should equal(0)
   }
 
-  it should "handle 0755" in {
-    octalToInt("0755") should equal(493)
+  it should "handle 100755" in {
+    octalToInt("100755") should equal(33261)
   }
 
-  it should "handle 0644" in {
-    octalToInt("0644") should equal(420)
+  it should "handle 100644" in {
+    octalToInt("100644") should equal(33188)
   }
 
   it should "handle Int 0" in {
     intToOctal(0) should equal("0")
   }
 
-  it should "handle Int to multi digit octal" in {
+  it should "handle Int to multi-digit octal" in {
     intToOctal(9) should equal("11")
     intToOctal(342391) should equal("1234567")
   }

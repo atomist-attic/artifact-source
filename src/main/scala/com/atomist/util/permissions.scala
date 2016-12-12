@@ -24,7 +24,7 @@ object FilePermissions {
       if (p == PosixFilePermission.OTHERS_EXECUTE) mode |= oct"0001"
       else mode |= 0
     })
-    mode
+    oct"0100000" + oct"${intToOctal(mode)}"
   }
 }
 

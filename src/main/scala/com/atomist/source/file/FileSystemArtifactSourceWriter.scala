@@ -6,7 +6,7 @@ import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermission
 
 import com.atomist.source._
-import com.atomist.util.{FilePermissions, Octal, Permissions}
+import com.atomist.util.{Octal, Permissions}
 import org.apache.commons.io.FileUtils
 
 import scala.util.Try
