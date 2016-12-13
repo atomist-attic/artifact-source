@@ -5,6 +5,7 @@ import java.util.function.{Function => JFunction}
 import com.atomist.source.ArtifactSource.FileFilter
 
 import scala.collection.mutable.ListBuffer
+import scala.language.{implicitConversions, postfixOps}
 
 trait FileEditor {
 
