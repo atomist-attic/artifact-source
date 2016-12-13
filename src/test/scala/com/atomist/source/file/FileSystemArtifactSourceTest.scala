@@ -120,7 +120,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val filtered = s.filter(d => true, f => !f.name.contains(".vm"))
     filtered.allFiles.exists(_.name contains ".vm") shouldBe false
     withClue("should leave nothing after filter") {
-      filtered.allFiles.isEmpty shouldBe true
+      filtered.allFiles shouldBe empty
     }
   }
 
@@ -134,13 +134,13 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   it should "be able to find existing directory" in {
     val s = AtomistTemplatesSource
     s.directories.nonEmpty shouldBe true
-    s.findDirectory("atomistTemplates").isDefined shouldBe true
+    s.findDirectory("atomistTemplates") shouldBe defined
   }
 
   it should "not be able to find bogus directory" in {
     val s = AtomistTemplatesSource
     s.directories.nonEmpty shouldBe true
-    s.findDirectory("xsdfsdfsdfsdf").isDefined shouldBe false
+    s.findDirectory("xsdfsdfsdfsdf") shouldBe empty
   }
 
   it should "reject bogus file rootPath" in {

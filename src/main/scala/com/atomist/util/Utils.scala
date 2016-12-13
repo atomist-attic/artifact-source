@@ -27,9 +27,7 @@ object Utils {
     * Implicit conversion from Scala function to Java 8 Function.
     */
   implicit def toFunction[From, To](function: (From) => To): java.util.function.Function[From, To] =
-    new java.util.function.Function[From, To] {
-      override def apply(input: From): To = function(input)
-    }
+    (input: From) => function(input)
 
   type Closeable = {def close(): Unit}
 
@@ -46,7 +44,7 @@ object Utils {
   def withCloseable[T <: Closeable, R](f: Unit => T)(block: T => R): R = {
     var closable: Option[T] = None
     try {
-      closable = Some(f())
+      closable = Some(f(()))
       block(closable.get)
     } finally {
       if (closable.isDefined)
@@ -79,5 +77,4 @@ object Utils {
     def toUnix: String =
       s.replaceAll("\\r\\n", "\n").replaceAll("\\r", "\n")
   }
-
 }

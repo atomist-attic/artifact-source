@@ -2,8 +2,6 @@ package com.atomist.source
 
 import com.atomist.source.ArtifactSourceUtils.prettyListFiles
 
-import scala.collection.JavaConversions._
-
 class SimpleFileBasedArtifactSourceTest extends CommonTests {
 
   override val validSource: ArtifactSource = new SimpleFileBasedArtifactSource("",
@@ -34,7 +32,7 @@ class SimpleFileBasedArtifactSourceTest extends CommonTests {
     fbac.findFile("name") should not be defined
     fbac.findFile(s"${pathElements.mkString("/")}/name") shouldBe defined
     fbac.findFile(s"${pathElements.mkString("/")}/name").get should equal(f1)
-    fbac.allDirectories.map(d => d.path).containsAll(Set("some", "some/path")) shouldBe true
+    fbac.allDirectories.map(_.path) should contain allOf("some", "some/path")
     fbac.allDirectories.size should equal(2)
 
     fbac.directories.isEmpty shouldBe false

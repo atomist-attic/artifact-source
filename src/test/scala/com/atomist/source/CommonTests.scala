@@ -2,8 +2,6 @@ package com.atomist.source
 
 import org.scalatest.{FlatSpec, Matchers}
 
-import scala.collection.JavaConversions._
-
 /**
   * Tests to run against different representations of ArtifactSource:
   * Directory browsing and File based
@@ -156,21 +154,6 @@ abstract class CommonTests extends FlatSpec with Matchers {
     result.allDirectories.size should equal(as2.allDirectories.size + 1)
     result.findDirectory(s"my/$dirName") shouldBe defined
     result.findDirectory("my").get.artifacts.size should be(3)
-  }
-
-  it should "not allow mutation of exposed collections" in {
-    val f1 = StringFileArtifact("name", "my/new/path", "contents")
-    val result = validSource + Seq(f1)
-    val f2 = StringFileArtifact("name", "my/new/path", "contents")
-    an[UnsupportedOperationException] should be thrownBy {
-      validSource.allFiles.add(f2)
-    }
-    an[UnsupportedOperationException] should be thrownBy {
-      validSource.artifacts.add(f2)
-    }
-    an[UnsupportedOperationException] should be thrownBy {
-      validSource.files.add(f2)
-    }
   }
 
   it should "add extra directories when adding single file" in {
