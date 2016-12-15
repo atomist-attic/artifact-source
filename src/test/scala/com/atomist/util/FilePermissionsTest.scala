@@ -16,9 +16,9 @@ class FilePermissionsTest extends FlatSpec with Matchers {
       PosixFilePermission.GROUP_READ,
       PosixFilePermission.GROUP_EXECUTE,
       PosixFilePermission.OTHERS_READ,
-      PosixFilePermission.OTHERS_EXECUTE).asJava
+      PosixFilePermission.OTHERS_EXECUTE)
 
-    FilePermissions.toMode(permissions) should equal(33261)
+    FilePermissions.toMode(permissions.asJava) should equal(33261)
   }
 
   it should "convert octal 100644 to decimal" in {
@@ -26,8 +26,8 @@ class FilePermissionsTest extends FlatSpec with Matchers {
       PosixFilePermission.OWNER_READ,
       PosixFilePermission.OWNER_WRITE,
       PosixFilePermission.GROUP_READ,
-      PosixFilePermission.OTHERS_READ).asJava
+      PosixFilePermission.OTHERS_READ)
 
-    FilePermissions.toMode(permissions) should equal(33188)
+    FilePermissions.toMode(permissions.asJava) should equal(33188)
   }
 }
