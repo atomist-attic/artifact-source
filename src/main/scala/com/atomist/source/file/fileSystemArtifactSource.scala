@@ -79,6 +79,18 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
     }).sortBy(a => (a.name, a.pathElements.mkString("/")))
   }
 
+  private def filterFiles(files: Array[File]) = {
+    if (pathFilters.isEmpty) files.map(wrap).toSeq
+    else {
+      val buf = new ListBuffer[File]
+      for (pf <- pathFilters) {
+        buf ++= files.filter(f => pf(f.getPath))
+      }
+      println("***** " + buf.mkString("\n"))
+      buf.distinct.map(wrap)
+    }
+  }
+
   // Can't extend Artifact as it's a sealed trait, so these
   // methods will become subclass implementations of Artifact methods
   private abstract class LazyFileSystemArtifact(f: File, root: File) {
@@ -106,18 +118,6 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
     override val artifacts: Seq[Artifact] = filterFiles(dir.listFiles)
 
     override def toString = s"Name: '$name':path: '$path' wrapping $dir - ${getClass.getSimpleName}"
-  }
-
-  private def filterFiles(files: Array[File]) = {
-    if (pathFilters.isEmpty) files.map(wrap).toSeq
-    else {
-      val buf = new ListBuffer[File]
-      for (pf <- pathFilters) {
-        buf ++= files.filter(f => pf(f.getPath))
-      }
-      println("***** " + buf.mkString("\n"))
-      buf.distinct.map(wrap).toSeq
-    }
   }
 
   private class LazyFileSystemFileArtifact(val f: File, root: File)
