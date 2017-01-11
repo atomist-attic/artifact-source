@@ -5,10 +5,10 @@ import java.nio.file._
 import java.nio.file.attribute.PosixFileAttributes
 import java.util.regex.Matcher
 
-import com.atomist.source.ArtifactSource.{ArtifactDirFilter, ArtifactFileFilter}
 import com.atomist.source._
 import com.atomist.util.FilePermissions
 
+import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -35,8 +35,8 @@ case class SimpleFileSystemArtifactSourceIdentifier(rootFile: File)
 
 object FileSystemArtifactSource {
 
-  def apply(id: FileSystemArtifactSourceIdentifier, df: ArtifactDirFilter, ff: ArtifactFileFilter) =
-    new FileSystemArtifactSource(id, df, ff)
+  def apply(id: FileSystemArtifactSourceIdentifier, pathFilters: Seq[PathFilter]) =
+    new FileSystemArtifactSource(id, pathFilters)
 
   def apply(id: FileSystemArtifactSourceIdentifier) =
     new FileSystemArtifactSource(id)
@@ -46,8 +46,7 @@ object FileSystemArtifactSource {
   * ArtifactSource backed by file system.
   */
 class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
-                               val df: ArtifactDirFilter = _ => true,
-                               val ff: ArtifactFileFilter = _ => true)
+                               val pathFilters: Seq[PathFilter] = Seq())
   extends ArtifactSource
     with DirectoryBasedArtifactContainer {
 
@@ -60,17 +59,25 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
     else
       new LazyFileSystemFileArtifact(f, id.rootFile)
 
-  override lazy val artifacts: Seq[Artifact] =
+  //  override lazy val artifacts: Seq[Artifact] = {
+  //    (id.rootFile match {
+  //      case d: File if d.isDirectory => if (pathFilters.map(pf => {
+  //        println(s"d: processing filter ${pf.getClass.getSimpleName} for path ${d.getPath}")
+  //        pf(d.getPath)
+  //      }).exists(_ == false)) d.listFiles.map(wrap).toSeq else Nil
+  //      case f: File => if (pathFilters.map(pf => {
+  //        println(s"f: processing filter ${pf.getClass.getSimpleName} for path ${f.getPath}")
+  //        pf(f.getPath)
+  //      }).exists(_ == false)) Seq(wrap(f)) else Nil
+  //    }).sortBy(a => (a.name, a.pathElements.mkString("/")))
+  //  }
+
+  override lazy val artifacts: Seq[Artifact] = {
     (id.rootFile match {
-      case d: File if d.isDirectory => d.listFiles.filter(f => {
-        println("*** " + f.getPath)
-        df(f.getPath)
-      }).map(wrap).toSeq
-      case f: File => if (ff(f.getPath)) {
-        println("### " + f.getPath)
-        Seq(wrap(f))
-      } else Nil
+      case d: File if d.isDirectory => filterFiles(d.listFiles)
+      case f: File => filterFiles(Array(f))
     }).sortBy(a => (a.name, a.pathElements.mkString("/")))
+  }
 
   // Can't extend Artifact as it's a sealed trait, so these
   // methods will become subclass implementations of Artifact methods
@@ -96,12 +103,21 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
 
     override val pathElements: Seq[String] = pathElementsFromFile
 
-    override val artifacts: Seq[Artifact] = dir.listFiles.filter(f => {
-      println("@@@ " + f.getPath)
-      ff(f.getPath)
-    }).map(wrap)
+    override val artifacts: Seq[Artifact] = filterFiles(dir.listFiles)
 
     override def toString = s"Name: '$name':path: '$path' wrapping $dir - ${getClass.getSimpleName}"
+  }
+
+  private def filterFiles(files: Array[File]) = {
+    if (pathFilters.isEmpty) files.map(wrap).toSeq
+    else {
+      val buf = new ListBuffer[File]
+      for (pf <- pathFilters) {
+        buf ++= files.filter(f => pf(f.getPath))
+      }
+      println("***** " + buf.mkString("\n"))
+      buf.distinct.map(wrap).toSeq
+    }
   }
 
   private class LazyFileSystemFileArtifact(val f: File, root: File)
@@ -131,6 +147,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
 
     override def toString = s"Name: '$name':path: '$path' wrapping $f - ${getClass.getSimpleName}"
   }
+
 }
 
 /**
@@ -139,10 +156,9 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
 object ClassPathArtifactSource {
 
   def toArtifactSource(resource: String,
-                       df: ArtifactDirFilter = _ => true,
-                       ff: ArtifactFileFilter = _ => true): ArtifactSource = {
+                       pathFilters: Seq[PathFilter] = Seq()): ArtifactSource = {
     val f = classPathResourceToFile(resource)
-    new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f), df, ff)
+    new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f), pathFilters)
   }
 
   def classPathResourceToFile(resource: String): File = {

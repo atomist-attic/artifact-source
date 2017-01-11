@@ -141,11 +141,11 @@ trait DirectoryArtifact extends Artifact with ArtifactContainer {
 
   override def toString: String =
     s"${getClass.getSimpleName}(${System.identityHashCode(this)}):path(${pathElements.size})='${pathElements.mkString(",")}';" +
-      s"${artifacts.size} artifacts=[${artifacts.map(a => a.name).mkString(",")}]"
+      s"${artifacts.size} artifacts=[${artifacts.map(_.name).mkString(",")}]"
 }
 
 /**
-  * Useable when constructing new FileArtifact instances.
+  * Usable when constructing new FileArtifact instances.
   */
 case class NameAndPathElements(name: String, pathElements: Seq[String])
 

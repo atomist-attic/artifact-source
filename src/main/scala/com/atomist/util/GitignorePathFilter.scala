@@ -12,19 +12,19 @@ import org.springframework.util.AntPathMatcher
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-object AtomistIgnoreFileFilter {
+object GitignorePathFilter {
 
-  private val AtomistIgnoreFile = ".atomist/ignore"
+  private val GitIgnoreFile = ".gitignore"
 
-  def apply(rootPath: String) = new AtomistIgnoreFileFilter(rootPath)
+  def apply(rootPath: String) = new GitignorePathFilter(rootPath)
 }
 
-class AtomistIgnoreFileFilter(val rootPath: String) extends PathFilter {
+class GitignorePathFilter(val rootPath: String) extends PathFilter {
 
-  import AtomistIgnoreFileFilter._
+  import GitignorePathFilter._
 
   private val matchedFiles = {
-    val file = Paths.get(rootPath, AtomistIgnoreFile).toFile
+    val file = Paths.get(rootPath, GitIgnoreFile).toFile
     if (file.exists) {
       val patterns = getPatterns(file)
       val pathMatcher = new AntPathMatcher()
@@ -50,15 +50,6 @@ class AtomistIgnoreFileFilter(val rootPath: String) extends PathFilter {
     !matchedFiles.exists(f => f.equals(file) || isSubDirectory(f, file))
   }
 
-  private def getPatterns(file: File): List[String] = {
-    FileUtils.readLines(file, Charset.defaultCharset()).asScala
-      .filterNot(l => l.isEmpty || l.startsWith("#"))
-      .map(l => if (l.endsWith("/") || l.endsWith("\\")) l.dropRight(1) else l)
-      .map(Paths.get(rootPath, _).toString)
-      .distinct
-      .toList
-  }
-
   def isSubDirectory(base: File, child: File): Boolean = {
     val baseFile = base.getCanonicalFile
     val childFile = child.getCanonicalFile
@@ -70,5 +61,14 @@ class AtomistIgnoreFileFilter(val rootPath: String) extends PathFilter {
       parentFile = parentFile.getParentFile
     }
     false
+  }
+
+  private def getPatterns(file: File): List[String] = {
+    FileUtils.readLines(file, Charset.defaultCharset()).asScala
+      .filterNot(l => l.isEmpty || l.startsWith("#"))
+      .map(l => if (l.endsWith("/") || l.endsWith("\\")) l.dropRight(1) else l)
+      .map(Paths.get(rootPath, _).toString)
+      .distinct
+      .toList
   }
 }

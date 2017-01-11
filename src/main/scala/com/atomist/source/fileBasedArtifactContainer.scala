@@ -27,19 +27,19 @@ trait DirectoryInferringArtifactContainer extends FileBasedArtifactContainer {
     val allPaths: Set[Seq[String]] = {
       def pathsUnder(path: Seq[String]): Set[Seq[String]] = {
         val pathsBelow: Set[Seq[String]] = allFiles
-          .filter(f => f.parentPathElements.nonEmpty && path.forall(p => f.parentPathElements.contains(p)))
-          .map(f => f.pathElements)
-          .filter(f => f.nonEmpty)
+          .filter(f => f.parentPathElements.nonEmpty && path.forall(f.parentPathElements.contains(_)))
+          .map(_.pathElements)
+          .filter(_.nonEmpty)
           .toSet
 
         def pathsAbove(pathElements: Seq[String]): Set[Seq[String]] =
           if (pathElements.size < 1) Set()
           else Set(pathElements) ++ pathsAbove(pathElements.dropRight(1))
 
-        val thePathsAbove = pathsBelow.flatMap(p => pathsAbove(p))
+        val thePathsAbove = pathsBelow.flatMap(pathsAbove(_))
 
         def str(paths: Set[Seq[String]]) =
-          paths.map(p => p.mkString("/")).mkString("[", ",", "]")
+          paths.map(_.mkString("/")).mkString("[", ",", "]")
 
         pathsBelow ++ thePathsAbove
       }

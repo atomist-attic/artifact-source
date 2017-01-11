@@ -2,19 +2,25 @@ package com.atomist.util
 
 import java.nio.file.Paths
 
+import com.atomist.source.PathFilter
+import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.eclipse.jgit.treewalk.{FileTreeIterator, TreeWalk, WorkingTreeIterator}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
-case class GitignoreFileFilter(rootPath: String) {
+case class GitignorePathFilterOld(rootPath: String) extends PathFilter {
 
   private val ignoredFiles = {
     val paths = ListBuffer.empty[String]
     Try {
-      val builder = new FileRepositoryBuilder
-      val repository = builder.readEnvironment().findGitDir().build()
+      val gitDir = Paths.get(rootPath, ".git").toFile
+      if (gitDir.exists())
+        paths += gitDir.getPath
+
+      val git = Git.open(gitDir)
+      val repository = git.getRepository
       val treeWalk = new TreeWalk(repository)
       treeWalk.addTree(new FileTreeIterator(repository))
       while (treeWalk.next()) {
@@ -31,10 +37,7 @@ case class GitignoreFileFilter(rootPath: String) {
     }
   }
 
-  println(ignoredFiles.mkString("\n"))
+  // println(ignoredFiles.mkString("\n"))
 
-  def apply(path: String): Boolean = {
-    println(s"^^^ $path: matched: ${ignoredFiles.exists(_.equals(path))}")
-    !ignoredFiles.exists(_.equals(path))
-  }
+  override def apply(path: String): Boolean = ignoredFiles.exists(_.startsWith(path))
 }

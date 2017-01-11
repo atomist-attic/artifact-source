@@ -23,10 +23,6 @@ case class SimpleFileEditor(file: FileArtifact => Boolean, f: FileArtifact => Fi
 
 object ArtifactSource {
 
-  type ArtifactDirFilter = String => Boolean
-
-  type ArtifactFileFilter = String => Boolean
-
   type DirFilter = DirectoryArtifact => Boolean
 
   type FileFilter = FileArtifact => Boolean
@@ -167,37 +163,6 @@ trait ArtifactSource extends RootArtifactContainer {
         case f: FileArtifact => FileAdditionDelta(f)
       })
     }
-
-  def filterArtifactSource(df: ArtifactDirFilter, ff: ArtifactFileFilter): ArtifactSource = {
-    def filterArtifacts(artifacts: Seq[Artifact]) = artifacts collect {
-      case d: DirectoryArtifact if df(d.path) => new FilteringDirectoryArtifact(d)
-      case f: FileArtifact if ff(f.path) => f
-    }
-
-    class FilteringDirectoryArtifact(dir: DirectoryArtifact)
-      extends DirectoryArtifact
-        with DirectoryBasedArtifactContainer {
-
-      override val name = dir.name
-      override val pathElements = dir.pathElements
-
-      override def artifacts: Seq[Artifact] = filterArtifacts(dir.artifacts)
-    }
-
-    new ArtifactSource with DirectoryBasedArtifactContainer {
-      override val id = ArtifactSource.this.id
-
-      override val artifacts: Seq[Artifact] = filterArtifacts(ArtifactSource.this.artifacts)
-
-      override val cachedDeltas: Seq[Delta] = {
-        val deletedArtifacts: Seq[Artifact] = ArtifactSource.this.artifacts.filter(a => !artifacts.exists(_.path.equals(a.path)))
-        ArtifactSource.this.cachedDeltas ++ (deletedArtifacts map {
-          case d: DirectoryArtifact => DirectoryDeletionDelta(d)
-          case f: FileArtifact => FileDeletionDelta(f)
-        })
-      }
-    }
-  }
 
   /**
     * Filter down to artifacts matching the given predicates.
