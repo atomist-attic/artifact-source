@@ -4,12 +4,14 @@ import java.io.{File, FileInputStream}
 import java.nio.file._
 import java.nio.file.attribute.PosixFileAttributes
 import java.util.regex.Matcher
+import java.util.{List => JList}
 
 import com.atomist.source._
 import com.atomist.source.filter.ArtifactFilter
 import com.atomist.util.FilePermissions
 
 import scala.annotation.tailrec
+import scala.collection.JavaConverters._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -38,6 +40,9 @@ object FileSystemArtifactSource {
 
   def apply(id: FileSystemArtifactSourceIdentifier, artifactFilters: Seq[ArtifactFilter]) =
     new FileSystemArtifactSource(id, artifactFilters)
+
+  def apply(id: FileSystemArtifactSourceIdentifier, artifactFilters: JList[ArtifactFilter]) =
+    new FileSystemArtifactSource(id, artifactFilters.asScala)
 
   def apply(id: FileSystemArtifactSourceIdentifier, artifactFilter: ArtifactFilter) =
     new FileSystemArtifactSource(id, Seq(artifactFilter))
@@ -76,6 +81,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
       case Nil => files
       case head :: tail => applyFilter(files.filter(f => head(f.getPath)), tail)
     }
+
     applyFilter(unfilteredFiles, artifactFilters)
   }
 

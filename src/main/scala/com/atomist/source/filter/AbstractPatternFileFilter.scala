@@ -8,10 +8,11 @@ import java.nio.file.attribute.BasicFileAttributes
 import org.apache.commons.io.FileUtils
 import org.springframework.util.AntPathMatcher
 
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-abstract class AbstractPathFilter(val rootPath: String) extends ArtifactFilter {
+abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactFilter {
 
   private val matchedFiles = {
     val file = Paths.get(rootPath, filePath).toFile
@@ -42,16 +43,14 @@ abstract class AbstractPathFilter(val rootPath: String) extends ArtifactFilter {
   }
 
   private def isSubDirectory(base: File, child: File): Boolean = {
-    val baseFile = base.getCanonicalFile
-    val childFile = child.getCanonicalFile
-    var parentFile = childFile
-    while (parentFile != null) {
-      if (baseFile.equals(parentFile)) {
-        return true
-      }
-      parentFile = parentFile.getParentFile
+    @tailrec
+    def testFile(file: File, parent: File): Boolean = {
+      if (parent == null) false
+      else if (file.equals(parent)) true
+      else testFile(parent, parent.getParentFile)
     }
-    false
+
+    testFile(base.getCanonicalFile, child.getCanonicalFile)
   }
 
   private def getPatterns(file: File): List[String] = {
