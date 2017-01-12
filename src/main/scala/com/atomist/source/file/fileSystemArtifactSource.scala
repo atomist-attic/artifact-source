@@ -141,7 +141,6 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
 
     override def toString = s"Name: '$name':path: '$path' wrapping $f - ${getClass.getSimpleName}"
   }
-
 }
 
 /**
