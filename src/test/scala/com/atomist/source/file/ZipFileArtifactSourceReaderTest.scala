@@ -108,9 +108,4 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
     val resourceDir = zipSource.findDirectory("src/test/resources")
     resourceDir shouldBe defined
   }
-
-  private def validateTargetDirectory(s: ArtifactSource): Unit = {
-    val files = s.allFiles
-    files.exists(_.name contains ".vm")
-  }
 }

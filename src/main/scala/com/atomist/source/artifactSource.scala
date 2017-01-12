@@ -168,7 +168,7 @@ trait ArtifactSource extends RootArtifactContainer {
     * Filter down to artifacts matching the given predicates.
     */
   def filter(dirFilter: DirFilter, fileFilter: FileFilter): ArtifactSource = {
-    def filterArtifacts(arts: Seq[Artifact]) = arts collect {
+    def filterArtifacts(artifacts: Seq[Artifact]) = artifacts collect {
       case d: DirectoryArtifact if dirFilter(d) => new FilteringDirectoryArtifact(d)
       case f: FileArtifact if fileFilter(f) => f
     }

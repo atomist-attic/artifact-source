@@ -2,10 +2,11 @@ package com.atomist.source.file
 
 import java.io.{File, FileInputStream}
 import java.nio.file.attribute.PosixFileAttributeView
-import java.nio.file.{FileSystems, Files}
+import java.nio.file.{FileSystems, Files, Paths}
 
 import com.atomist.source._
 import com.atomist.source.file.ClassPathArtifactSource.{classPathResourceToFile, toArtifactSource}
+import com.atomist.source.filter.{AtomistIgnoreFileFilter, DotGitDirFilter, DotGitignoreFileFilter}
 import com.atomist.util.BinaryDecider.isBinaryContent
 import org.scalatest._
 
@@ -29,7 +30,7 @@ object FileSystemArtifactSourceTest {
   }
 
   def ignoreFiles3ZipId = {
-    val f = classPathResourceToFile("ignore-files/dot-git-ignored-node_modules.zip")
+    val f = classPathResourceToFile("ignore-files/dot-atomist-ignored-node_modules.zip")
     ZipFileInput(new FileInputStream(f))
   }
 }
@@ -47,7 +48,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   it should "find single file and verify contents" in {
     val classpathSource = toArtifactSource("java-source/HelloWorldService.java")
     val artifacts = classpathSource.artifacts
-    val files = artifacts.filter(a => a.isInstanceOf[FileArtifact])
+    val files = artifacts.filter(_.isInstanceOf[FileArtifact])
     artifacts.size should be > 0
     val aFile = files.head.asInstanceOf[FileArtifact]
     aFile.contentLength should be > 0
@@ -127,7 +128,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   it should "be able to filter directories" in {
     val s = AtomistTemplatesSource
     s.allFiles.exists(f => f.name contains "Application") shouldBe true
-    val filtered = s.filter(d => !d.name.contains("spring"), f => true)
+    val filtered = s.filter(!_.name.contains("spring"), f => true)
     filtered.allFiles.exists(_.name contains "Java") shouldBe false
   }
 
@@ -149,19 +150,19 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     an[ArtifactSourceException] should be thrownBy new FileSystemArtifactSource(fsid)
   }
 
-  it should "handle ignoring files for first test source" in {
+  it should "handle filtering source with no .gitignore" in {
     val zid = ignoreFiles1ZipId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val tmpDir = Files.createTempDirectory(null)
     val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
-    val file = fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
+    fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
-    val as = new FileSystemArtifactSource(fid)
+    val as = FileSystemArtifactSource(fid)
     as.findDirectory(".atomist/node_modules") shouldBe defined
   }
 
-  it should "handle ignoring files for second test source" in {
+  it should "handle filtering source with negated 'node_modules' in .gitignore" in {
     val zid = ignoreFiles2ZipId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
@@ -169,11 +170,11 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
-    val as = new FileSystemArtifactSource(fid)
+    val as = FileSystemArtifactSource(fid, DotGitignoreFileFilter(tmpDir.toString))
     as.findDirectory(".atomist/node_modules") shouldBe defined
   }
 
-  it should "handle ignoring files for third test source" in {
+  it should "handle filtering source with 'node_modules' in .atomist/ignore" in {
     val zid = ignoreFiles3ZipId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
@@ -181,8 +182,23 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
-    val as = new FileSystemArtifactSource(fid)
+    val as = FileSystemArtifactSource(fid, Seq(
+      DotGitignoreFileFilter(tmpDir.toString),
+      AtomistIgnoreFileFilter(tmpDir.toString)))
     as.findDirectory(".atomist/node_modules") shouldBe empty
+    as.findDirectory("target") shouldBe empty
+  }
+
+  it should "handle filtering .git and target from artifact-source" in {
+    val rootPath = System.getProperty("user.dir")
+    val fid = FileSystemArtifactSourceIdentifier(Paths.get(rootPath).toFile)
+    val as = FileSystemArtifactSource(fid, Seq(
+      DotGitignoreFileFilter(rootPath),
+      AtomistIgnoreFileFilter(rootPath),
+      DotGitDirFilter(rootPath)))
+    as.findDirectory("src") shouldBe defined
+    as.findDirectory(".git") shouldBe empty
+    as.findDirectory("target") shouldBe empty
   }
 
   private def validateTargetDirectory(s: ArtifactSource): Unit = {
