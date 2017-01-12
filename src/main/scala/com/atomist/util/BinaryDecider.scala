@@ -14,6 +14,7 @@ object BinaryDecider {
   }
 
   private case class CharTypeCounts(ascii: Int, binary: Int) {
+
     def isBinary = if (binary == 0) false else 100 * binary / (ascii + binary) > 95
 
     def incAscii = copy(ascii = ascii + 1)
