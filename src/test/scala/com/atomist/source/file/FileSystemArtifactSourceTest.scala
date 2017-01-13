@@ -6,7 +6,7 @@ import java.nio.file.{FileSystems, Files, Paths}
 
 import com.atomist.source._
 import com.atomist.source.file.ClassPathArtifactSource.{classPathResourceToFile, toArtifactSource}
-import com.atomist.source.filter.{AtomistIgnoreFileFilter, DotGitDirFilter, DotGitignoreFileFilter}
+import com.atomist.source.filter.{AtomistIgnoreFileFilter, GitDirFilter, GitignoreFileFilter}
 import com.atomist.util.BinaryDecider.isBinaryContent
 import org.scalatest._
 
@@ -170,7 +170,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
-    val as = FileSystemArtifactSource(fid, DotGitignoreFileFilter(tmpDir.toString))
+    val as = FileSystemArtifactSource(fid, GitignoreFileFilter(tmpDir.toString))
     as.findDirectory(".atomist/node_modules") shouldBe defined
   }
 
@@ -183,7 +183,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
     val as = FileSystemArtifactSource(fid, Seq(
-      DotGitignoreFileFilter(tmpDir.toString),
+      GitignoreFileFilter(tmpDir.toString),
       AtomistIgnoreFileFilter(tmpDir.toString)))
     as.findDirectory(".atomist/node_modules") shouldBe empty
     as.findDirectory("target") shouldBe empty
@@ -193,9 +193,9 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val rootPath = System.getProperty("user.dir")
     val fid = FileSystemArtifactSourceIdentifier(Paths.get(rootPath).toFile)
     val as = FileSystemArtifactSource(fid, Seq(
-      DotGitignoreFileFilter(rootPath),
+      GitignoreFileFilter(rootPath),
       AtomistIgnoreFileFilter(rootPath),
-      DotGitDirFilter(rootPath)))
+      GitDirFilter(rootPath)))
     as.findDirectory("src") shouldBe defined
     as.findDirectory(".git") shouldBe empty
     as.findDirectory("target") shouldBe empty
