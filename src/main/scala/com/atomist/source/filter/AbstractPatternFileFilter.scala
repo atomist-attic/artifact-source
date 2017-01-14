@@ -6,11 +6,10 @@ import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 
 import org.apache.commons.io.FileUtils
-import org.springframework.util.AntPathMatcher
 
-import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
+import scala.util.{Failure, Success, Try}
 
 abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactFilter {
 
@@ -18,40 +17,41 @@ abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactF
     val file = Paths.get(rootPath, filePath).toFile
     if (file.exists) {
       val patterns = getPatterns(file)
-      val pathMatcher = new AntPathMatcher()
-      val files = ArrayBuffer.empty[File]
+      // val pathMatcher = new AntPathMatcher() // spring-core required
+      val fs = FileSystems.getDefault
+      val pathMatchers = patterns.map(p =>
+        Try(fs.getPathMatcher(s"glob:$p")) match {
+          case Success(matcher) => matcher
+          case Failure(e) => null
+        }
+      ) ++ patterns.map(p =>
+        Try(fs.getPathMatcher(s"regex:$p")) match {
+          case Success(matcher) => matcher
+          case Failure(e) => null
+        }
+      ).filter(_ != null)
+
+      val files = ArrayBuffer.empty[String]
       Files.walkFileTree(Paths.get(rootPath), new SimpleFileVisitor[Path] {
         override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes) = {
-          patterns.foreach(p => if (pathMatcher.`match`(p, dir.toString)) files += dir.toFile)
+          if (pathMatchers.exists(_.matches(dir))) files += dir.toString
+          // if (patterns.exists(p => pathMatcher.`match`(p, dir.toString))) files += dir.toString
           FileVisitResult.CONTINUE
         }
 
         override def visitFile(file: Path, attrs: BasicFileAttributes) = {
-          patterns.foreach(p => if (pathMatcher.`match`(p, file.toString)) files += file.toFile)
+          if (pathMatchers.exists(_.matches(file))) files += file.toString
+          // if (patterns.exists(p => pathMatcher.`match`(p, file.toString))) files += file.toString
           FileVisitResult.CONTINUE
         }
       })
-      files.toList
+      files.distinct.toList
     } else Nil
   }
 
   protected def filePath: String
 
-  override def apply(path: String): Boolean = {
-    val file = new File(path)
-    !matchedFiles.exists(f => f.equals(file) || isSubDirectory(f, file))
-  }
-
-  private def isSubDirectory(base: File, child: File): Boolean = {
-    @tailrec
-    def testFile(file: File, parent: File): Boolean = {
-      if (parent == null) false
-      else if (file.equals(parent)) true
-      else testFile(parent, parent.getParentFile)
-    }
-
-    testFile(base.getCanonicalFile, child.getCanonicalFile)
-  }
+  override def apply(path: String): Boolean = !matchedFiles.exists(_.equals(path))
 
   private def getPatterns(file: File): List[String] = {
     FileUtils.readLines(file, Charset.defaultCharset()).asScala

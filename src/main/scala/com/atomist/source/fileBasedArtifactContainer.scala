@@ -58,7 +58,7 @@ trait DirectoryInferringArtifactContainer extends FileBasedArtifactContainer {
     directoriesInferred
   }
 
-  // Directory artifact returned by inference
+  // Directory artifact returned by inference.
   private case class LightweightDirectoryArtifact(name: String,
                                                   pathElements: Seq[String],
                                                   override val uniqueId: Option[String])
@@ -74,13 +74,13 @@ trait DirectoryInferringArtifactContainer extends FileBasedArtifactContainer {
       * which will still be available from each FileArtifact.
       */
     override def allFiles: Seq[FileArtifact] =
-      DirectoryInferringArtifactContainer.this.allFiles.filter(f => f.parentPathElements.startsWith(pathElements))
+      DirectoryInferringArtifactContainer.this.allFiles.filter(_.parentPathElements.startsWith(pathElements))
 
     /**
-      * All directories, including nested directories
+      * All directories, including nested directories.
       */
     override def allDirectories: Seq[DirectoryArtifact] =
-      DirectoryInferringArtifactContainer.this.allDirectories.filter(d => d.parentPathElements.equals(pathElements))
+      DirectoryInferringArtifactContainer.this.allDirectories.filter(_.parentPathElements.equals(pathElements))
   }
 }
 

@@ -201,15 +201,6 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     as.findDirectory("target") shouldBe empty
   }
 
-  it should "not filter artifact-source" in {
-    val rootPath = System.getProperty("user.dir")
-    val fid = FileSystemArtifactSourceIdentifier(Paths.get(rootPath).toFile)
-    val as = FileSystemArtifactSource(fid)
-    as.findDirectory("src") shouldBe defined
-    as.findDirectory(".git") shouldBe defined
-    as.findDirectory("target") shouldBe defined
-  }
-
   private def validateTargetDirectory(s: ArtifactSource): Unit = {
     val files = s.allFiles
     files.exists(_.name contains ".vm")

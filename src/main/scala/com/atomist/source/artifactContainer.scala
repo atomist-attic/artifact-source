@@ -20,10 +20,9 @@ trait ArtifactContainer {
 
   def empty: Boolean = artifacts.isEmpty
 
-  def directories: Seq[DirectoryArtifact] = artifacts
-    .collect {
-      case da: DirectoryArtifact => da
-    }
+  def directories: Seq[DirectoryArtifact] = artifacts collect {
+    case da: DirectoryArtifact => da
+  }
 
   /**
     * Find directory under current directory. If the name contains / it will
@@ -54,11 +53,14 @@ trait ArtifactContainer {
   }
 
   def findDirectoryByPath(pathElements: Seq[String]): Option[DirectoryArtifact] = {
-    allDirectories.find(dir => dir.pathElements.equals(relativeToFullPath(pathElements)))
+    val relPath = relativeToFullPath(pathElements)
+    allDirectories.find(_.pathElements.equals(relPath))
   }
 
-  def findFileByPath(name: String, pathElements: Seq[String]): Option[FileArtifact] =
-    allFiles.find(f => f.name.equals(name) && f.pathElements.equals(relativeToFullPath(pathElements)))
+  def findFileByPath(name: String, pathElements: Seq[String]): Option[FileArtifact] = {
+    val relPath = relativeToFullPath(pathElements)
+    allFiles.find(f => f.name.equals(name) && f.pathElements.equals(relPath))
+  }
 
   /**
     * Subclasses should override this to return the full path for the given relative path.
