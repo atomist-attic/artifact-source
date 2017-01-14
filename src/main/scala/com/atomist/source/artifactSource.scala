@@ -178,6 +178,7 @@ trait ArtifactSource extends RootArtifactContainer {
         with DirectoryBasedArtifactContainer {
 
       override val name = dir.name
+
       override val pathElements = dir.pathElements
 
       override def artifacts: Seq[Artifact] = filterArtifacts(dir.artifacts)
@@ -205,7 +206,7 @@ trait ArtifactSource extends RootArtifactContainer {
              fileFilter: JFunction[FileArtifact, Boolean]): ArtifactSource =
     filter(d => dirFilter.apply(d), f => fileFilter.apply(f))
 
-  def removeEmptyDirectories(): ArtifactSource = filter(d => d.allFiles.nonEmpty, f => true)
+  def removeEmptyDirectories(): ArtifactSource = filter(_.allFiles.nonEmpty, _ => true)
 
   def +(as: ArtifactSource): ArtifactSource = this plus as
 
@@ -305,7 +306,7 @@ trait ArtifactSource extends RootArtifactContainer {
       if (dir.isDefined) {
         // TODO this is fragile
         val pathTok = path.split("/")
-        ArtifactSource.repathed(getIdString + "/" + path, dir.get.allFiles, a => a.pathElements.drop(pathTok.length))
+        ArtifactSource.repathed(getIdString + "/" + path, dir.get.allFiles, _.pathElements.drop(pathTok.length))
       } else if (findFile(path).isDefined)
         throw new IllegalArgumentException(s"Cannot drill into directory '$path': It's a file not a directory")
       else
@@ -338,9 +339,8 @@ trait ArtifactSource extends RootArtifactContainer {
   /**
     * Change paths inside this ArtifactSource.
     */
-  def repathed(idSuffix: String, newPathFor: Artifact => Seq[String]): ArtifactSource = {
+  def repathed(idSuffix: String, newPathFor: Artifact => Seq[String]): ArtifactSource =
     ArtifactSource.repathed(this.getIdString + idSuffix, this.allFiles, newPathFor)
-  }
 
   /**
     * Return ArtifactSource containing artifacts under this path.

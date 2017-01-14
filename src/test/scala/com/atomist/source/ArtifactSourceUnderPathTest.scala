@@ -75,4 +75,14 @@ class ArtifactSourceUnderPathTest extends FlatSpec with Matchers {
 
     orig / "" should be theSameInstanceAs orig
   }
+
+  it should "create directories defined in SimpleFileBasedArtifactSource after using + " in pendingUntilFixed {
+    val f = StringFileArtifact(".atomist/editors/Editor.sj", "{}")
+    val f2 = StringFileArtifact(".atomist/editors/Editor2.sj", "{}")
+    val as = SimpleFileBasedArtifactSource(f) + SimpleFileBasedArtifactSource(f2)
+    // val as = SimpleFileBasedArtifactSource(f, f2)
+    as.allFiles.size should be(2)
+    val as2 = as.underPath(".atomist")
+    as2.allFiles.size should be(2)
+  }
 }

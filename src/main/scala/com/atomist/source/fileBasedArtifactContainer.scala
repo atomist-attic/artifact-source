@@ -19,7 +19,7 @@ trait FileBasedArtifactContainer extends ArtifactContainer {
 trait DirectoryInferringArtifactContainer extends FileBasedArtifactContainer {
 
   /**
-    * All directories, including nested directories
+    * All directories, including nested directories.
     */
   override lazy val allDirectories: Seq[DirectoryArtifact] = {
     // Build from allFiles
