@@ -201,6 +201,18 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     as.findDirectory("target") shouldBe empty
   }
 
+//  it should "handle filtering projects directory" in {
+//    val rootPath = Paths.get(System.getProperty("user.home"), "projects").toString
+//    val fid = FileSystemArtifactSourceIdentifier(Paths.get(rootPath).toFile)
+//    val start = System.currentTimeMillis()
+//    val as = FileSystemArtifactSource(fid, Seq(
+//      GitignoreFileFilter(rootPath),
+//      AtomistIgnoreFileFilter(rootPath),
+//      GitDirFilter(rootPath)))
+//    as.findDirectory("atomist/artifact-source") shouldBe defined
+//    println(s"elapsed time: ${System.currentTimeMillis() - start}")
+//  }
+
   private def validateTargetDirectory(s: ArtifactSource): Unit = {
     val files = s.allFiles
     files.exists(_.name contains ".vm")
