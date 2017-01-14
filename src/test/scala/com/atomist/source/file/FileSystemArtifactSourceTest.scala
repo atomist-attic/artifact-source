@@ -118,7 +118,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val s = AtomistTemplatesSource / "atomistTemplates"
     val files = s.allFiles
     files.exists(_.name contains ".vm") shouldBe true
-    val filtered = s.filter(d => true, f => !f.name.contains(".vm"))
+    val filtered = s.filter(_ => true, !_.name.contains(".vm"))
     filtered.allFiles.exists(_.name contains ".vm") shouldBe false
     withClue("should leave nothing after filter") {
       filtered.allFiles shouldBe empty
@@ -127,7 +127,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
   it should "be able to filter directories" in {
     val s = AtomistTemplatesSource
-    s.allFiles.exists(f => f.name contains "Application") shouldBe true
+    s.allFiles.exists(_.name contains "Application") shouldBe true
     val filtered = s.filter(!_.name.contains("spring"), f => true)
     filtered.allFiles.exists(_.name contains "Java") shouldBe false
   }
