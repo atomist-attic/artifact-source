@@ -23,7 +23,7 @@ trait DirectoryBasedArtifactContainer extends ArtifactContainer {
   }
 
   /**
-    * All directories, including nested directories
+    * All directories, including nested directories.
     */
   override lazy val allDirectories: Seq[DirectoryArtifact] = {
     def flatten(arts: Seq[Artifact]): Seq[DirectoryArtifact] =

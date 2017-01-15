@@ -7,7 +7,7 @@ package com.atomist.source
   * particular data structure; see DirectoryBasedArtifactContainer for
   * a convenient trait to extend for a directory based approach.
   *
-  * @see DirectoryBasedArtifactContainer
+  * @see [[DirectoryBasedArtifactContainer]]
   */
 trait ArtifactContainer {
 
