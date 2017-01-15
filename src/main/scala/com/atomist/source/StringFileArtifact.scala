@@ -6,12 +6,11 @@ import com.atomist.util.Utils.StringImprovements
 /**
   * Simple artifact class containing content.
   */
-case class StringFileArtifact(
-                               name: String,
-                               pathElements: Seq[String],
-                               private val _content: String,
-                               override val mode: Int,
-                               override val uniqueId: Option[String])
+case class StringFileArtifact(name: String,
+                              pathElements: Seq[String],
+                              private val _content: String,
+                              override val mode: Int,
+                              override val uniqueId: Option[String])
   extends NonStreamedFileArtifact {
 
   require(!name.isEmpty, "Name must not be empty")
@@ -42,7 +41,7 @@ case class StringFileArtifact(
 
   def contentLength: Int = _content.toSystem.length
 
-  override def content : String = _content.toSystem
+  override def content: String = _content.toSystem
 
   override def toString = s"${getClass.getSimpleName}:path='[$path]';contentLength=$contentLength,mode=$mode,uniqueId=$uniqueId"
 }

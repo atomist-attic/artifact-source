@@ -3,18 +3,17 @@ package com.atomist.source
 import java.io.ByteArrayInputStream
 
 import com.atomist.source.FileArtifact.DefaultMode
-import com.atomist.util.Utils.withCloseable
+import com.atomist.util.Utils.{StringImprovements, withCloseable}
 import org.apache.commons.io.IOUtils
-import com.atomist.util.Utils.StringImprovements
+
 /**
   * Simple artifact class containing byte array content.
   */
-case class ByteArrayFileArtifact(
-                                  name: String,
-                                  pathElements: Seq[String],
-                                  bytes: Array[Byte],
-                                  override val mode: Int,
-                                  override val uniqueId: Option[String])
+case class ByteArrayFileArtifact(name: String,
+                                 pathElements: Seq[String],
+                                 bytes: Array[Byte],
+                                 override val mode: Int,
+                                 override val uniqueId: Option[String])
   extends FileArtifact {
 
   require(!name.isEmpty, "Name must not be empty")
