@@ -13,7 +13,7 @@ import scala.util.{Failure, Success, Try}
 
 abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactFilter {
 
-  private val matchedFiles = {
+  private val matchedPaths: (List[String], List[String]) = {
     val file = Paths.get(rootPath, filePath).toFile
     if (file.exists) {
       val patterns = getPatterns(file)
@@ -32,26 +32,31 @@ abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactF
       ).filter(_ != null)
 
       val files = ArrayBuffer.empty[String]
+      val dirs = ArrayBuffer.empty[String]
       Files.walkFileTree(Paths.get(rootPath), new SimpleFileVisitor[Path] {
         override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes) = {
-          if (pathMatchers.exists(_.matches(dir))) files += dir.toString
           // if (patterns.exists(p => pathMatcher.`match`(p, dir.toString))) files += dir.toString
-          FileVisitResult.CONTINUE
+          if (pathMatchers.exists(_.matches(dir))) {
+            dirs += dir.toString
+            FileVisitResult.SKIP_SUBTREE
+          } else FileVisitResult.CONTINUE
         }
 
         override def visitFile(file: Path, attrs: BasicFileAttributes) = {
-          if (pathMatchers.exists(_.matches(file))) files += file.toString
           // if (patterns.exists(p => pathMatcher.`match`(p, file.toString))) files += file.toString
+          if (pathMatchers.exists(_.matches(file))) files += file.toString
           FileVisitResult.CONTINUE
         }
       })
-      files.distinct.toList
-    } else Nil
+      (dirs.toList, files.toList)
+    } else (Nil, Nil)
   }
 
   protected def filePath: String
 
-  override def apply(path: String): Boolean = !matchedFiles.exists(_.equals(path))
+  override def apply(path: String): Boolean =
+    !(matchedPaths._1.exists(Paths.get(path).toAbsolutePath.toString.startsWith(_)) ||
+      matchedPaths._2.exists(_.equals(path)))
 
   private def getPatterns(file: File): List[String] = {
     FileUtils.readLines(file, Charset.defaultCharset()).asScala
