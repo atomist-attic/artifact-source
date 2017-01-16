@@ -4,17 +4,17 @@ import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * Tests to run against different representations of ArtifactSource:
-  * Directory browsing and File based
+  * Directory browsing and File based.
   */
 abstract class CommonTests extends FlatSpec with Matchers {
 
   /**
-    * Must have same contents as TestUtils.ValidSource
+    * Must have same contents as TestUtils.ValidSource.
     */
   protected val validSource: ArtifactSource
 
   /**
-    * Create an empty ArtifactSource
+    * Create an empty ArtifactSource.
     */
   protected val emptySource: ArtifactSource
 

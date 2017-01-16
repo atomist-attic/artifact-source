@@ -125,6 +125,15 @@ trait ArtifactSource extends RootArtifactContainer {
       override def artifacts: Seq[Artifact] = allDirectories ++ allFiles
     }
 
+  def plus(additionalArtifacts: Seq[Artifact]): ArtifactSource = {
+    // TODO must be able to do this in a nicer, more functional, way
+    var as = this
+    for (a <- additionalArtifacts) {
+      as = as plus a
+    }
+    as
+  }
+
   def plus(newArtifact: Artifact): ArtifactSource =
   // TODO what to do in event of conflict
     new ArtifactSource with DirectoryBasedArtifactContainer {
@@ -164,60 +173,11 @@ trait ArtifactSource extends RootArtifactContainer {
       })
     }
 
-  /**
-    * Filter down to artifacts matching the given predicates.
-    */
-  def filter(dirFilter: DirFilter, fileFilter: FileFilter): ArtifactSource = {
-    def filterArtifacts(artifacts: Seq[Artifact]) = artifacts collect {
-      case d: DirectoryArtifact if dirFilter(d) => new FilteringDirectoryArtifact(d)
-      case f: FileArtifact if fileFilter(f) => f
-    }
-
-    class FilteringDirectoryArtifact(dir: DirectoryArtifact)
-      extends DirectoryArtifact
-        with DirectoryBasedArtifactContainer {
-
-      override val name = dir.name
-
-      override val pathElements = dir.pathElements
-
-      override def artifacts: Seq[Artifact] = filterArtifacts(dir.artifacts)
-    }
-
-    new ArtifactSource with DirectoryBasedArtifactContainer {
-      override val id = ArtifactSource.this.id
-
-      override val artifacts: Seq[Artifact] = filterArtifacts(ArtifactSource.this.artifacts)
-
-      override val cachedDeltas: Seq[Delta] = {
-        val deletedArtifacts: Seq[Artifact] = ArtifactSource.this.artifacts.filter(a => !artifacts.exists(_.path.equals(a.path)))
-        ArtifactSource.this.cachedDeltas ++ (deletedArtifacts map {
-          case d: DirectoryArtifact => DirectoryDeletionDelta(d)
-          case f: FileArtifact => FileDeletionDelta(f)
-        })
-      }
-    }
-  }
-
-  /**
-    * Java 8 version of filter.
-    */
-  def filter(dirFilter: JFunction[DirectoryArtifact, Boolean],
-             fileFilter: JFunction[FileArtifact, Boolean]): ArtifactSource =
-    filter(d => dirFilter.apply(d), f => fileFilter.apply(f))
-
-  def removeEmptyDirectories(): ArtifactSource = filter(_.allFiles.nonEmpty, _ => true)
-
   def +(as: ArtifactSource): ArtifactSource = this plus as
 
-  def plus(additionalArtifacts: Seq[Artifact]): ArtifactSource = {
-    // TODO must be able to do this in a nicer, more functional, way
-    var as = this
-    for (a <- additionalArtifacts) {
-      as = as plus a
-    }
-    as
-  }
+  def +(additionalArtifacts: Seq[Artifact]): ArtifactSource = this plus additionalArtifacts
+
+  def +(a: Artifact): ArtifactSource = this plus a
 
   def Δ(from: ArtifactSource): Deltas = deltaFrom(from)
 
@@ -268,13 +228,52 @@ trait ArtifactSource extends RootArtifactContainer {
     }
   }
 
+  /**
+    * Filter down to artifacts matching the given predicates.
+    */
+  def filter(dirFilter: DirFilter, fileFilter: FileFilter): ArtifactSource = {
+    def filterArtifacts(artifacts: Seq[Artifact]) = artifacts collect {
+      case d: DirectoryArtifact if dirFilter(d) => new FilteringDirectoryArtifact(d)
+      case f: FileArtifact if fileFilter(f) => f
+    }
+
+    class FilteringDirectoryArtifact(dir: DirectoryArtifact)
+      extends DirectoryArtifact
+        with DirectoryBasedArtifactContainer {
+
+      override val name = dir.name
+
+      override val pathElements = dir.pathElements
+
+      override def artifacts: Seq[Artifact] = filterArtifacts(dir.artifacts)
+    }
+
+    new ArtifactSource with DirectoryBasedArtifactContainer {
+      override val id = ArtifactSource.this.id
+
+      override val artifacts: Seq[Artifact] = filterArtifacts(ArtifactSource.this.artifacts)
+
+      override val cachedDeltas: Seq[Delta] = {
+        val deletedArtifacts: Seq[Artifact] = ArtifactSource.this.artifacts.filter(a => !artifacts.exists(_.path.equals(a.path)))
+        ArtifactSource.this.cachedDeltas ++ (deletedArtifacts map {
+          case d: DirectoryArtifact => DirectoryDeletionDelta(d)
+          case f: FileArtifact => FileDeletionDelta(f)
+        })
+      }
+    }
+  }
+
+  /**
+    * Java 8 version of filter.
+    */
+  def filter(dirFilter: JFunction[DirectoryArtifact, Boolean],
+             fileFilter: JFunction[FileArtifact, Boolean]): ArtifactSource =
+    filter(d => dirFilter.apply(d), f => fileFilter.apply(f))
+
+  def removeEmptyDirectories(): ArtifactSource = filter(_.allFiles.nonEmpty, _ => true)
+
   private def modified(oldFile: FileArtifact, currentFile: FileArtifact): Boolean =
     oldFile.contentLength != currentFile.contentLength || !oldFile.content.equals(currentFile.content)
-
-  def +(additionalArtifacts: Seq[Artifact]): ArtifactSource =
-    this.plus(additionalArtifacts)
-
-  def +(a: Artifact): ArtifactSource = this plus a
 
   /**
     * Remove the file with the given path, if found.
@@ -354,8 +353,8 @@ trait ArtifactSource extends RootArtifactContainer {
     * @return two ArtifactSources
     */
   def split(crit: SplitCriteria): ArtifactSourceSplit = {
-    val a = this.filter(d => true, crit.shared || crit.toA)
-    val b = this.filter(d => true, crit.shared || !crit.toA)
+    val a = this.filter(_ => true, crit.shared || crit.toA)
+    val b = this.filter(_ => true, crit.shared || !crit.toA)
     (a, b)
   }
 
@@ -392,7 +391,7 @@ trait ArtifactSource extends RootArtifactContainer {
 
   private val cacheIfNecessary: Artifact => Artifact = {
     case d: DirectoryArtifact => SimpleDirectoryArtifact(d.name, d.pathElements,
-      d.artifacts.map(a => cacheIfNecessary(a)), d.uniqueId)
+      d.artifacts.map(cacheIfNecessary(_)), d.uniqueId)
     case f: FileArtifact => cacheFileIfNecessary(f)
   }
 
@@ -407,7 +406,7 @@ trait ArtifactSource extends RootArtifactContainer {
   def cached: ArtifactSource = {
     new ArtifactSource with DirectoryBasedArtifactContainer {
       override val id = ArtifactSource.this.id
-      override val artifacts: Seq[Artifact] = ArtifactSource.this.artifacts.map(a => cacheIfNecessary(a))
+      override val artifacts: Seq[Artifact] = ArtifactSource.this.artifacts.map(cacheIfNecessary(_))
     }
   }
 
