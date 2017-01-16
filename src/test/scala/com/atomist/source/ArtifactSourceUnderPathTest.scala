@@ -72,17 +72,36 @@ class ArtifactSourceUnderPathTest extends FlatSpec with Matchers {
     val f1 = StringFileArtifact("name", "my/new/path", "contents")
     val f2 = StringFileArtifact("name", "my/other/path", "content")
     val orig = ValidSource + Seq(f1, f2)
-
     orig / "" should be theSameInstanceAs orig
   }
 
-  it should "create directories defined in SimpleFileBasedArtifactSource after using + " in pendingUntilFixed {
-    val f = StringFileArtifact(".atomist/editors/Editor.sj", "{}")
+  it should "handle underPath when adding an ArtifactSource to another " in {
+    val f1 = StringFileArtifact(".atomist/editors/Editor.sj", "{}")
     val f2 = StringFileArtifact(".atomist/editors/Editor2.sj", "{}")
-    val as = SimpleFileBasedArtifactSource(f) + SimpleFileBasedArtifactSource(f2)
-    // val as = SimpleFileBasedArtifactSource(f, f2)
+    val as = SimpleFileBasedArtifactSource(f1) + SimpleFileBasedArtifactSource(f2)
     as.allFiles.size should be(2)
-    val as2 = as.underPath(".atomist")
+
+    val as2 = as / ".atomist"
+    val alldirectories = as2.allDirectories
+    alldirectories.size should be(1)
+    alldirectories.head.path should be("editors")
     as2.allFiles.size should be(2)
+  }
+
+  it should "handle underPath when adding ArtifactSource's together " in {
+    val f1 = StringFileArtifact(".atomist/editors/Editor.sj", "{}")
+    val f2 = StringFileArtifact(".atomist/editors/Editor2.sj", "{}")
+    val f3 = StringFileArtifact(".atomist/editors/Editor3.sj", "{}")
+    val f4 = StringFileArtifact(".atomist/editors/Editor4.sj", "{}")
+    val as = SimpleFileBasedArtifactSource(f1) +
+      SimpleFileBasedArtifactSource(f2) +
+      SimpleFileBasedArtifactSource(f3) + f4
+    as.allFiles.size should be(4)
+
+    val as2 = as / ".atomist"
+    val allDirectories = as2.allDirectories
+    allDirectories.size should be(1)
+    allDirectories.head.path should be("editors")
+    as2.allFiles.size should be(4)
   }
 }

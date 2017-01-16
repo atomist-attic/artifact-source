@@ -95,8 +95,8 @@ trait ArtifactSource extends RootArtifactContainer {
     */
   def lastModified: Long = throw new UnsupportedOperationException
 
-  def plus(right: ArtifactSource): ArtifactSource =
-    new ArtifactSource {
+  def plus(right: ArtifactSource): ArtifactSource = {
+    val as = new ArtifactSource {
       private val left = ArtifactSource.this
 
       override val id: ArtifactSourceIdentifier = left.id
@@ -124,6 +124,9 @@ trait ArtifactSource extends RootArtifactContainer {
 
       override def artifacts: Seq[Artifact] = allDirectories ++ allFiles
     }
+
+    SimpleFileBasedArtifactSource.from(as)
+  }
 
   def plus(additionalArtifacts: Seq[Artifact]): ArtifactSource = {
     // TODO must be able to do this in a nicer, more functional, way

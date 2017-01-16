@@ -121,4 +121,6 @@ class SimpleFileBasedArtifactSource(val id: ArtifactSourceIdentifier,
 object SimpleFileBasedArtifactSource {
 
   def apply(files: FileArtifact*) = new SimpleFileBasedArtifactSource("", files)
+
+  def from(as: ArtifactSource) = new SimpleFileBasedArtifactSource(as.id, as.allFiles, as.cachedDeltas, as.collisions)
 }
