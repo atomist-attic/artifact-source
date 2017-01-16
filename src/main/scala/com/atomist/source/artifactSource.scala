@@ -144,9 +144,9 @@ trait ArtifactSource extends RootArtifactContainer {
             newArtifact
           else {
             val theRightDirectory = parent.findChildDirectory(pathBelow.head) getOrElse EmptyDirectoryArtifact(name = pathBelow.head, pathAbove)
-            val theNewShit = findOrCreateDirectory(pathAbove :+ pathBelow.head, pathBelow.tail, theRightDirectory)
+            val theNewDirs = findOrCreateDirectory(pathAbove :+ pathBelow.head, pathBelow.tail, theRightDirectory)
             SimpleDirectoryArtifact(theRightDirectory.name, theRightDirectory.pathElements,
-              replaceOldWithNew(theRightDirectory.artifacts, theNewShit),
+              replaceOldWithNew(theRightDirectory.artifacts, theNewDirs),
               theRightDirectory.uniqueId)
           }
         }
