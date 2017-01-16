@@ -75,7 +75,7 @@ class ArtifactSourceUnderPathTest extends FlatSpec with Matchers {
     orig / "" should be theSameInstanceAs orig
   }
 
-  it should "handle underPath" in {
+  it should "handle underPath when creating ArtifactSource with two files" in {
     val f1 = StringFileArtifact(".atomist/editors/Editor.sj", "{}")
     val f2 = StringFileArtifact(".atomist/editors/Editor2.sj", "{}")
     val as = SimpleFileBasedArtifactSource(f1, f2)
@@ -86,6 +86,8 @@ class ArtifactSourceUnderPathTest extends FlatSpec with Matchers {
     dirs.size should be(1)
     dirs.head.path should be("editors")
     as2.allFiles.size should be(2)
+    as2.findFile("editors/Editor.sj") shouldBe defined
+    as2.findFile("editors/Editor2.sj") shouldBe defined
   }
 
   it should "handle underPath when adding an ArtifactSource to another" in {
@@ -99,6 +101,8 @@ class ArtifactSourceUnderPathTest extends FlatSpec with Matchers {
     dirs.size should be(1)
     dirs.head.path should be("editors")
     as2.allFiles.size should be(2)
+    as2.findFile("editors/Editor.sj") shouldBe defined
+    as2.findFile("editors/Editor2.sj") shouldBe defined
   }
 
   it should "handle underPath when adding multiple ArtifactSources" in {
@@ -116,5 +120,10 @@ class ArtifactSourceUnderPathTest extends FlatSpec with Matchers {
     dirs.size should be(1)
     dirs.head.path should be("editors")
     as2.allFiles.size should be(4)
+    as2.findFile("editors/Editor.sj") shouldBe defined
+    as2.findFile("editors/Editor2.sj") shouldBe defined
+    as2.findFile("editors/Editor3.sj") shouldBe defined
+    as2.findFile("editors/Editor4.sj") shouldBe defined
+
   }
 }
