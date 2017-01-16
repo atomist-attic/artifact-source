@@ -36,7 +36,7 @@ trait DirectoryInferringArtifactContainer extends FileBasedArtifactContainer {
           if (pathElements.size < 1) Set()
           else Set(pathElements) ++ pathsAbove(pathElements.dropRight(1))
 
-        val thePathsAbove = pathsBelow.flatMap(pathsAbove(_))
+        val thePathsAbove = pathsBelow.flatMap(pathsAbove)
 
         def str(paths: Set[Seq[String]]) =
           paths.map(_.mkString("/")).mkString("[", ",", "]")

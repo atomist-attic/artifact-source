@@ -3,9 +3,7 @@ package com.atomist.source
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.charset.Charset
 
-import com.atomist.util.Utils.withCloseable
-import com.atomist.util.Utils.StringImprovements
-
+import com.atomist.util.Utils.{StringImprovements, withCloseable}
 import org.apache.commons.io.IOUtils
 
 /**

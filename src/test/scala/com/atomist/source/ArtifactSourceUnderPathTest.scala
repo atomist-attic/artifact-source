@@ -75,20 +75,33 @@ class ArtifactSourceUnderPathTest extends FlatSpec with Matchers {
     orig / "" should be theSameInstanceAs orig
   }
 
-  it should "handle underPath when adding an ArtifactSource to another " in {
+  it should "handle underPath" in {
+    val f1 = StringFileArtifact(".atomist/editors/Editor.sj", "{}")
+    val f2 = StringFileArtifact(".atomist/editors/Editor2.sj", "{}")
+    val as = SimpleFileBasedArtifactSource(f1, f2)
+    as.allFiles.size should be(2)
+
+    val as2 = as / ".atomist"
+    val dirs = as2.allDirectories
+    dirs.size should be(1)
+    dirs.head.path should be("editors")
+    as2.allFiles.size should be(2)
+  }
+
+  it should "handle underPath when adding an ArtifactSource to another" in {
     val f1 = StringFileArtifact(".atomist/editors/Editor.sj", "{}")
     val f2 = StringFileArtifact(".atomist/editors/Editor2.sj", "{}")
     val as = SimpleFileBasedArtifactSource(f1) + SimpleFileBasedArtifactSource(f2)
     as.allFiles.size should be(2)
 
     val as2 = as / ".atomist"
-    val alldirectories = as2.allDirectories
-    alldirectories.size should be(1)
-    alldirectories.head.path should be("editors")
+    val dirs = as2.allDirectories
+    dirs.size should be(1)
+    dirs.head.path should be("editors")
     as2.allFiles.size should be(2)
   }
 
-  it should "handle underPath when adding ArtifactSource's together " in {
+  it should "handle underPath when adding multiple ArtifactSources" in {
     val f1 = StringFileArtifact(".atomist/editors/Editor.sj", "{}")
     val f2 = StringFileArtifact(".atomist/editors/Editor2.sj", "{}")
     val f3 = StringFileArtifact(".atomist/editors/Editor3.sj", "{}")
@@ -99,9 +112,9 @@ class ArtifactSourceUnderPathTest extends FlatSpec with Matchers {
     as.allFiles.size should be(4)
 
     val as2 = as / ".atomist"
-    val allDirectories = as2.allDirectories
-    allDirectories.size should be(1)
-    allDirectories.head.path should be("editors")
+    val dirs = as2.allDirectories
+    dirs.size should be(1)
+    dirs.head.path should be("editors")
     as2.allFiles.size should be(4)
   }
 }

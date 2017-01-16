@@ -117,7 +117,7 @@ trait ArtifactSource extends RootArtifactContainer {
             ).flatten
 
       override def allDirectories: Seq[DirectoryArtifact] =
-        right.allDirectories ++ left.allDirectories.filter(f => !right.allDirectories.exists(_.path.equals(f.path)))
+        right.allDirectories ++ left.allDirectories.filter(d => !right.allDirectories.exists(_.path.equals(d.path)))
 
       override def allFiles: Seq[FileArtifact] =
         right.allFiles ++ left.allFiles.filter(f => !right.allFiles.exists(_.path.equals(f.path)))
