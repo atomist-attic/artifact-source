@@ -124,6 +124,5 @@ class ArtifactSourceUnderPathTest extends FlatSpec with Matchers {
     as2.findFile("editors/Editor2.sj") shouldBe defined
     as2.findFile("editors/Editor3.sj") shouldBe defined
     as2.findFile("editors/Editor4.sj") shouldBe defined
-
   }
 }
