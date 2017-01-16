@@ -282,7 +282,7 @@ trait ArtifactSource extends RootArtifactContainer {
     * @param path Path of file to remove, if found
     * @return an ArtifactSource
     */
-  def delete(path: String): ArtifactSource = filter(d => true, f => !f.path.equals(path))
+  def delete(path: String): ArtifactSource = filter(_ => true, !_.path.equals(path))
 
   /**
     * Remove the file with the given path, if found
