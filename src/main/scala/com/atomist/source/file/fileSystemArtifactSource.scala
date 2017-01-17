@@ -38,14 +38,8 @@ case class SimpleFileSystemArtifactSourceIdentifier(rootFile: File)
 
 object FileSystemArtifactSource {
 
-  def apply(id: FileSystemArtifactSourceIdentifier, artifactFilters: Seq[ArtifactFilter]) =
-    new FileSystemArtifactSource(id, artifactFilters)
-
-  def apply(id: FileSystemArtifactSourceIdentifier, artifactFilters: JList[ArtifactFilter]) =
-    new FileSystemArtifactSource(id, artifactFilters.asScala)
-
-  def apply(id: FileSystemArtifactSourceIdentifier, artifactFilter: ArtifactFilter) =
-    new FileSystemArtifactSource(id, Seq(artifactFilter))
+  def apply(id: FileSystemArtifactSourceIdentifier, artifactFilters: ArtifactFilter*) =
+    new FileSystemArtifactSource(id, artifactFilters: _*)
 
   def apply(id: FileSystemArtifactSourceIdentifier) =
     new FileSystemArtifactSource(id)
@@ -55,9 +49,15 @@ object FileSystemArtifactSource {
   * ArtifactSource backed by file system.
   */
 class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
-                               val artifactFilters: Seq[ArtifactFilter] = Seq())
+                               val artifactFilters: ArtifactFilter*)
   extends ArtifactSource
     with DirectoryBasedArtifactContainer {
+
+  def this(id: FileSystemArtifactSourceIdentifier, artifactFilters: JList[ArtifactFilter]) =
+    this(id, artifactFilters.asScala: _*)
+
+  def this(id: FileSystemArtifactSourceIdentifier) =
+    this(id, Seq(): _*)
 
   if (!id.rootFile.exists)
     throw ArtifactSourceAccessException(s"File '${id.rootFile}' does not exist")
@@ -77,12 +77,12 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
 
   private def filterFiles(unfilteredFiles: Seq[File]) = {
     @tailrec
-    def applyFilter(files: Seq[File], filters: Seq[ArtifactFilter]): Seq[File] = filters match {
+    def applyFilter(files: Seq[File], filters: List[ArtifactFilter]): Seq[File] = filters match {
       case Nil => files
       case head :: tail => applyFilter(files.filter(f => head(f.getPath)), tail)
     }
 
-    applyFilter(unfilteredFiles, artifactFilters)
+    applyFilter(unfilteredFiles, artifactFilters.toList)
   }
 
   // Can't extend Artifact as it's a sealed trait, so these
@@ -149,9 +149,9 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
 object ClassPathArtifactSource {
 
   def toArtifactSource(resource: String,
-                       artifactFilters: Seq[ArtifactFilter] = Seq()): ArtifactSource = {
+                       artifactFilters: ArtifactFilter*): ArtifactSource = {
     val f = classPathResourceToFile(resource)
-    new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f), artifactFilters)
+    new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(f), artifactFilters: _*)
   }
 
   def classPathResourceToFile(resource: String): File = {

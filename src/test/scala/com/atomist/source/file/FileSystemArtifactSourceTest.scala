@@ -182,9 +182,9 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
-    val as = FileSystemArtifactSource(fid, Seq(
+    val as = FileSystemArtifactSource(fid,
       GitignoreFileFilter(tmpDir.toString),
-      AtomistIgnoreFileFilter(tmpDir.toString)))
+      AtomistIgnoreFileFilter(tmpDir.toString))
     as.findDirectory(".atomist/node_modules") shouldBe empty
     as.findDirectory("target") shouldBe empty
   }
@@ -193,10 +193,10 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val rootPath = System.getProperty("user.dir")
     val fid = FileSystemArtifactSourceIdentifier(Paths.get(rootPath).toFile)
     // val start = System.currentTimeMillis()
-    val as = FileSystemArtifactSource(fid, Seq(
+    val as = FileSystemArtifactSource(fid,
       GitignoreFileFilter(rootPath),
       AtomistIgnoreFileFilter(rootPath),
-      GitDirFilter(rootPath)))
+      GitDirFilter(rootPath))
     as.findDirectory("src") shouldBe defined
     as.findDirectory(".git") shouldBe empty
     as.findDirectory("target") shouldBe empty

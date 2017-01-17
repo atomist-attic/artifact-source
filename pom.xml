@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.atomist</groupId>
     <artifactId>artifact-source</artifactId>
-    <version>0.14.0-SNAPSHOT</version>
+    <version>0.14.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>artifact-source</name>
     <description>Atomist Artifact Source Abstraction</description>
