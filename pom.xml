@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.atomist</groupId>
     <artifactId>artifact-source</artifactId>
-    <version>0.14.2-SNAPSHOT</version>
+    <version>0.14.3-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>artifact-source</name>
     <description>Atomist Artifact Source Abstraction</description>
@@ -36,20 +36,9 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-framework-bom</artifactId>
-                <version>4.3.5.RELEASE</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
         </dependencies>
     </dependencyManagement>
     <dependencies>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-core</artifactId>
-        </dependency>
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
