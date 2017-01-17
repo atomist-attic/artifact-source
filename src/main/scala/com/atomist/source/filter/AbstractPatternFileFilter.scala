@@ -14,18 +14,19 @@ import scala.util.{Failure, Success, Try}
 abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactFilter {
 
   private val matchedPaths: (List[String], List[String]) = {
+
     val file = Paths.get(rootPath, filePath).toFile
     if (file.exists) {
       val patterns = getPatterns(file)
       // val pathMatcher = new AntPathMatcher() // spring-core required
       val fs = FileSystems.getDefault
       val pathMatchers = patterns.map(p =>
-        Try(fs.getPathMatcher(s"glob:$p")) match {
+        Try(fs.getPathMatcher(s"glob:**/$p")) match {
           case Success(matcher) => matcher
           case Failure(e) => null
         }
       ) ++ patterns.map(p =>
-        Try(fs.getPathMatcher(s"regex:$p")) match {
+        Try(fs.getPathMatcher(s"regex:**/$p")) match {
           case Success(matcher) => matcher
           case Failure(e) => null
         }
@@ -35,7 +36,7 @@ abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactF
       val dirs = ArrayBuffer.empty[String]
       Files.walkFileTree(Paths.get(rootPath), new SimpleFileVisitor[Path] {
         override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes) = {
-          // if (patterns.exists(p => pathMatcher.`match`(p, dir.toString))) files += dir.toString
+          // if (patterns.exists(p => pathMatcher.`match`(p, dir.toString))) {
           if (pathMatchers.exists(_.matches(dir))) {
             dirs += dir.toString
             FileVisitResult.SKIP_SUBTREE
@@ -62,7 +63,6 @@ abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactF
     FileUtils.readLines(file, Charset.defaultCharset()).asScala
       .filterNot(l => l.isEmpty || l.startsWith("#"))
       .map(l => if (l.endsWith("/") || l.endsWith("\\")) l.dropRight(1) else l)
-      .map(Paths.get(rootPath, _).toString)
       .distinct
       .toList
   }
