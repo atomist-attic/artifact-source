@@ -95,13 +95,20 @@ trait ArtifactSource extends RootArtifactContainer {
     */
   def lastModified: Long = throw new UnsupportedOperationException
 
+  /**
+    * Add all artifacts in right to this.  The artifacts in right are also
+    * added to this.cachedDeltas, right.cachedDeltas is ignored.
+    *
+    * @param right ArtifactSource containing artifacts to be added
+    * @return The sum of this and right
+    */
   def plus(right: ArtifactSource): ArtifactSource = {
     val as = new ArtifactSource {
       private val left = ArtifactSource.this
 
       override val id: ArtifactSourceIdentifier = left.id
 
-      override lazy val cachedDeltas: Seq[Delta] =
+      override lazy val cachedDeltas: Seq[Delta] = left.cachedDeltas ++
         (for (newFile <- right.allFiles)
           yield
             left.findFile(newFile.path) match {
