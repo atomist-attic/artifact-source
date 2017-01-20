@@ -4,7 +4,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class ArtifactSourceDeltasTest extends FlatSpec with Matchers {
 
-  it should "find no delta between equal ArtifactSources" in {
+  "deltaFrom" should "find no delta between equal ArtifactSources" in {
     val as = EmptyArtifactSource()
     val f1 = StringFileArtifact("name", "", "contents")
     val withAdd1 = as + f1
@@ -75,4 +75,144 @@ class ArtifactSourceDeltasTest extends FlatSpec with Matchers {
   }
 
   it should "note added empty directories in deltas" is pending
+
+  "plus" should "include all files when adding" in {
+    val left: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("left"),
+      Seq(StringFileArtifact("pancho", "was a bandit"))
+    )
+    val right: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("right"),
+      Seq(StringFileArtifact("lefty", "he could sing the blues"))
+    )
+    val sum: ArtifactSource = left + right
+
+    sum.totalFileCount should be (2)
+    sum.findFile("pancho") match {
+      case Some(f: FileArtifact) if f.path == "pancho" && f.content == "was a bandit" =>
+      case _ => fail("pancho file is not in sum")
+    }
+    sum.findFile("lefty") match {
+      case Some(f: FileArtifact) if f.path == "lefty" && f.content == "he could sing the blues" =>
+      case _ => fail("lefty file not in sum")
+    }
+  }
+
+  it should "combine like directories when adding" in {
+    val left: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("left"),
+      Seq(StringFileArtifact("pancho", "was a bandit"),
+        StringFileArtifact("federales/say", "we could have had him any day")
+      )
+    )
+    val right: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("right"),
+      Seq(StringFileArtifact("lefty", "he could sing the blues"),
+        StringFileArtifact("federales/we", "only let him slip away")
+      )
+    )
+    val sum: ArtifactSource = left + right
+
+    sum.totalFileCount should be (4)
+    sum.allDirectories.size should be (1)
+    sum.allDirectories.head.path should be ("federales")
+  }
+
+  it should "include all directories when adding" in {
+    val left: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("left"),
+      Seq(StringFileArtifact("pancho", "was a bandit"),
+        StringFileArtifact("federales/say", "we could have had him any day")
+      )
+    )
+    val right: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("right"),
+      Seq(StringFileArtifact("lefty", "he could sing the blues"),
+        StringFileArtifact("federales/we", "only let him slip away"),
+        StringFileArtifact("out/of", "kindness I suppose")
+      )
+    )
+    val sum: ArtifactSource = left + right
+
+    sum.totalFileCount should be (5)
+    sum.allDirectories.size should be (2)
+    sum.findDirectory("federales") match {
+      case Some(d: DirectoryArtifact) if d.path == "federales" =>
+      case _ => fail("federales directory not in sum")
+    }
+    sum.findDirectory("out") match {
+      case Some(d: DirectoryArtifact) if d.path == "out" =>
+      case _ => fail("out directory not in sum")
+    }
+  }
+
+  it should "handle nested directories when adding" in {
+    val left: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("left"),
+      Seq(StringFileArtifact("pancho", "was a bandit"),
+        StringFileArtifact("federales/say", "we could have had him any day")
+      )
+    )
+    val right: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("right"),
+      Seq(StringFileArtifact("lefty", "he could sing the blues"),
+        StringFileArtifact("federales/we", "only let him slip away"),
+        StringFileArtifact("federales/out/of", "kindness I suppose")
+      )
+    )
+    val sum: ArtifactSource = left + right
+
+    sum.totalFileCount should be (5)
+    sum.allDirectories.size should be (2)
+    sum.findDirectory("federales") match {
+      case Some(d: DirectoryArtifact) if d.path == "federales" =>
+      case _ => fail("federales directory not in sum")
+    }
+    sum.findDirectory("federales/out") match {
+      case Some(d: DirectoryArtifact) if d.path == "federales/out" =>
+      case _ => fail("federales/out directory not in sum")
+    }
+  }
+
+  it should "put artifacts in right to cachedDeltas when adding" in {
+    val left: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("left"),
+      Seq(StringFileArtifact("pancho", "was a bandit"))
+    )
+    val right: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("right"),
+      Seq(StringFileArtifact("lefty", "he could sing the blues"))
+    )
+    val sum: ArtifactSource = left + right
+
+    sum.totalFileCount should be (2)
+    sum.cachedDeltas.size should be (1)
+    sum.cachedDeltas.head.path should be ("lefty")
+  }
+
+  it should "add artifacts in right to cachedDeltas when adding" in {
+    val pancho = StringFileArtifact("pancho", "was a bandit")
+    val left: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("left"),
+      Seq(pancho), Seq(FileAdditionDelta(pancho))
+    )
+    val right: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("right"),
+      Seq(StringFileArtifact("lefty", "he could sing the blues"))
+    )
+    val sum: ArtifactSource = left + right
+
+    sum.totalFileCount should be (2)
+    sum.cachedDeltas.size should be (2)
+    sum.cachedDeltas.exists(_.path == pancho.path) should be (true)
+    sum.cachedDeltas.exists(_.path == "lefty") should be (true)
+  }
+
+  it should "ignore cachedDeltas in right when adding" in {
+    val pancho = StringFileArtifact("pancho", "was a bandit")
+    val left: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("left"),
+      Seq(pancho), Seq(FileAdditionDelta(pancho))
+    )
+    val right: ArtifactSource = new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier("right"),
+      Seq(StringFileArtifact("lefty", "he could sing the blues")),
+      // nothing should exist in cachedDeltas that does not exist in artifacts
+      // but we are just testing here
+      Seq(FileAdditionDelta(StringFileArtifact("you", "weren't your mama's only boy")))
+    )
+    val sum: ArtifactSource = left + right
+
+    sum.totalFileCount should be (2)
+    sum.cachedDeltas.size should be (2)
+    sum.cachedDeltas.exists(_.path == pancho.path) should be (true)
+    sum.cachedDeltas.exists(_.path == "lefty") should be (true)
+    sum.cachedDeltas.exists(_.path == "you") should be (false)
+  }
 }
