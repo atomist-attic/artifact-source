@@ -319,7 +319,7 @@ trait ArtifactSource extends RootArtifactContainer {
       } else if (findFile(path).isDefined)
         throw new IllegalArgumentException(s"Cannot drill into directory '$path': It's a file not a directory")
       else
-        new EmptyArtifactSource(this.id + "/" + path)
+        EmptyArtifactSource(this.id + "/" + path)
     }
   }
 
@@ -407,7 +407,7 @@ trait ArtifactSource extends RootArtifactContainer {
 
   private def cacheFileIfNecessary(fa: FileArtifact): FileArtifact = fa match {
     case f: FileArtifact if f.isCached => f
-    case f: FileArtifact => new ByteArrayFileArtifact(f)
+    case f: FileArtifact => ByteArrayFileArtifact(f)
   }
 
   /**

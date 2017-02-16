@@ -61,6 +61,8 @@ object ByteArrayFileArtifact {
     ByteArrayFileArtifact(npath.name, npath.pathElements, bytes, mode, None)
   }
 
+  def apply(fa: FileArtifact) = new ByteArrayFileArtifact(fa)
+
   def toByteArrayFileArtifact(fa: FileArtifact): ByteArrayFileArtifact = fa match {
     case bafa: ByteArrayFileArtifact => bafa
     case fa: FileArtifact => new ByteArrayFileArtifact(fa)
