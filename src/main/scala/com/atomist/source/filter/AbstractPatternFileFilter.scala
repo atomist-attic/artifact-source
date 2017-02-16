@@ -14,7 +14,6 @@ import scala.util.{Failure, Success, Try}
 abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactFilter {
 
   private val matchedPaths: (List[String], List[String]) = {
-
     val file = Paths.get(rootPath, filePath).toFile
     if (file.exists) {
       val patterns = getPatterns(file)
@@ -59,11 +58,10 @@ abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactF
     !(matchedPaths._1.exists(Paths.get(path).toAbsolutePath.toString.startsWith(_)) ||
       matchedPaths._2.exists(_.equals(path)))
 
-  private def getPatterns(file: File): List[String] = {
+  private def getPatterns(file: File): List[String] =
     FileUtils.readLines(file, Charset.defaultCharset()).asScala
       .filterNot(l => l.isEmpty || l.startsWith("#"))
       .map(l => if (l.endsWith("/") || l.endsWith("\\")) l.dropRight(1) else l)
       .distinct
       .toList
-  }
 }
