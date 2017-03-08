@@ -9,5 +9,5 @@ trait CloudRepoId {
   override def toString = s"repository '$repo', owner '$owner'"
 }
 
-case class SimpleCloudRepoId(owner: String, repo: String) extends CloudRepoId
+case class SimpleCloudRepoId(repo: String, owner: String) extends CloudRepoId
 
