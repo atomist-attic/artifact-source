@@ -51,7 +51,7 @@ trait FileArtifact extends Artifact {
     */
   def content: String
 
-  def contentLength: Int
+  def contentLength: Long
 
   /**
     * Returns an InputStream for this resource. Should be closed after use.

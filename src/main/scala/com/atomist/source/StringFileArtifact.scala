@@ -39,7 +39,7 @@ case class StringFileArtifact(name: String,
 
   override def isCached = true
 
-  def contentLength: Int = _content.toSystem.length
+  def contentLength: Long = _content.toSystem.length
 
   override def content: String = _content.toSystem
 

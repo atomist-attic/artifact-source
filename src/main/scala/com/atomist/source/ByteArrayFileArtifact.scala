@@ -42,7 +42,7 @@ case class ByteArrayFileArtifact(name: String,
 
   override def content: String = new String(bytes).toSystem
 
-  def contentLength: Int = new String(bytes).toSystem.length
+  def contentLength = new String(bytes).toSystem.length
 
   override def inputStream() = new ByteArrayInputStream(bytes)
 

@@ -51,7 +51,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val files = artifacts.filter(_.isInstanceOf[FileArtifact])
     artifacts.size should be > 0
     val aFile = files.head.asInstanceOf[FileArtifact]
-    aFile.contentLength should be > 0
+    aFile.contentLength should be > 0L
     aFile.content should have size aFile.contentLength
     isBinaryContent(aFile.content) shouldBe false
     if (PosixSupported)
@@ -64,7 +64,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val files = artifacts.filter(_.isInstanceOf[FileArtifact])
     artifacts.size should be > 0
     val aFile = files.head.asInstanceOf[FileArtifact]
-    aFile.contentLength should be > 0
+    aFile.contentLength should be > 0L
     isBinaryContent(aFile.content) shouldBe true
   }
 
@@ -74,7 +74,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val files = artifacts.filter(_.isInstanceOf[FileArtifact])
     artifacts.size should be > 0
     val aFile = files.head.asInstanceOf[FileArtifact]
-    aFile.contentLength should be > 0
+    aFile.contentLength should be > 0L
     isBinaryContent(aFile.content) shouldBe true
   }
 
@@ -84,7 +84,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val files = artifacts.filter(_.isInstanceOf[FileArtifact])
     artifacts.size should be > 0
     val aFile = files.head.asInstanceOf[FileArtifact]
-    aFile.contentLength should be > 0
+    aFile.contentLength should be > 0L
     isBinaryContent(aFile.content) shouldBe true
     if (PosixSupported)
       aFile.mode should be(FileArtifact.ExecutableMode)
