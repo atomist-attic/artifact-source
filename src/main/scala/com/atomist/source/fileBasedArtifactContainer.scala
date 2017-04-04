@@ -1,7 +1,5 @@
 package com.atomist.source
 
-import scala.collection.JavaConverters._
-
 /**
   * Implements artifacts() method from allFiles and allDirectories, which must be supplied by subclasses.
   */
@@ -11,7 +9,7 @@ trait FileBasedArtifactContainer extends ArtifactContainer {
     * Return all artifacts at this level.
     */
   override lazy val artifacts: Seq[Artifact] =
-    // Build from allFiles and directories.
+  // Build from allFiles and directories.
     (allFiles ++ allDirectories).filter(a => relativeToFullPath(Nil).equals(a.parentPathElements))
 }
 
@@ -78,8 +76,6 @@ trait DirectoryInferringArtifactContainer extends FileBasedArtifactContainer {
     override def allFiles: Seq[FileArtifact] =
       DirectoryInferringArtifactContainer.this.allFiles.filter(_.parentPathElements.startsWith(pathElements))
 
-    override def allFilesAsJava = allFiles.asJava
-
     /**
       * All directories, including nested directories.
       */
@@ -98,8 +94,6 @@ class SimpleFileBasedArtifactContainer(pAllFiles: Seq[FileArtifact])
     with RootArtifactContainer {
 
   override val allFiles = pAllFiles
-
-  override val allFilesAsJava = pAllFiles.asJava
 }
 
 object FileBasedArtifactContainer {

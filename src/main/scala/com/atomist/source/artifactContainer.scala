@@ -1,5 +1,7 @@
 package com.atomist.source
 
+import scala.collection.JavaConverters._
+
 /**
   * Extended by classes that hold a number of artifacts,
   * whether an ArtifactSource or a DirectoryArtifact.
@@ -88,7 +90,7 @@ trait ArtifactContainer {
     */
   def allFiles: Seq[FileArtifact]
 
-  def allFilesAsJava: java.util.List[FileArtifact]
+  def allFilesAsJava: java.util.List[FileArtifact] = allFiles.asJava
 
   /**
     * Count of all files in all subdirectories.

@@ -2,8 +2,6 @@ package com.atomist.source
 
 import org.scalatest.Matchers
 
-import scala.collection.JavaConverters._
-
 /**
   * Test for ArtifactSource operations
   */
@@ -73,8 +71,6 @@ class ArtifactSourceTest extends CommonTests {
         *         which will still be available from each FileArtifact.
         */
       override val allFiles: Seq[FileArtifact] = Nil
-
-      override val allFilesAsJava: java.util.List[FileArtifact] = allFiles.asJava
     }
 
     val f = StringFileArtifact("name", "", "contents")
@@ -96,6 +92,7 @@ class ArtifactSourceTest extends CommonTests {
     val f3 = StringFileArtifact("name3", "whatever3")
     val as = ArtifactSource.fromFiles(f1, f2, f3)
     as.allFiles.size should equal(3)
+    as.allFilesAsJava.size should equal(3)
   }
 
   it should "create artifact source using +" in {
@@ -104,6 +101,7 @@ class ArtifactSourceTest extends CommonTests {
     val f3 = StringFileArtifact(".atomist/editors/name3", "whatever3")
     val as = ArtifactSource.fromFiles(f1, f2) + f3
     as.allFiles.size should equal(3)
+    as.allFilesAsJava.size should equal(3)
   }
 }
 

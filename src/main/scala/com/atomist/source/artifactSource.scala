@@ -4,7 +4,6 @@ import java.util.function.{Function => JFunction}
 
 import com.atomist.source.ArtifactSource.FileFilter
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.language.{implicitConversions, postfixOps}
 
@@ -129,8 +128,6 @@ trait ArtifactSource extends RootArtifactContainer {
 
       override def allFiles: Seq[FileArtifact] =
         right.allFiles ++ left.allFiles.filter(f => !right.allFiles.exists(_.path.equals(f.path)))
-
-      override def allFilesAsJava = allFiles.asJava
 
       override def artifacts: Seq[Artifact] = allDirectories ++ allFiles
     }
