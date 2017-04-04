@@ -4,6 +4,7 @@ import java.util.function.{Function => JFunction}
 
 import com.atomist.source.ArtifactSource.FileFilter
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.language.{implicitConversions, postfixOps}
 
@@ -115,19 +116,21 @@ trait ArtifactSource extends RootArtifactContainer {
               case Some(oldFile) => FileUpdateDelta(oldFile, newFile)
               case None => FileAdditionDelta(newFile)
             }) ++
-          (for (newDir <- right.allDirectories)
-            yield
-              left.findDirectory(newDir.path) match {
-                case Some(d) => None
-                case None => Some(DirectoryAdditionDelta(newDir))
-              }
-            ).flatten
+        (for (newDir <- right.allDirectories)
+          yield
+            left.findDirectory(newDir.path) match {
+              case Some(d) => None
+              case None => Some(DirectoryAdditionDelta(newDir))
+            }
+          ).flatten
 
       override def allDirectories: Seq[DirectoryArtifact] =
         right.allDirectories ++ left.allDirectories.filter(d => !right.allDirectories.exists(_.path.equals(d.path)))
 
       override def allFiles: Seq[FileArtifact] =
         right.allFiles ++ left.allFiles.filter(f => !right.allFiles.exists(_.path.equals(f.path)))
+
+      override def allFilesAsJava = allFiles.asJava
 
       override def artifacts: Seq[Artifact] = allDirectories ++ allFiles
     }

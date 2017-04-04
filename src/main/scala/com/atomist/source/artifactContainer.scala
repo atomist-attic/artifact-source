@@ -88,6 +88,8 @@ trait ArtifactContainer {
     */
   def allFiles: Seq[FileArtifact]
 
+  def allFilesAsJava: java.util.List[FileArtifact]
+
   /**
     * Count of all files in all subdirectories.
     *

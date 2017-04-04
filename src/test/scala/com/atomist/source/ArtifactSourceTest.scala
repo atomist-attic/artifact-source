@@ -2,6 +2,8 @@ package com.atomist.source
 
 import org.scalatest.Matchers
 
+import scala.collection.JavaConverters._
+
 /**
   * Test for ArtifactSource operations
   */
@@ -71,6 +73,8 @@ class ArtifactSourceTest extends CommonTests {
         *         which will still be available from each FileArtifact.
         */
       override val allFiles: Seq[FileArtifact] = Nil
+
+      override val allFilesAsJava: java.util.List[FileArtifact] = allFiles.asJava
     }
 
     val f = StringFileArtifact("name", "", "contents")

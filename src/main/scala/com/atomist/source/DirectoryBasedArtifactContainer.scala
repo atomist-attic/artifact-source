@@ -1,5 +1,7 @@
 package com.atomist.source
 
+import scala.collection.JavaConverters._
+
 /**
   * Implements ArtifactContainer methods using directory-based approach,
   * where files are found by navigating down through directories.
@@ -10,9 +12,9 @@ trait DirectoryBasedArtifactContainer extends ArtifactContainer {
     * All files.
     *
     * @return all file artifacts, ignoring directory structure,
-    * which will still be available from each FileArtifact.
+    *         which will still be available from each FileArtifact.
     */
-  lazy override val allFiles: Seq[FileArtifact] = {
+  override lazy val allFiles: Seq[FileArtifact] = {
     def flatten(arts: Seq[Artifact]): Seq[FileArtifact] =
       arts.flatMap(a => a match {
         case d: DirectoryArtifact => flatten(d.artifacts)
@@ -21,6 +23,8 @@ trait DirectoryBasedArtifactContainer extends ArtifactContainer {
 
     flatten(artifacts)
   }
+
+  override lazy val allFilesAsJava: java.util.List[FileArtifact] = allFiles.asJava
 
   /**
     * All directories, including nested directories.
