@@ -31,7 +31,7 @@ class FileSystemArtifactSourceWriterTest extends FlatSpec with Matchers {
     validSource.empty shouldBe false
     val fid = FileSystemArtifactSourceIdentifier(newTemporaryDir.toFile)
     fWriter.write(validSource, fid, SimpleSourceUpdateInfo(getClass.getName))
-    val as = new FileSystemArtifactSource(fid)
+    val as = FileSystemArtifactSource(fid)
     as.artifacts.nonEmpty shouldBe true
     as.artifacts.size shouldEqual validSource.artifacts.size
     TestUtils.verify(validSource, as)
@@ -41,7 +41,7 @@ class FileSystemArtifactSourceWriterTest extends FlatSpec with Matchers {
     validSource.empty shouldBe false
     val fid = FileSystemArtifactSourceIdentifier(newTemporaryDir.toFile)
     fWriter.write(validSource, fid, SimpleSourceUpdateInfo(getClass.getName))
-    val as = new FileSystemArtifactSource(fid)
+    val as = FileSystemArtifactSource(fid)
     as.artifacts.size shouldEqual validSource.artifacts.size
     TestUtils.verify(validSource, as)
   }
