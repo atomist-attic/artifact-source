@@ -1,5 +1,7 @@
 package com.atomist.source
 
+import java.util.{List => JList}
+
 import scala.collection.JavaConverters._
 
 /**
@@ -20,11 +22,15 @@ trait ArtifactContainer {
     */
   def artifacts: Seq[Artifact]
 
+  def artifactsAsJava: JList[Artifact] = artifacts.asJava
+
   def empty: Boolean = artifacts.isEmpty
 
   def directories: Seq[DirectoryArtifact] = artifacts collect {
     case da: DirectoryArtifact => da
   }
+
+  def directoriesAsJava: JList[DirectoryArtifact] = directories.asJava
 
   /**
     * Find directory under current directory. If the name contains / it will
@@ -77,20 +83,21 @@ trait ArtifactContainer {
     *
     * @return a list files in top level directory
     */
-  def files: Seq[FileArtifact] =
-    artifacts.collect {
-      case fa: FileArtifact => fa
-    }
+  def files: Seq[FileArtifact] = artifacts.collect {
+    case fa: FileArtifact => fa
+  }
+
+  def filesAsJava: JList[FileArtifact] = files.asJava
 
   /**
     * All files.
     *
     * @return all file artifacts, ignoring directory structure,
-    * which will still be available from each FileArtifact.
+    *         which will still be available from each FileArtifact.
     */
   def allFiles: Seq[FileArtifact]
 
-  def allFilesAsJava: java.util.List[FileArtifact] = allFiles.asJava
+  def allFilesAsJava: JList[FileArtifact] = allFiles.asJava
 
   /**
     * Count of all files in all subdirectories.
@@ -103,6 +110,8 @@ trait ArtifactContainer {
     * All directories, including nested directories.
     */
   def allDirectories: Seq[DirectoryArtifact]
+
+  def allDirectoriesAsJava: JList[DirectoryArtifact] = allDirectories.asJava
 }
 
 /**
