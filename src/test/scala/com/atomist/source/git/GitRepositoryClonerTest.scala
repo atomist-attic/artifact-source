@@ -3,6 +3,7 @@ package com.atomist.source.git
 import java.io.File
 import java.nio.file.Paths
 
+import com.atomist.source.ArtifactSourceCreationException
 import org.scalatest.{FlatSpec, Matchers}
 
 class GitRepositoryClonerTest extends FlatSpec with Matchers {
@@ -16,12 +17,17 @@ class GitRepositoryClonerTest extends FlatSpec with Matchers {
     cloneAndVerify(None, None, Some(repoDir))
   }
 
-  it should "shallow clone remote repo with branch specified" in {
+  it should "clone remote repo with branch specified" in {
     cloneAndVerify(Some("path-into-as"), Some("966b8f992fb27558c06ef9dc44b4dcc6cd7626de"))
   }
 
+  it should "fail to clone repo due to malformed git url" in {
+    val grc = GitRepositoryCloner("", Some("foo://github.com"))
+    an[ArtifactSourceCreationException] should be thrownBy grc.clone("rug", "atomist")
+  }
+
   private def cloneAndVerify(branch: Option[String] = None, sha: Option[String] = None, dir: Option[File] = None): Unit = {
-    val grc = new GitRepositoryCloner("", Some("https://github.com"))
+    val grc = GitRepositoryCloner("", Some("https://github.com"))
     val start = System.currentTimeMillis
     val as = grc.clone("rug", "atomist", branch, sha, dir)
     val artifacts = as.artifacts
