@@ -34,7 +34,7 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
               val rc2 = new ProcessBuilder("git", "reset", "--hard", commitSha).directory(repoDir.toFile).start.waitFor
               rc2 match {
                 case 0 =>
-                case _ => throw ArtifactSourceCreationException(s"Failed to find commit with sha $sha. Return code $rc2")
+                case _ => throw ArtifactSourceCreationException(s"Failed to find commit with sha $commitSha. Return code $rc2")
               }
             case None =>
           }
