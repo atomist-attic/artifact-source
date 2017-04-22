@@ -17,31 +17,26 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
   import GitRepositoryCloner._
 
   @throws[ArtifactSourceCreationException]
-  def clone(repo: String, owner: String, dir: Option[File]): FileSystemArtifactSource =
-    clone(repo, owner, "master", dir)
-
-  @throws[ArtifactSourceCreationException]
-  def clone(repo: String, owner: String, branch: String, dir: Option[File]): FileSystemArtifactSource =
-    clone(repo, owner, branch, "", dir)
-
-  @throws[ArtifactSourceCreationException]
-  def clone(repo: String, owner: String, branch: String, sha: String, dir: Option[File]): FileSystemArtifactSource =
-    clone(repo, owner, branch, sha, Depth, dir)
-
-  @throws[ArtifactSourceCreationException]
-  def clone(repo: String, owner: String, branch: String, sha: String, depth: Int, dir: Option[File]): FileSystemArtifactSource =
+  def clone(repo: String,
+            owner: String,
+            branch: Option[String] = None,
+            sha: Option[String] = None,
+            dir: Option[File] = None,
+            depth: Int = Depth): FileSystemArtifactSource =
     try {
       val repoDir = createRepoDirectory(repo, owner, dir)
       val commands = getCloneCommands(repo, owner, branch, depth, repoDir.toString)
       val rc = new ProcessBuilder(commands.asJava).start.waitFor
       rc match {
         case 0 =>
-          if (sha != null && sha != "") {
-            val rc2 = new ProcessBuilder("git", "reset", "--hard", sha).directory(repoDir.toFile).start.waitFor
-            rc2 match {
-              case 0 =>
-              case _ => throw ArtifactSourceCreationException(s"Failed to find commit with sha $sha. Return code $rc2")
-            }
+          sha match {
+            case Some(commitSha) =>
+              val rc2 = new ProcessBuilder("git", "reset", "--hard", commitSha).directory(repoDir.toFile).start.waitFor
+              rc2 match {
+                case 0 =>
+                case _ => throw ArtifactSourceCreationException(s"Failed to find commit with sha $sha. Return code $rc2")
+              }
+            case None =>
           }
           val fid = SimpleFileSystemArtifactSourceIdentifier(repoDir.toFile)
           FileSystemArtifactSource(fid, GitDirFilter(repoDir.toString))
@@ -66,9 +61,9 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
 
   def cleanUp(fid: FileSystemArtifactSourceIdentifier): Unit = cleanUp(fid.rootFile)
 
-  private def getCloneCommands(repo: String, owner: String, branch: String, depth: Int, path: String): Seq[String] = {
+  private def getCloneCommands(repo: String, owner: String, branch: Option[String], depth: Int, path: String): Seq[String] = {
     val branchSeq = branch match {
-      case br if branch != null && branch != "" && branch != "master" => Seq("-b", br)
+      case Some(br) => if (branch == "master") Seq.empty else Seq("-b", br)
       case _ => Seq.empty
     }
     Seq("git", "clone") ++ branchSeq ++ Seq("--depth", depth + "", s"$getUrl/$owner/$repo.git", path)
