@@ -12,7 +12,7 @@ import org.apache.commons.io.FileUtils
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
-case class GitRepositoryCloner(oAuthToken: String, remoteUrl: String = "", dir: Option[File] = None) {
+case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = None, dir: Option[File] = None) {
 
   import GitRepositoryCloner._
 
@@ -76,7 +76,10 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: String = "", dir: 
 
   private def getUrl = {
     val url = Try {
-      if (remoteUrl == null || remoteUrl.isEmpty) new URL("https://github.com") else new URL(remoteUrl)
+      remoteUrl match {
+        case Some(gitUrl) => new URL(gitUrl)
+        case None => new URL("https://github.com")
+      }
     } match {
       case Success(parsedUrl) => parsedUrl
       case Failure(e) => throw ArtifactSourceCreationException(s"Failed to parse remote URL $remoteUrl", e)

@@ -1,6 +1,7 @@
 package com.atomist.source.git
 
 import java.io.File
+import java.nio.file.Paths
 
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -11,7 +12,7 @@ class GitRepositoryClonerTest extends FlatSpec with Matchers {
   }
 
   it should "clone remote repo to specified directory" in {
-    val repoDir = new File(System.getProperty("java.io.tmpdir"))
+    val repoDir = Paths.get(System.getProperty("java.io.tmpdir"), s"tmp_${System.currentTimeMillis}").toFile
     cloneAndVerify("", "", Some(repoDir))
   }
 
@@ -20,7 +21,7 @@ class GitRepositoryClonerTest extends FlatSpec with Matchers {
   }
 
   private def cloneAndVerify(branch: String, sha: String, dir: Option[File] = None): Unit = {
-    val grc = new GitRepositoryCloner("", "https://github.com")
+    val grc = new GitRepositoryCloner("", Some("https://github.com"), dir)
     val start = System.currentTimeMillis
     val as = grc.clone("rug", "atomist", branch, sha)
     val artifacts = as.artifacts
