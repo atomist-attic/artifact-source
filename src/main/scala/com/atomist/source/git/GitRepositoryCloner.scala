@@ -12,7 +12,7 @@ import org.apache.commons.io.FileUtils
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
-case class GitRepositoryCloner(oAuthToken: String, remoteUrl: String = "") {
+case class GitRepositoryCloner(oAuthToken: String, remoteUrl: String = "", dir: Option[File] = None) {
 
   import GitRepositoryCloner._
 
@@ -32,21 +32,19 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: String = "") {
   def clone(repo: String, owner: String, branch: String, sha: String, depth: Int): FileSystemArtifactSource =
     try {
       val repoDir = createRepoDirectory(repo, owner)
-      repoDir.deleteOnExit()
-
-      val commands = getCloneCommands(repo, owner, branch, depth, repoDir.getPath)
+      val commands = getCloneCommands(repo, owner, branch, depth, repoDir.toString)
       val rc = new ProcessBuilder(commands.asJava).start.waitFor
       rc match {
         case 0 =>
           if (sha != null && sha != "") {
-            val rc2 = new ProcessBuilder("git", "reset", "--hard", sha).directory(repoDir).start.waitFor
+            val rc2 = new ProcessBuilder("git", "reset", "--hard", sha).directory(repoDir.toFile).start.waitFor
             rc2 match {
               case 0 =>
               case _ => throw ArtifactSourceCreationException(s"Failed to find commit with sha $sha. Return code $rc2")
             }
           }
-          val fid = SimpleFileSystemArtifactSourceIdentifier(repoDir)
-          FileSystemArtifactSource(fid, GitDirFilter(repoDir.getPath))
+          val fid = SimpleFileSystemArtifactSourceIdentifier(repoDir.toFile)
+          FileSystemArtifactSource(fid, GitDirFilter(repoDir.toString))
         case _ => throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'. Return code $rc")
       }
     } catch {
@@ -54,12 +52,19 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: String = "") {
         throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'", e)
     }
 
+  private def createRepoDirectory(repo: String, owner: String) =
+    dir match {
+      case Some(file) =>
+        Files.createDirectory(file.toPath)
+      case None =>
+        val tempDir = Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}")
+        tempDir.toFile.deleteOnExit()
+        tempDir
+    }
+
   def cleanUp(file: File): Unit = FileUtils.deleteQuietly(file)
 
   def cleanUp(fid: FileSystemArtifactSourceIdentifier): Unit = cleanUp(fid.rootFile)
-
-  private def createRepoDirectory(repo: String, owner: String) =
-    Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile
 
   private def getCloneCommands(repo: String, owner: String, branch: String, depth: Int, path: String): Seq[String] = {
     val branchSeq = branch match {
