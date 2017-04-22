@@ -21,9 +21,9 @@ class GitRepositoryClonerTest extends FlatSpec with Matchers {
   }
 
   private def cloneAndVerify(branch: String, sha: String, dir: Option[File] = None): Unit = {
-    val grc = new GitRepositoryCloner("", Some("https://github.com"), dir)
+    val grc = new GitRepositoryCloner("", Some("https://github.com"))
     val start = System.currentTimeMillis
-    val as = grc.clone("rug", "atomist", branch, sha)
+    val as = grc.clone("rug", "atomist", branch, sha, dir)
     val artifacts = as.artifacts
     println(s"ArtifactSource creation: ${System.currentTimeMillis - start} ms")
     artifacts.size should be > 0

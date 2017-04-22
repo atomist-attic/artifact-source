@@ -12,26 +12,26 @@ import org.apache.commons.io.FileUtils
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
-case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = None, dir: Option[File] = None) {
+case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = None) {
 
   import GitRepositoryCloner._
 
   @throws[ArtifactSourceCreationException]
-  def clone(repo: String, owner: String): FileSystemArtifactSource =
-    clone(repo, owner, "master")
+  def clone(repo: String, owner: String, dir: Option[File]): FileSystemArtifactSource =
+    clone(repo, owner, "master", dir)
 
   @throws[ArtifactSourceCreationException]
-  def clone(repo: String, owner: String, branch: String): FileSystemArtifactSource =
-    clone(repo, owner, branch, "")
+  def clone(repo: String, owner: String, branch: String, dir: Option[File]): FileSystemArtifactSource =
+    clone(repo, owner, branch, "", dir)
 
   @throws[ArtifactSourceCreationException]
-  def clone(repo: String, owner: String, branch: String, sha: String): FileSystemArtifactSource =
-    clone(repo, owner, branch, sha, Depth)
+  def clone(repo: String, owner: String, branch: String, sha: String, dir: Option[File]): FileSystemArtifactSource =
+    clone(repo, owner, branch, sha, Depth, dir)
 
   @throws[ArtifactSourceCreationException]
-  def clone(repo: String, owner: String, branch: String, sha: String, depth: Int): FileSystemArtifactSource =
+  def clone(repo: String, owner: String, branch: String, sha: String, depth: Int, dir: Option[File]): FileSystemArtifactSource =
     try {
-      val repoDir = createRepoDirectory(repo, owner)
+      val repoDir = createRepoDirectory(repo, owner, dir)
       val commands = getCloneCommands(repo, owner, branch, depth, repoDir.toString)
       val rc = new ProcessBuilder(commands.asJava).start.waitFor
       rc match {
@@ -52,7 +52,7 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
         throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'", e)
     }
 
-  private def createRepoDirectory(repo: String, owner: String) =
+  private def createRepoDirectory(repo: String, owner: String, dir: Option[File]) =
     dir match {
       case Some(file) =>
         Files.createDirectory(file.toPath)
