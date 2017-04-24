@@ -54,7 +54,8 @@ trait ArtifactContainer {
 
   // TODO what if it's a directory?
   def findFile(pathName: String): Option[FileArtifact] = {
-    val split = pathName.split("/")
+    val rel = if (pathName.startsWith("/")) pathName.drop(1) else pathName
+    val split = rel.split("/")
     val name = split.last
     val pathElements = split.seq.dropRight(1)
     findFileByPath(name, pathElements)
