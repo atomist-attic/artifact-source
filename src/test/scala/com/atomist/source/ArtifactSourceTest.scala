@@ -25,8 +25,8 @@ class ArtifactSourceTest extends CommonTests {
     introspectorSource.findDirectory(dirName) match {
       case None => fail("Should have been able to find source directory")
       case Some(d) =>
-        d.pathElements.size should equal(2)
-        d.pathElements.mkString("/") should equal(dirName)
+        d.pathElements.size should equal(11)
+        d.pathElements.mkString("/") should endWith(dirName)
     }
   }
 
@@ -43,7 +43,7 @@ class ArtifactSourceTest extends CommonTests {
     val introspectorSource = SpringBootSource
     introspectorSource.findDirectoryByPath(Seq("src", "main")) shouldBe defined
     introspectorSource.findDirectory("src/main") shouldBe defined
-    introspectorSource.findDirectory("other/junk").isDefined shouldBe false
+    introspectorSource.findDirectory("other/junk") shouldBe empty
     introspectorSource.findDirectoryByPath(Seq("other", "junk")).isDefined shouldBe false
   }
 

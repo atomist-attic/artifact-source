@@ -52,7 +52,6 @@ trait ArtifactContainer {
     case da: DirectoryArtifact if da.name equals name => da
   }.headOption
 
-  // TODO what if it's a directory?
   def findFile(pathName: String): Option[FileArtifact] = {
     val split = pathName.split("/")
     val name = split.last
@@ -62,12 +61,22 @@ trait ArtifactContainer {
 
   def findDirectoryByPath(pathElements: Seq[String]): Option[DirectoryArtifact] = {
     val relPath = relativeToFullPath(pathElements)
-    allDirectories.find(_.pathElements.equals(relPath))
+    val allD = allDirectories
+    allD.find(d => {
+         println(d.pathElements.size +": " + d.pathElements.mkString("/"))
+        println(relPath.size + ": " + relPath.mkString("/"))
+      d.pathElements.containsSlice(relPath)
+    })
   }
 
   def findFileByPath(name: String, pathElements: Seq[String]): Option[FileArtifact] = {
     val relPath = relativeToFullPath(pathElements)
-    allFiles.find(f => f.name.equals(name) && f.pathElements.equals(relPath))
+    val all = allFiles
+    all.find(f => {
+   //   println(f.pathElements.size +": " + f.pathElements.mkString("/"))
+    //  println(relPath.size + ": " + relPath.mkString("/"))
+      f.name.equals(name) && f.pathElements == relPath
+    })
   }
 
   /**
