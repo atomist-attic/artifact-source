@@ -31,7 +31,7 @@ class GitRepositoryClonerTest extends FlatSpec with Matchers {
     val start = System.currentTimeMillis
     val as = grc.clone("rug", "atomist", branch, sha, dir)
     val artifacts = as.artifacts
-    println(s"ArtifactSource creation: ${System.currentTimeMillis - start} ms")
+    // println(s"ArtifactSource creation: ${System.currentTimeMillis - start} ms")
     artifacts.size should be > 0
     grc.cleanUp(as.id)
     as.id.rootFile.exists shouldBe false
