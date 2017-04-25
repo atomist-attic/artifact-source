@@ -60,7 +60,7 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
 
   private def getCloneCommands(repo: String, owner: String, branch: Option[String], depth: Int, path: String): Seq[String] = {
     val branchSeq = branch match {
-      case Some(br) => if (branch == "master") Seq.empty else Seq("-b", br)
+      case Some(br) => if (br == "master") Seq.empty else Seq("-b", br)
       case _ => Seq.empty
     }
     Seq("git", "clone") ++ branchSeq ++ Seq("--depth", depth + "", s"$getUrl/$owner/$repo.git", path)
