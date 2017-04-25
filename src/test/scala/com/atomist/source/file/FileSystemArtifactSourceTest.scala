@@ -82,14 +82,14 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     validateTargetDirectory(AtomistTemplatesSource)
   }
 
-  it should "find file under directory starting with /" in pendingUntilFixed {
+  it should "find file under directory starting with /" in {
     val dir = Files.createTempDirectory(s"tmp_${System.currentTimeMillis}")
     val tempFile = Files.createTempFile(dir, s"tmp_${System.currentTimeMillis}", ".txt")
     tempFile.toFile.deleteOnExit
     FileUtils.copyToFile(new ByteArrayInputStream("contents".getBytes), tempFile.toFile)
     val fid = SimpleFileSystemArtifactSourceIdentifier(dir.toFile)
     val introspectorSource = FileSystemArtifactSource(fid)
-    introspectorSource.findFile(tempFile.toString) shouldBe defined
+    introspectorSource.findFile("/" + tempFile.toFile.getName) shouldBe defined
     FileUtils.deleteQuietly(dir.toFile)
     introspectorSource.findDirectory(dir.toString) shouldBe empty
   }
