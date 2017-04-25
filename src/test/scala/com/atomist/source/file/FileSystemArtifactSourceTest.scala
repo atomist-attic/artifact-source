@@ -23,6 +23,17 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     an[ArtifactSourceException] should be thrownBy toArtifactSource("this is complete nonsense")
   }
 
+  it should "delete files by name and path" in {
+    val name = ".atomist/build/cli-build.yml"
+    val classpathSource = toArtifactSource("foo")
+    classpathSource.findFile(name).isDefined shouldBe true
+    val newSource = classpathSource.delete(name)
+    newSource.findFile(name).isEmpty shouldBe true
+    classpathSource.cachedDeltas.size shouldBe 0
+    newSource.cachedDeltas.size shouldBe 1
+    classpathSource.deltaFrom(newSource).deltas.size shouldBe 1
+  }
+
   it should "find single file and verify contents" in {
     val classpathSource = toArtifactSource("java-source/HelloWorldService.java")
     val artifacts = classpathSource.artifacts

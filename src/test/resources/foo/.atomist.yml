@@ -1,0 +1,130 @@
+---
+kind: "operation"
+client: "rug-cli 0.34.0"
+editor:
+  name: "UpdateSupportFiles"
+  group: "atomist"
+  artifact: "rug-editors"
+  version: "0.28.0-20170424215631"
+  origin:
+    repo: "https://github.com/atomist/rug-editors.git"
+    branch: "0b7d2d9baf3a2ef0e8ae64f0c7277482a912d81f"
+    sha: "0b7d2d9"
+
+---
+kind: "operation"
+client: "rug-cli 0.34.0"
+editor:
+  name: "UpdateSupportFiles"
+  group: "atomist"
+  artifact: "rug-editors"
+  version: "0.28.0"
+  origin:
+    repo: "git@github.com:atomist-rugs/rug-editors.git"
+    branch: "master"
+    sha: "5620b67*"
+
+---
+kind: "operation"
+client: "rug-cli 0.34.0"
+editor:
+  name: "UpdateSupportFiles"
+  group: "atomist"
+  artifact: "rug-editors"
+  version: "0.28.0"
+  origin:
+    repo: "git@github.com:atomist-rugs/rug-editors.git"
+    branch: "master"
+    sha: "5620b67*"
+
+---
+kind: "operation"
+client: "rug-cli 0.34.0-SNAPSHOT"
+editor:
+  name: "UpdateSupportFiles"
+  group: "atomist"
+  artifact: "rug-editors"
+  version: "0.28.0"
+  origin:
+    repo: "git@github.com:atomist-rugs/rug-editors.git"
+    branch: "master"
+    sha: "5620b67*"
+
+---
+kind: "operation"
+client: "rug-cli 0.34.0-SNAPSHOT"
+editor:
+  name: "UpdateSupportFiles"
+  group: "atomist"
+  artifact: "rug-editors"
+  version: "0.28.0"
+  origin:
+    repo: "git@github.com:atomist-rugs/rug-editors.git"
+    branch: "master"
+    sha: "5620b67*"
+
+---
+kind: "operation"
+client: "rug-cli 0.34.0-SNAPSHOT"
+editor:
+  name: "UpdateSupportFiles"
+  group: "atomist"
+  artifact: "rug-editors"
+  version: "0.28.0"
+  origin:
+    repo: "git@github.com:atomist-rugs/rug-editors.git"
+    branch: "master"
+    sha: "5620b67*"
+
+---
+kind: "operation"
+client: "rug-cli 0.34.0-SNAPSHOT"
+editor:
+  name: "UpdateSupportFiles"
+  group: "atomist"
+  artifact: "rug-editors"
+  version: "0.28.0"
+  origin:
+    repo: "git@github.com:atomist-rugs/rug-editors.git"
+    branch: "master"
+    sha: "5620b67*"
+
+---
+kind: "operation"
+client: "rug-cli 0.34.0-SNAPSHOT"
+editor:
+  name: "UpdateSupportFiles"
+  group: "atomist"
+  artifact: "rug-editors"
+  version: "0.28.0"
+  origin:
+    repo: "git@github.com:atomist-rugs/rug-editors.git"
+    branch: "master"
+    sha: "5620b67*"
+
+---
+kind: "operation"
+client: "rug-cli 0.34.0-SNAPSHOT"
+editor:
+  name: "UpdateSupportFiles"
+  group: "atomist"
+  artifact: "rug-editors"
+  version: "0.28.0"
+  origin:
+    repo: "git@github.com:atomist-rugs/rug-editors.git"
+    branch: "master"
+    sha: "5620b67*"
+
+---
+kind: "operation"
+client: "rug-cli 0.34.0-SNAPSHOT"
+editor:
+  name: "UpdateSupportFiles"
+  group: "atomist"
+  artifact: "rug-editors"
+  version: "0.28.0"
+  origin:
+    repo: "git@github.com:atomist-rugs/rug-editors.git"
+    branch: "master"
+    sha: "5620b67*"
+
