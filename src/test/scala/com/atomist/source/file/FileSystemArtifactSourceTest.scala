@@ -23,17 +23,6 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     an[ArtifactSourceException] should be thrownBy toArtifactSource("this is complete nonsense")
   }
 
-  it should "delete files by name and path" in {
-    val name = ".atomist/build/cli-build.yml"
-    val classpathSource = toArtifactSource("foo")
-    classpathSource.findFile(name).isDefined shouldBe true
-    val newSource = classpathSource.delete(name)
-    newSource.findFile(name).isEmpty shouldBe true
-    classpathSource.cachedDeltas.size shouldBe 0
-    newSource.cachedDeltas.size shouldBe 1
-    classpathSource.deltaFrom(newSource).deltas.size shouldBe 1
-  }
-
   it should "find single file and verify contents" in {
     val classpathSource = toArtifactSource("java-source/HelloWorldService.java")
     val artifacts = classpathSource.artifacts
@@ -94,16 +83,16 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   }
 
   it should "find file under directory starting with /" in {
-    val dir = Files.createTempDirectory(s"tmp_${System.currentTimeMillis}")
-    dir.toFile.deleteOnExit
-    val subDir = Files.createDirectory(Paths.get(dir.toString, "src"))
+    val dir = Files.createTempDirectory(s"tmp_${System.currentTimeMillis}").toFile
+    dir.deleteOnExit
+    val subDir = Files.createDirectory(Paths.get(dir.getPath, "src"))
     val tempFile = Files.createFile(Paths.get(subDir.toString, "tmp.txt")).toFile
     FileUtils.copyToFile(new ByteArrayInputStream("contents".getBytes), tempFile)
-    val fid = SimpleFileSystemArtifactSourceIdentifier(dir.toFile)
-    val introspectorSource = FileSystemArtifactSource(fid)
-    introspectorSource.findFile(s"/src/${tempFile.getName}") shouldBe defined
-    FileUtils.deleteQuietly(dir.toFile)
-    introspectorSource.findDirectory(dir.toString) shouldBe empty
+    val fid = SimpleFileSystemArtifactSourceIdentifier(dir)
+    val as = FileSystemArtifactSource(fid)
+    as.findFile(s"/src/${tempFile.getName}") shouldBe defined
+    FileUtils.deleteQuietly(dir)
+    as.findDirectory(dir.toString) shouldBe empty
   }
 
   // TODO some of these tests are more generic ArtifactSource tests
@@ -156,9 +145,9 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zid = ignoreFiles1ZipId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
-    val tmpDir = Files.createTempDirectory(null)
-    tmpDir.toFile.deleteOnExit
-    val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
+    val tmpDir = Files.createTempDirectory(null).toFile
+    tmpDir.deleteOnExit
+    val fid = FileSystemArtifactSourceIdentifier(tmpDir)
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
     val as = FileSystemArtifactSource(fid)
@@ -169,12 +158,12 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zid = ignoreFiles2ZipId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
-    val tmpDir = Files.createTempDirectory(null)
-    tmpDir.toFile.deleteOnExit
-    val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
+    val tmpDir = Files.createTempDirectory(null).toFile
+    tmpDir.deleteOnExit
+    val fid = FileSystemArtifactSourceIdentifier(tmpDir)
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
-    val as = FileSystemArtifactSource(fid, GitignoreFileFilter(tmpDir.toString))
+    val as = FileSystemArtifactSource(fid, GitignoreFileFilter(tmpDir.getPath))
     as.findDirectory(".atomist/node_modules") shouldBe defined
   }
 
@@ -182,9 +171,9 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zid = ignoreFiles3ZipId
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
-    val tmpDir = Files.createTempDirectory(null)
-    tmpDir.toFile.deleteOnExit
-    val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
+    val tmpDir = Files.createTempDirectory(null).toFile
+    tmpDir.deleteOnExit
+    val fid = FileSystemArtifactSourceIdentifier(tmpDir)
     val f = fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
     val path = Paths.get(f.getAbsolutePath, "dot-atomist-ignored-node_modules").toString
     val as = FileSystemArtifactSource(fid,
@@ -206,6 +195,17 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     as.findDirectory(".git") shouldBe empty
     as.findDirectory("target") shouldBe empty
     // println(s"elapsed time = ${System.currentTimeMillis() - start} ms")
+  }
+
+  it should "delete files by name and path" in {
+    val name = ".atomist/build/cli-build.yml"
+    val classpathSource = toArtifactSource("foo")
+    classpathSource.findFile(name) shouldBe defined
+    val newSource = classpathSource.delete(name)
+    newSource.findFile(name) shouldBe empty
+    classpathSource.cachedDeltas.size shouldBe 0
+    newSource.cachedDeltas.size shouldBe 1
+    classpathSource.deltaFrom(newSource).deltas.size shouldBe 1
   }
 
   private def validateTargetDirectory(s: ArtifactSource): Unit =
