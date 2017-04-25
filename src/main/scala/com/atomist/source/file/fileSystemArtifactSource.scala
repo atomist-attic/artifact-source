@@ -36,6 +36,9 @@ object FileSystemArtifactSourceIdentifier {
 case class SimpleFileSystemArtifactSourceIdentifier(rootFile: File)
   extends FileSystemArtifactSourceIdentifier
 
+case class NamedFileSystemArtifactSourceIdentifier(override val name: String, rootFile: File)
+  extends FileSystemArtifactSourceIdentifier
+
 /**
   * ArtifactSource backed by file system.
   */

@@ -21,40 +21,37 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
             owner: String,
             branch: Option[String] = None,
             sha: Option[String] = None,
-            dir: Option[File] = None,
+            fid: Option[FileSystemArtifactSourceIdentifier] = None,
             depth: Int = Depth): FileSystemArtifactSource =
     try {
-      val repoDir = createRepoDirectory(repo, owner, dir)
+      val id = fid match {
+        case Some(identifier) => identifier
+        case None =>
+          val tempDir = Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile
+          tempDir.deleteOnExit()
+          SimpleFileSystemArtifactSourceIdentifier(tempDir)
+      }
+      val repoDir = id.rootFile
       val commands = getCloneCommands(repo, owner, branch, depth, repoDir.toString)
       val rc = new ProcessBuilder(commands.asJava).start.waitFor
       rc match {
         case 0 =>
           sha match {
             case Some(commitSha) =>
-              val rc2 = new ProcessBuilder("git", "reset", "--hard", commitSha).directory(repoDir.toFile).start.waitFor
+              val rc2 = new ProcessBuilder("git", "reset", "--hard", commitSha).directory(repoDir).start.waitFor
               rc2 match {
                 case 0 =>
                 case _ => throw ArtifactSourceCreationException(s"Failed to find commit with sha $commitSha. Return code $rc2")
               }
             case None =>
           }
-          val fid = SimpleFileSystemArtifactSourceIdentifier(repoDir.toFile)
-          FileSystemArtifactSource(fid, GitDirFilter(repoDir.toString))
+
+          FileSystemArtifactSource(id, GitDirFilter(repoDir.toString))
         case _ => throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'. Return code $rc")
       }
     } catch {
       case e: Exception =>
         throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'", e)
-    }
-
-  private def createRepoDirectory(repo: String, owner: String, dir: Option[File]) =
-    dir match {
-      case Some(file) =>
-        Files.createDirectory(file.toPath)
-      case None =>
-        val tempDir = Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}")
-        tempDir.toFile.deleteOnExit()
-        tempDir
     }
 
   def cleanUp(file: File): Unit = FileUtils.deleteQuietly(file)
