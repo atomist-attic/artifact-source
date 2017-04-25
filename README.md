@@ -84,7 +84,7 @@ at [atomist-community.slack.com](https://join.atomist.com).
 
 If you find a problem, please create an [issue][].
 
-[issue]: https://github.com/atomist/rug-resolver/issues
+[issue]: https://github.com/atomist/artifact-source/issues
 
 ## Development
 
