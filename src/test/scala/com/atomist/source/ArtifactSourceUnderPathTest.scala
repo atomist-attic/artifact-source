@@ -60,10 +60,10 @@ class ArtifactSourceUnderPathTest extends FlatSpec with Matchers {
     val again = "zz/yy" /: orig
     again.totalFileCount should equal(orig.totalFileCount)
 
-    added1.findFile("xx/inRoot") should be(defined)
+    added1.findFile("xx/inRoot") shouldBe defined
     added1.directories.size should equal(1)
-    added1.findDirectory("xx") should be(defined)
-    again.findFile("zz/yy/my/new/path/name") should be(defined)
+    added1.findDirectory("xx") shouldBe defined
+    again.findFile("zz/yy/my/new/path/name") shouldBe defined
     added1.directories.map(_.name).toSet should equal(Set("xx"))
     again.allFiles.head.parentPathElements.toSet should equal(Set("zz", "yy"))
   }

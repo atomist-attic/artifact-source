@@ -52,7 +52,6 @@ trait ArtifactContainer {
     case da: DirectoryArtifact if da.name equals name => da
   }.headOption
 
-  // TODO what if it's a directory?
   def findFile(pathName: String): Option[FileArtifact] = {
     val rel = if (pathName.startsWith("/")) pathName.drop(1) else pathName
     val split = rel.split("/")

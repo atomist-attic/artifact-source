@@ -36,15 +36,6 @@ object FileSystemArtifactSourceIdentifier {
 case class SimpleFileSystemArtifactSourceIdentifier(rootFile: File)
   extends FileSystemArtifactSourceIdentifier
 
-object FileSystemArtifactSource {
-
-  def apply(id: FileSystemArtifactSourceIdentifier, artifactFilters: ArtifactFilter*) =
-    new FileSystemArtifactSource(id, artifactFilters: _*)
-
-  def apply(id: FileSystemArtifactSourceIdentifier) =
-    new FileSystemArtifactSource(id)
-}
-
 /**
   * ArtifactSource backed by file system.
   */
@@ -62,18 +53,18 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
   if (!id.rootFile.exists)
     throw ArtifactSourceAccessException(s"File '${id.rootFile}' does not exist")
 
-  private def wrap(f: File): Artifact =
-    if (f.isDirectory)
-      new LazyFileSystemDirectoryArtifact(f, id.rootFile)
-    else
-      new LazyFileSystemFileArtifact(f, id.rootFile)
-
   override lazy val artifacts: Seq[Artifact] = {
     (id.rootFile match {
       case d: File if d.isDirectory => filterFiles(d.listFiles.toSeq).map(wrap)
       case f: File => filterFiles(Seq(f)).map(wrap)
     }).sortBy(a => (a.name, a.pathElements.mkString("/")))
   }
+
+  private def wrap(f: File): Artifact =
+    if (f.isDirectory)
+      new LazyFileSystemDirectoryArtifact(f, id.rootFile)
+    else
+      new LazyFileSystemFileArtifact(f, id.rootFile)
 
   private def filterFiles(unfilteredFiles: Seq[File]) = {
     @tailrec
@@ -94,8 +85,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
     // Remove path above root
     protected val pathElementsFromFile: Seq[String] = {
       val fixed = f.getPath.replace(root.getPath, "")
-      val sep = Matcher.quoteReplacement(File.separator)
-      val elts = fixed.split(sep).toSeq
+      val elts = fixed.split(Matcher.quoteReplacement(File.separator)).toSeq
       if (elts.nonEmpty && elts.head.equals("")) elts.drop(1) else elts
     }
   }
@@ -141,6 +131,15 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
 
     override def toString = s"Name: '$name':path: '$path' wrapping $f - ${getClass.getSimpleName}"
   }
+}
+
+object FileSystemArtifactSource {
+
+  def apply(id: FileSystemArtifactSourceIdentifier, artifactFilters: ArtifactFilter*) =
+    new FileSystemArtifactSource(id, artifactFilters: _*)
+
+  def apply(id: FileSystemArtifactSourceIdentifier) =
+    new FileSystemArtifactSource(id)
 }
 
 /**

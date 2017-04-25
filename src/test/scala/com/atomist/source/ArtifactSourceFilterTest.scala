@@ -57,7 +57,7 @@ class ArtifactSourceFilterTest extends FlatSpec with Matchers {
     val f2 = StringFileArtifact("name2", "my/other/path", "contents")
     val result = as plus Seq(f1, f2)
 
-    result.findFile("my/other/path/name2") should be(defined)
+    result.findFile("my/other/path/name2") shouldBe defined
     result.allFiles.size should equal(2)
     result.allDirectories.size should equal(3)
     val filtered = result - "my/other/path/name2"
@@ -73,7 +73,7 @@ class ArtifactSourceFilterTest extends FlatSpec with Matchers {
     val f3 = StringFileArtifact("name", "my/other/path", "contents")
     val result = as plus Seq(f1, f2, f3)
 
-    result.findFile("name") should be(defined)
+    result.findFile("name") shouldBe defined
     result.allFiles.size should equal(3)
     result.allDirectories.size should equal(3)
     result.findFile("name") shouldBe defined

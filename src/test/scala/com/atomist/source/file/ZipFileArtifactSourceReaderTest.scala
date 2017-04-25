@@ -7,24 +7,6 @@ import com.atomist.source.file.ClassPathArtifactSource.classPathResourceToFile
 import org.apache.commons.io.FileUtils
 import org.scalatest.{FlatSpec, Matchers}
 
-object ZipFileArtifactSourceReaderTest {
-
-  def springBootZipFileId = {
-    val f = classPathResourceToFile("springboot1.zip")
-    ZipFileInput(new FileInputStream(f))
-  }
-
-  def springRestServiceZipFileId = {
-    val f = classPathResourceToFile("spring-rest-service.zip")
-    ZipFileInput(new FileInputStream(f))
-  }
-
-  def leinTemplateZileFileId = {
-    val f = classPathResourceToFile("simple-lein-project-1.0.0.zip")
-    ZipFileInput(new FileInputStream(f))
-  }
-}
-
 class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
 
   it should "read zip file with directory after files" in {
@@ -107,5 +89,22 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
     val resourceDir = zipSource.findDirectory("src/test/resources")
     resourceDir shouldBe defined
+  }
+}
+object ZipFileArtifactSourceReaderTest {
+
+  def springBootZipFileId = {
+    val f = classPathResourceToFile("springboot1.zip")
+    ZipFileInput(new FileInputStream(f))
+  }
+
+  def springRestServiceZipFileId = {
+    val f = classPathResourceToFile("spring-rest-service.zip")
+    ZipFileInput(new FileInputStream(f))
+  }
+
+  def leinTemplateZileFileId = {
+    val f = classPathResourceToFile("simple-lein-project-1.0.0.zip")
+    ZipFileInput(new FileInputStream(f))
   }
 }

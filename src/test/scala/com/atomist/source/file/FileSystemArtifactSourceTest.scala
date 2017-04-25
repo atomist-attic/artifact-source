@@ -1,6 +1,6 @@
 package com.atomist.source.file
 
-import java.io.{File, FileInputStream}
+import java.io.{ByteArrayInputStream, File, FileInputStream}
 import java.nio.file.attribute.PosixFileAttributeView
 import java.nio.file.{FileSystems, Files, Paths}
 
@@ -8,32 +8,10 @@ import com.atomist.source._
 import com.atomist.source.file.ClassPathArtifactSource.{classPathResourceToFile, toArtifactSource}
 import com.atomist.source.filter.{AtomistIgnoreFileFilter, GitDirFilter, GitignoreFileFilter}
 import com.atomist.util.BinaryDecider.isBinaryContent
+import org.apache.commons.io.FileUtils
 import org.scalatest._
 
 import scala.collection.JavaConverters._
-
-object FileSystemArtifactSourceTest {
-
-  val AtomistTemplatesSource = toArtifactSource("spring-boot")
-
-  val PosixSupported = FileSystems.getDefault.getFileStores.asScala
-    .exists(_.supportsFileAttributeView(classOf[PosixFileAttributeView]))
-
-  def ignoreFiles1ZipId = {
-    val f = classPathResourceToFile("ignore-files/no-dot-git.zip")
-    ZipFileInput(new FileInputStream(f))
-  }
-
-  def ignoreFiles2ZipId = {
-    val f = classPathResourceToFile("ignore-files/dot-git-negated-node_modules.zip")
-    ZipFileInput(new FileInputStream(f))
-  }
-
-  def ignoreFiles3ZipId = {
-    val f = classPathResourceToFile("ignore-files/dot-atomist-ignored-node_modules.zip")
-    ZipFileInput(new FileInputStream(f))
-  }
-}
 
 class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
@@ -104,6 +82,18 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     validateTargetDirectory(AtomistTemplatesSource)
   }
 
+  it should "find file under directory starting with /" in {
+    val dir = Files.createTempDirectory(s"tmp_${System.currentTimeMillis}")
+    val tempFile = Files.createTempFile(dir, s"tmp_${System.currentTimeMillis}", ".txt")
+    tempFile.toFile.deleteOnExit
+    FileUtils.copyToFile(new ByteArrayInputStream("contents".getBytes), tempFile.toFile)
+    val fid = SimpleFileSystemArtifactSourceIdentifier(dir.toFile)
+    val introspectorSource = FileSystemArtifactSource(fid)
+    introspectorSource.findFile(tempFile.toString) shouldBe defined
+    FileUtils.deleteQuietly(dir.toFile)
+    introspectorSource.findDirectory(dir.toString) shouldBe empty
+  }
+
   // TODO some of these tests are more generic ArtifactSource tests
   it should "be able to cache" in {
     val classpathSource = AtomistTemplatesSource
@@ -155,6 +145,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val tmpDir = Files.createTempDirectory(null)
+    tmpDir.toFile.deleteOnExit
     val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
@@ -167,6 +158,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val tmpDir = Files.createTempDirectory(null)
+    tmpDir.toFile.deleteOnExit
     val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
@@ -179,12 +171,13 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val tmpDir = Files.createTempDirectory(null)
+    tmpDir.toFile.deleteOnExit
     val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
-    fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
-
+    val f = fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
+    val path = Paths.get(f.getAbsolutePath, "dot-atomist-ignored-node_modules").toString
     val as = FileSystemArtifactSource(fid,
-      GitignoreFileFilter(tmpDir.toString),
-      AtomistIgnoreFileFilter(tmpDir.toString))
+      GitignoreFileFilter(path),
+      AtomistIgnoreFileFilter(path))
     as.findDirectory(".atomist/node_modules") shouldBe empty
     as.findDirectory("target") shouldBe empty
   }
@@ -205,4 +198,27 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
   private def validateTargetDirectory(s: ArtifactSource): Unit =
     s.allFiles.exists(_.name contains ".vm")
+}
+
+object FileSystemArtifactSourceTest {
+
+  val AtomistTemplatesSource = toArtifactSource("spring-boot")
+
+  val PosixSupported = FileSystems.getDefault.getFileStores.asScala
+    .exists(_.supportsFileAttributeView(classOf[PosixFileAttributeView]))
+
+  def ignoreFiles1ZipId = {
+    val f = classPathResourceToFile("ignore-files/no-dot-git.zip")
+    ZipFileInput(new FileInputStream(f))
+  }
+
+  def ignoreFiles2ZipId = {
+    val f = classPathResourceToFile("ignore-files/dot-git-negated-node_modules.zip")
+    ZipFileInput(new FileInputStream(f))
+  }
+
+  def ignoreFiles3ZipId = {
+    val f = classPathResourceToFile("ignore-files/dot-atomist-ignored-node_modules.zip")
+    ZipFileInput(new FileInputStream(f))
+  }
 }
