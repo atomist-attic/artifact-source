@@ -12,6 +12,6 @@ class ArtifactContainerTest extends FlatSpec with Matchers {
           |}
         """.stripMargin)
     )
-    assert(src.findFile("/Foo.java").nonEmpty)
+   src.findFile("/Foo.java") shouldBe defined
   }
 }
