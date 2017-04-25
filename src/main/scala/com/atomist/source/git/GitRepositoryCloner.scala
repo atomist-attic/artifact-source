@@ -5,7 +5,7 @@ import java.net.URL
 import java.nio.file.Files
 
 import com.atomist.source.ArtifactSourceCreationException
-import com.atomist.source.file.{FileSystemArtifactSource, FileSystemArtifactSourceIdentifier, NamedFileSystemArtifactSourceIdentifier, SimpleFileSystemArtifactSourceIdentifier}
+import com.atomist.source.file.{FileSystemArtifactSource, FileSystemArtifactSourceIdentifier, NamedFileSystemArtifactSourceIdentifier}
 import com.atomist.source.filter.GitDirFilter
 import org.apache.commons.io.FileUtils
 
