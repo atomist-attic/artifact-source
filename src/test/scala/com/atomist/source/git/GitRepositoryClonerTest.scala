@@ -1,6 +1,6 @@
 package com.atomist.source.git
 
-import java.nio.file.{Files, Paths}
+import java.nio.file.Paths
 
 import com.atomist.source.ArtifactSourceCreationException
 import com.atomist.source.file.{FileSystemArtifactSourceIdentifier, NamedFileSystemArtifactSourceIdentifier}
