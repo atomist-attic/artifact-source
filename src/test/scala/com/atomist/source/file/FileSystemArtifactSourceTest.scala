@@ -171,13 +171,12 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val tmpDir = Files.createTempDirectory(null)
-    tmpDir.toFile.deleteOnExit
     val fid = FileSystemArtifactSourceIdentifier(tmpDir.toFile)
-    val f = fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
-    val path = Paths.get(f.getAbsolutePath, "dot-atomist-ignored-node_modules").toString
+    fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
+
     val as = FileSystemArtifactSource(fid,
-      GitignoreFileFilter(path),
-      AtomistIgnoreFileFilter(path))
+      GitignoreFileFilter(tmpDir.toString),
+      AtomistIgnoreFileFilter(tmpDir.toString))
     as.findDirectory(".atomist/node_modules") shouldBe empty
     as.findDirectory("target") shouldBe empty
   }

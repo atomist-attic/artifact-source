@@ -62,22 +62,12 @@ trait ArtifactContainer {
 
   def findDirectoryByPath(pathElements: Seq[String]): Option[DirectoryArtifact] = {
     val relPath = relativeToFullPath(pathElements)
-    val allD = allDirectories
-    allD.find(d => {
-         println(d.pathElements.size +": " + d.pathElements.mkString("/"))
-        println(relPath.size + ": " + relPath.mkString("/"))
-      d.pathElements.containsSlice(relPath)
-    })
+    allDirectories.find(_.pathElements.equals(relPath))
   }
 
   def findFileByPath(name: String, pathElements: Seq[String]): Option[FileArtifact] = {
     val relPath = relativeToFullPath(pathElements)
-    val all = allFiles
-    all.find(f => {
-   //   println(f.pathElements.size +": " + f.pathElements.mkString("/"))
-    //  println(relPath.size + ": " + relPath.mkString("/"))
-      f.name.equals(name) && f.pathElements == relPath
-    })
+    allFiles.find(f => f.name.equals(name) && f.pathElements.equals(relPath))
   }
 
   /**

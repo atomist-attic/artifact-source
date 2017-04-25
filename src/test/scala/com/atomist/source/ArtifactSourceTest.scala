@@ -25,7 +25,7 @@ class ArtifactSourceTest extends CommonTests {
     introspectorSource.findDirectory(dirName) match {
       case None => fail("Should have been able to find source directory")
       case Some(d) =>
-        d.pathElements.size should equal(11)
+        d.pathElements.size should equal(2)
         d.pathElements.mkString("/") should endWith(dirName)
     }
   }

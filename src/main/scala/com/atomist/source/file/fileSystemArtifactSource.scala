@@ -85,9 +85,8 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
     // Remove path above root
     protected val pathElementsFromFile: Seq[String] = {
       val fixed = f.getPath.replace(root.getPath, "")
-     val elts = f.getPath.split(Matcher.quoteReplacement(File.separator)).toSeq
-    elts
-   //  if (elts.nonEmpty && elts.head.equals("")) elts.drop(1) else elts
+      val elts = fixed.split(Matcher.quoteReplacement(File.separator)).toSeq
+      if (elts.nonEmpty && elts.head.equals("")) elts.drop(1) else elts
     }
   }
 
