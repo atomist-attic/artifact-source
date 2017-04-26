@@ -60,7 +60,9 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
       case Some(file) =>
         Try(Files.createDirectory(file.toPath)) match {
           case Success(path) => path.toFile
-          case Failure(e: FileAlreadyExistsException) => file
+          case Failure(e: FileAlreadyExistsException) =>
+            resetDirectoryContent(file)
+            file
         }
       case None =>
         val tempDir = Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile
