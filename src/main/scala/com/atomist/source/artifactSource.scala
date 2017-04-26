@@ -264,7 +264,8 @@ trait ArtifactSource extends RootArtifactContainer {
       override val artifacts: Seq[Artifact] = filterArtifacts(ArtifactSource.this.artifacts)
 
       override val cachedDeltas: Seq[Delta] = {
-        val deletedArtifacts: Seq[Artifact] = ArtifactSource.this.artifacts.filter(a => !artifacts.exists(_.path.equals(a.path)))
+        val deletedArtifacts: Seq[Artifact] = ArtifactSource.this.allArtifacts
+          .filter(a => !allArtifacts.exists(_.path.equals(a.path)))
         ArtifactSource.this.cachedDeltas ++ (deletedArtifacts map {
           case d: DirectoryArtifact => DirectoryDeletionDelta(d)
           case f: FileArtifact => FileDeletionDelta(f)

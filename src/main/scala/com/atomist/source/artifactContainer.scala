@@ -112,6 +112,8 @@ trait ArtifactContainer {
   def allDirectories: Seq[DirectoryArtifact]
 
   def allDirectoriesAsJava: JList[DirectoryArtifact] = allDirectories.asJava
+
+  def allArtifacts: Seq[Artifact] = allFiles ++ allDirectories
 }
 
 /**

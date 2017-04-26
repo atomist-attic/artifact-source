@@ -19,7 +19,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
   val fWriter = new FileSystemArtifactSourceWriter
 
-  it should "handle classpath directory not found" in {
+  "File system artifact source" should "handle classpath directory not found" in {
     an[ArtifactSourceException] should be thrownBy toArtifactSource("this is complete nonsense")
   }
 
@@ -205,7 +205,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     newSource.findFile(name) shouldBe empty
     classpathSource.cachedDeltas.size shouldBe 0
     newSource.cachedDeltas.size shouldBe 1
-    classpathSource.deltaFrom(newSource).deltas.size shouldBe 1
+    newSource.deltaFrom(classpathSource).deltas.size shouldBe 1
   }
 
   private def validateTargetDirectory(s: ArtifactSource): Unit =
