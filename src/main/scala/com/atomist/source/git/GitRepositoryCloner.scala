@@ -2,7 +2,7 @@ package com.atomist.source.git
 
 import java.io.File
 import java.net.URL
-import java.nio.file.Files
+import java.nio.file.{FileAlreadyExistsException, Files}
 
 import com.atomist.source.ArtifactSourceCreationException
 import com.atomist.source.file.{FileSystemArtifactSource, FileSystemArtifactSourceIdentifier, NamedFileSystemArtifactSourceIdentifier}
@@ -51,14 +51,17 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
 
   def cleanUp(fid: FileSystemArtifactSourceIdentifier): Unit = cleanUp(fid.rootFile)
 
-  def resetContent(dir: File): Unit = FileUtils.cleanDirectory(dir)
+  def resetDirectoryContent(dir: File): Unit = FileUtils.cleanDirectory(dir)
 
-  def resetContent(fid: FileSystemArtifactSourceIdentifier): Unit = resetContent(fid.rootFile)
+  def resetDirectoryContent(fid: FileSystemArtifactSourceIdentifier): Unit = resetDirectoryContent(fid.rootFile)
 
   private def createRepoDirectory(repo: String, owner: String, dir: Option[File]) =
     dir match {
       case Some(file) =>
-        Files.createDirectory(file.toPath).toFile
+        Try(Files.createDirectory(file.toPath)) match {
+          case Success(path) => path.toFile
+          case Failure(e: FileAlreadyExistsException) => file
+        }
       case None =>
         val tempDir = Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile
         tempDir.deleteOnExit()

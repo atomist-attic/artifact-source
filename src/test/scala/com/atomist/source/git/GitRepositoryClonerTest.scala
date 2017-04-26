@@ -4,11 +4,12 @@ import java.io.File
 import java.nio.file.Paths
 
 import com.atomist.source.ArtifactSourceCreationException
+import com.atomist.source.file.FileSystemArtifactSource
 import org.scalatest.{FlatSpec, Matchers}
 
 class GitRepositoryClonerTest extends FlatSpec with Matchers {
 
-  it should "clone remote repo to temp directory" in {
+  "Git repository cloner" should "clone remote repo to temp directory" in {
     cloneAndVerify()
   }
 
@@ -16,6 +17,20 @@ class GitRepositoryClonerTest extends FlatSpec with Matchers {
     val repoDir = Paths.get(System.getProperty("java.io.tmpdir"), s"tmp_${System.currentTimeMillis}").toFile
     repoDir.deleteOnExit()
     cloneAndVerify(None, None, Some(repoDir))
+  }
+
+  it should "clone remote repo to specified directory, reset directory content, and clone again" in {
+    val repoDir = Paths.get(System.getProperty("java.io.tmpdir"), s"tmp_${System.currentTimeMillis}").toFile
+    repoDir.deleteOnExit()
+    val grc = GitRepositoryCloner("")
+    val as = grc.clone("rug", "atomist", None, None, Some(repoDir))
+    as.allArtifacts.size should be > 0
+    grc.resetDirectoryContent(repoDir)
+    val newAs = FileSystemArtifactSource(as.id)
+    newAs.artifacts.size should equal(0)
+    val recloned = grc.clone("rug", "atomist", None, None, Some(repoDir))
+    recloned.artifacts.size should be > 0
+    grc.cleanUp(repoDir)
   }
 
   it should "clone remote repo with branch specified" in {
@@ -31,7 +46,7 @@ class GitRepositoryClonerTest extends FlatSpec with Matchers {
     val grc = GitRepositoryCloner("")
     val start = System.currentTimeMillis
     val as = grc.clone("rug", "atomist", branch, sha, dir)
-    val artifacts = as.artifacts
+    val artifacts = as.allArtifacts
     // println(s"ArtifactSource creation: ${System.currentTimeMillis - start} ms")
     artifacts.size should be > 0
     val fid = as.id
