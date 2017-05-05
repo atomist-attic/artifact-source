@@ -26,6 +26,12 @@ object FilePermissions {
     })
     oct"0100000" + oct"${intToOctal(mode)}"
   }
+
+  def fromMode(mode: Int): JSet[PosixFilePermission] = {
+    val octal = Octal.intToOctal(mode)
+    val perms = if (octal.length == 6) octal.substring(2) else octal
+    Permissions(perms)
+  }
 }
 
 object Octal {
@@ -52,7 +58,7 @@ object Octal {
 
 object Permissions {
 
-  def apply(perms: String): java.util.Set[PosixFilePermission] =
+  def apply(perms: String): JSet[PosixFilePermission] =
     PosixFilePermissions fromString convert(perms)
 
   def convert(perms: String) = {

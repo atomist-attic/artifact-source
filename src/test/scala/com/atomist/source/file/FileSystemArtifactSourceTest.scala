@@ -19,7 +19,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
   val fWriter = new FileSystemArtifactSourceWriter
 
-  "File system artifact source" should "handle classpath directory not found" in {
+  "FileSystemArtifactSource" should "handle classpath directory not found" in {
     an[ArtifactSourceException] should be thrownBy toArtifactSource("this is complete nonsense")
   }
 
@@ -84,7 +84,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
   it should "find file under directory starting with /" in {
     val dir = Files.createTempDirectory(s"tmp_${System.currentTimeMillis}").toFile
-    dir.deleteOnExit
+    dir.deleteOnExit()
     val subDir = Files.createDirectory(Paths.get(dir.getPath, "src"))
     val tempFile = Files.createFile(Paths.get(subDir.toString, "tmp.txt")).toFile
     FileUtils.copyToFile(new ByteArrayInputStream("contents".getBytes), tempFile)
@@ -146,7 +146,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val tmpDir = Files.createTempDirectory(null).toFile
-    tmpDir.deleteOnExit
+    tmpDir.deleteOnExit()
     val fid = FileSystemArtifactSourceIdentifier(tmpDir)
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
@@ -159,7 +159,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val tmpDir = Files.createTempDirectory(null).toFile
-    tmpDir.deleteOnExit
+    tmpDir.deleteOnExit()
     val fid = FileSystemArtifactSourceIdentifier(tmpDir)
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
@@ -172,7 +172,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val tmpDir = Files.createTempDirectory(null).toFile
-    tmpDir.deleteOnExit
+    tmpDir.deleteOnExit()
     val fid = FileSystemArtifactSourceIdentifier(tmpDir)
     val f = fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
     val path = Paths.get(f.getAbsolutePath, "dot-atomist-ignored-node_modules").toString
@@ -219,18 +219,12 @@ object FileSystemArtifactSourceTest {
   val PosixSupported = FileSystems.getDefault.getFileStores.asScala
     .exists(_.supportsFileAttributeView(classOf[PosixFileAttributeView]))
 
-  def ignoreFiles1ZipId = {
-    val f = classPathResourceToFile("ignore-files/no-dot-git.zip")
-    ZipFileInput(new FileInputStream(f))
-  }
+  def ignoreFiles1ZipId =
+    ZipFileInput(new FileInputStream(classPathResourceToFile("ignore-files/no-dot-git.zip")))
 
-  def ignoreFiles2ZipId = {
-    val f = classPathResourceToFile("ignore-files/dot-git-negated-node_modules.zip")
-    ZipFileInput(new FileInputStream(f))
-  }
+  def ignoreFiles2ZipId =
+    ZipFileInput(new FileInputStream(classPathResourceToFile("ignore-files/dot-git-negated-node_modules.zip")))
 
-  def ignoreFiles3ZipId = {
-    val f = classPathResourceToFile("ignore-files/dot-atomist-ignored-node_modules.zip")
-    ZipFileInput(new FileInputStream(f))
-  }
+  def ignoreFiles3ZipId =
+    ZipFileInput(new FileInputStream(classPathResourceToFile("ignore-files/dot-atomist-ignored-node_modules.zip")))
 }
