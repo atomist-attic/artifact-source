@@ -19,7 +19,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
   val fWriter = new FileSystemArtifactSourceWriter
 
-  "File system artifact source" should "handle classpath directory not found" in {
+  "FileSystemArtifactSource" should "handle classpath directory not found" in {
     an[ArtifactSourceException] should be thrownBy toArtifactSource("this is complete nonsense")
   }
 
@@ -219,18 +219,12 @@ object FileSystemArtifactSourceTest {
   val PosixSupported = FileSystems.getDefault.getFileStores.asScala
     .exists(_.supportsFileAttributeView(classOf[PosixFileAttributeView]))
 
-  def ignoreFiles1ZipId = {
-    val f = classPathResourceToFile("ignore-files/no-dot-git.zip")
-    ZipFileInput(new FileInputStream(f))
-  }
+  def ignoreFiles1ZipId =
+    ZipFileInput(new FileInputStream(classPathResourceToFile("ignore-files/no-dot-git.zip")))
 
-  def ignoreFiles2ZipId = {
-    val f = classPathResourceToFile("ignore-files/dot-git-negated-node_modules.zip")
-    ZipFileInput(new FileInputStream(f))
-  }
+  def ignoreFiles2ZipId =
+    ZipFileInput(new FileInputStream(classPathResourceToFile("ignore-files/dot-git-negated-node_modules.zip")))
 
-  def ignoreFiles3ZipId = {
-    val f = classPathResourceToFile("ignore-files/dot-atomist-ignored-node_modules.zip")
-    ZipFileInput(new FileInputStream(f))
-  }
+  def ignoreFiles3ZipId =
+    ZipFileInput(new FileInputStream(classPathResourceToFile("ignore-files/dot-atomist-ignored-node_modules.zip")))
 }
