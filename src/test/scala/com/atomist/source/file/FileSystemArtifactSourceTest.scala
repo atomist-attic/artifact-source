@@ -84,7 +84,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
   it should "find file under directory starting with /" in {
     val dir = Files.createTempDirectory(s"tmp_${System.currentTimeMillis}").toFile
-    dir.deleteOnExit
+    dir.deleteOnExit()
     val subDir = Files.createDirectory(Paths.get(dir.getPath, "src"))
     val tempFile = Files.createFile(Paths.get(subDir.toString, "tmp.txt")).toFile
     FileUtils.copyToFile(new ByteArrayInputStream("contents".getBytes), tempFile)
@@ -146,7 +146,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val tmpDir = Files.createTempDirectory(null).toFile
-    tmpDir.deleteOnExit
+    tmpDir.deleteOnExit()
     val fid = FileSystemArtifactSourceIdentifier(tmpDir)
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
@@ -159,7 +159,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val tmpDir = Files.createTempDirectory(null).toFile
-    tmpDir.deleteOnExit
+    tmpDir.deleteOnExit()
     val fid = FileSystemArtifactSourceIdentifier(tmpDir)
     fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
 
@@ -172,7 +172,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
 
     val tmpDir = Files.createTempDirectory(null).toFile
-    tmpDir.deleteOnExit
+    tmpDir.deleteOnExit()
     val fid = FileSystemArtifactSourceIdentifier(tmpDir)
     val f = fWriter.write(zipSource, fid, SimpleSourceUpdateInfo(getClass.getName))
     val path = Paths.get(f.getAbsolutePath, "dot-atomist-ignored-node_modules").toString
