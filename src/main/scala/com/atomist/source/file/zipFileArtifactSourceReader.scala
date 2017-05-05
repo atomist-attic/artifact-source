@@ -1,14 +1,13 @@
 package com.atomist.source.file
 
-import java.io.{File, IOException, InputStream, PushbackInputStream}
-import java.nio.charset.Charset
-import java.nio.file.Paths
+import java.io.{File, IOException, InputStream}
+import java.nio.file.attribute.PosixFilePermissions
+import java.nio.file.{Files, Paths}
 
-import com.atomist.source.{FileArtifact, _}
-import com.atomist.util.BinaryDecider
-import com.atomist.util.Utils.withCloseable
+import com.atomist.source._
+import com.atomist.util.FilePermissions
 import org.apache.commons.compress.archivers.zip.{AsiExtraField, ZipFile}
-import org.apache.commons.io.{FileUtils, IOUtils}
+import org.apache.commons.io.FileUtils
 
 import scala.collection.JavaConverters._
 
@@ -33,58 +32,53 @@ object ZipFileArtifactSourceReader {
     try {
       FileUtils.copyInputStreamToFile(id.is, tmpFile)
     } catch {
-      case e: IOException => throw ArtifactSourceAccessException(s"Failed to copy zip contents to temp file: ${e.getMessage}")
+      case e: IOException => throw ArtifactSourceAccessException(s"Failed to copy zip contents to temp file: ${e.getMessage}", e)
     }
 
     val zipFile = try {
       new ZipFile(tmpFile)
     } catch {
-      case e: IOException => throw ArtifactSourceAccessException(s"Expected zip entries in $id but none was found")
+      case e: IOException => throw ArtifactSourceAccessException(s"Expected zip entries in $id but none was found", e)
     }
 
+    val rootFile = Files.createTempDirectory("tmp").toFile
+    rootFile.deleteOnExit()
+
     try {
-      val artifactsRead: Seq[Artifact] =
-        zipFile.getEntries().asScala
-          .map(entry => {
-            val pathName = entry.getName
-            val path = if (IsWindows) pathName.replace(":", "_") else pathName
-            val file = Paths.get(path).toFile
-            if (file.isDirectory || entry.isDirectory || entry.isUnixSymlink) {
-              val split = pathName.split("/")
-              val name = split.last
-              val pathElements = split.seq.dropRight(1)
-              EmptyDirectoryArtifact(name, pathElements)
-            } else {
-              val unixMode = entry.getUnixMode
-              val mode = unixMode match {
-                case 0 =>
-                  entry.getExtraFields().collectFirst {
-                    case aef: AsiExtraField => aef.getMode
-                    case _ => FileArtifact.DefaultMode
-                  }.getOrElse(FileArtifact.DefaultMode)
-                case _ => unixMode
-              }
-              withCloseable(zipFile.getInputStream(entry))(is => {
-                val pis = new PushbackInputStream(is, 10)
-                val peekBytes = new Array[Byte](10)
-                pis.read(peekBytes)
-                val isBinary = BinaryDecider.isBinaryContent(peekBytes)
-                pis.unread(peekBytes)
-                if (isBinary) {
-                  val bytes = IOUtils.toByteArray(pis)
-                  ByteArrayFileArtifact(pathName, bytes, mode)
-                } else {
-                  val content = IOUtils.toString(pis, Charset.defaultCharset())
-                  StringFileArtifact(pathName, content, mode, None)
-                }
-              })
+      zipFile.getEntries().asScala
+        .foreach(entry => {
+          val pathName = entry.getName
+          val path = if (IsWindows) pathName.replace(":", "_") else pathName
+          val file = Paths.get(path).toFile
+          val newPath = Paths.get(rootFile.getPath, file.getPath)
+
+          if (file.isDirectory || entry.isDirectory || entry.isUnixSymlink)
+            Files.createDirectories(newPath)
+          else {
+            val unixMode = entry.getUnixMode
+            val mode = unixMode match {
+              case 0 =>
+                entry.getExtraFields().collectFirst {
+                  case aef: AsiExtraField => aef.getMode
+                  case _ => FileArtifact.DefaultMode
+                }.getOrElse(FileArtifact.DefaultMode)
+              case _ => unixMode
             }
-          }).toSeq
-      val (emptyDirectories, other) = artifactsRead.partition(_.isInstanceOf[EmptyDirectoryArtifact])
-      val emptyDirectoriesFirstArtifactsRead: Seq[Artifact] = emptyDirectories ++ other
-      EmptyArtifactSource(id) + emptyDirectoriesFirstArtifactsRead
+            val permissions = FilePermissions.fromMode(mode)
+            val fileAttributes = PosixFilePermissions.asFileAttribute(permissions)
+            val parentDir = newPath.toFile.getParentFile.toPath
+            if (!Files.exists(parentDir))
+              parentDir.toFile.mkdirs()
+
+            FileUtils.copyInputStreamToFile(zipFile.getInputStream(entry),
+              Files.createFile(newPath, fileAttributes).toFile)
+          }
+        })
+
+      val fid = FileSystemArtifactSourceIdentifier(rootFile)
+      FileSystemArtifactSource(fid)
     } finally {
-      zipFile.close()
+      ZipFile.closeQuietly(zipFile)
       tmpFile.delete()
     }
   }

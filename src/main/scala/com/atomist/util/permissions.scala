@@ -4,6 +4,7 @@ import java.nio.file.attribute.{PosixFilePermission, PosixFilePermissions}
 import java.util.{Set => JSet}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
 object FilePermissions {
@@ -25,6 +26,18 @@ object FilePermissions {
       else mode |= 0
     })
     oct"0100000" + oct"${intToOctal(mode)}"
+  }
+
+  def fromMode(mode: Int): JSet[PosixFilePermission] = {
+    var intMode = mode
+    val posixFilePermissions = PosixFilePermission.values
+    val permissions = new ArrayBuffer[PosixFilePermission]()
+    for (i <- posixFilePermissions.indices) {
+      if ((intMode & 1) == 1)
+        permissions += posixFilePermissions(posixFilePermissions.length - i - 1)
+      intMode >>= 1
+    }
+    permissions.toSet.asJava
   }
 }
 

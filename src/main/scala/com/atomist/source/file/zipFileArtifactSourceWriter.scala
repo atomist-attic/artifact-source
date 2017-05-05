@@ -36,11 +36,13 @@ object ZipFileArtifactSourceWriter {
       }
 
       // Copy empty directories
-      as.allDirectories collect {
-        case eda: EmptyDirectoryArtifact =>
-          val entry = new ZipArchiveEntry(eda.path)
-          zip putArchiveEntry entry
-          zip.closeArchiveEntry()
+      for {
+        da <- as.allDirectories
+        if da.allArtifacts.isEmpty
+      } {
+        val entry = new ZipArchiveEntry(da.path)
+        zip putArchiveEntry entry
+        zip.closeArchiveEntry()
       }
     } finally {
       zip.finish()
