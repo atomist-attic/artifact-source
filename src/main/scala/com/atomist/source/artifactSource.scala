@@ -46,7 +46,8 @@ object ArtifactSource {
     new SimpleFileBasedArtifactSource(NamedArtifactSourceIdentifier(newId), deltas.map(_.updatedFile), deltas)
   }
 
-  def of(pathsAndContents: Map[String, String]) = pathsAndContents.map(pac => StringFileArtifact(pac._1, pac._2)).toList
+  def of(pathsAndContents: Map[String, String]): List[StringFileArtifact] =
+    pathsAndContents.map(pac => StringFileArtifact(pac._1, pac._2)).toList
 
   def fromFiles(fileArtifacts: FileArtifact*) =
     new SimpleFileBasedArtifactSource(fileArtifacts.hashCode.toString, fileArtifacts)
@@ -118,7 +119,7 @@ trait ArtifactSource extends RootArtifactContainer {
         (for (newDir <- right.allDirectories)
           yield
             left.findDirectory(newDir.path) match {
-              case Some(d) => None
+              case Some(_) => None
               case None => Some(DirectoryAdditionDelta(newDir))
             }
           ).flatten
@@ -135,14 +136,8 @@ trait ArtifactSource extends RootArtifactContainer {
     SimpleFileBasedArtifactSource.from(as)
   }
 
-  def plus(additionalArtifacts: Seq[Artifact]): ArtifactSource = {
-    // TODO must be able to do this in a nicer, more functional, way
-    var as = this
-    for (a <- additionalArtifacts) {
-      as = as plus a
-    }
-    as
-  }
+  def plus(additionalArtifacts: Seq[Artifact]): ArtifactSource =
+    additionalArtifacts.foldLeft(this)((as: ArtifactSource, a: Artifact) => as plus a)
 
   def plus(newArtifact: Artifact): ArtifactSource =
   // TODO what to do in event of conflict
@@ -156,8 +151,8 @@ trait ArtifactSource extends RootArtifactContainer {
 
         def findOrCreateDirectory(pathAbove: Seq[String], pathBelow: Seq[String], parent: ArtifactContainer): Artifact = {
           if (newArtifact match {
-            case d: DirectoryArtifact if pathBelow.equals(Seq(newArtifact.name)) => true
-            case f: FileArtifact if pathBelow.isEmpty => true
+            case _: DirectoryArtifact if pathBelow.equals(Seq(newArtifact.name)) => true
+            case _: FileArtifact if pathBelow.isEmpty => true
             case _ => false
           })
             newArtifact
@@ -255,22 +250,19 @@ trait ArtifactSource extends RootArtifactContainer {
 
       override val pathElements = dir.pathElements
 
-      override def artifacts: Seq[Artifact] = filterArtifacts(dir.artifacts)
+      override lazy val artifacts: Seq[Artifact] = filterArtifacts(dir.artifacts)
     }
 
     new ArtifactSource with DirectoryBasedArtifactContainer {
-      override val id = ArtifactSource.this.id
+      override val id: ArtifactSourceIdentifier = ArtifactSource.this.id
 
-      override val artifacts: Seq[Artifact] = filterArtifacts(ArtifactSource.this.artifacts)
+      override lazy val artifacts: Seq[Artifact] = filterArtifacts(ArtifactSource.this.artifacts)
 
-      override val cachedDeltas: Seq[Delta] = {
-        val deletedArtifacts: Seq[Artifact] = ArtifactSource.this.allArtifacts
-          .filter(a => !allArtifacts.exists(_.path.equals(a.path)))
-        ArtifactSource.this.cachedDeltas ++ (deletedArtifacts map {
-          case d: DirectoryArtifact => DirectoryDeletionDelta(d)
-          case f: FileArtifact => FileDeletionDelta(f)
+      override lazy val cachedDeltas: Seq[Delta] =
+        ArtifactSource.this.cachedDeltas ++ (ArtifactSource.this.allArtifacts collect {
+          case d: DirectoryArtifact if !dirFilter(d) => DirectoryDeletionDelta(d)
+          case f: FileArtifact if !fileFilter(f) => FileDeletionDelta(f)
         })
-      }
     }
   }
 
@@ -398,7 +390,7 @@ trait ArtifactSource extends RootArtifactContainer {
     }
   }
 
-  def ✎(fe: FileEditor) = edit(fe)
+  def ✎(fe: FileEditor): ArtifactSource = edit(fe)
 
   private val cacheIfNecessary: Artifact => Artifact = {
     case d: DirectoryArtifact => SimpleDirectoryArtifact(d.name, d.pathElements,
