@@ -38,7 +38,7 @@ class FileSystemArtifactSourceWriter {
     val newFile = new File(rootFile, fa.path)
 
     fa match {
-      case ns: NonStreamedFileArtifact =>
+      case _: NonStreamedFileArtifact =>
         FileUtils.writeStringToFile(newFile, fa.content, Charset.defaultCharset())
       case sa: StreamedFileArtifact =>
         FileUtils.copyInputStreamToFile(new BufferedInputStream(sa.inputStream()), newFile)
@@ -49,11 +49,9 @@ class FileSystemArtifactSourceWriter {
     val octal = Octal.intToOctal(fa.mode)
     val perms = if (octal.length == 6) octal.substring(2) else octal
     val posix = Permissions(perms)
-    Try {
-      Files.setPosixFilePermissions(newFile.toPath, posix)
-    } recoverWith {
+    Try(Files.setPosixFilePermissions(newFile.toPath, posix)).recoverWith {
       // In case of windows
-      case e: UnsupportedOperationException =>
+      case _: UnsupportedOperationException =>
         Try {
           newFile.setExecutable(perms contains PosixFilePermission.OWNER_EXECUTE)
           newFile.setWritable(perms contains PosixFilePermission.OWNER_WRITE)

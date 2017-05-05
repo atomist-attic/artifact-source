@@ -78,7 +78,8 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
     // Look for an non-executable file and verify permissions
     val cmdFile = zipSource.findFile("project/mvnw.cmd")
     cmdFile shouldBe defined
-    cmdFile.get.mode should be(FileArtifact.DefaultMode)
+    if (!System.getProperty("os.name").contains("indows"))
+      cmdFile.get.mode should be(FileArtifact.DefaultMode)
 
     // Look for an executable file and verify executable permission
     val execFile = zipSource.findFile("project/mvnw")

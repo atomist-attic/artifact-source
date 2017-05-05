@@ -83,7 +83,7 @@ trait FileArtifact extends Artifact {
     ByteArrayFileArtifact(this.name, this.pathElements, newContent, this.mode, this.uniqueId)
 
   def withPath(pathName: String): FileArtifact = this match {
-    case sf: StringFileArtifact =>
+    case _: StringFileArtifact =>
       StringFileArtifact(pathName, this.content, this.mode, this.uniqueId)
     case _ =>
       val base = ByteArrayFileArtifact.toByteArrayFileArtifact(this)
@@ -92,7 +92,7 @@ trait FileArtifact extends Artifact {
   }
 
   def withMode(mode: Int): FileArtifact = this match {
-    case sf: StringFileArtifact =>
+    case _: StringFileArtifact =>
       StringFileArtifact(this.name, this.pathElements, this.content, mode, this.uniqueId)
     case _ =>
       val base = ByteArrayFileArtifact.toByteArrayFileArtifact(this)
@@ -100,7 +100,7 @@ trait FileArtifact extends Artifact {
   }
 
   def withUniqueId(id: String): FileArtifact = this match {
-    case sf: StringFileArtifact =>
+    case _: StringFileArtifact =>
       StringFileArtifact(this.name, this.pathElements, this.content, mode, Some(id))
     case _ =>
       val base = ByteArrayFileArtifact.toByteArrayFileArtifact(this)

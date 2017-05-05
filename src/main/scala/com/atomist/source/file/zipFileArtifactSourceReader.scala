@@ -1,7 +1,7 @@
 package com.atomist.source.file
 
 import java.io.{File, IOException, InputStream}
-import java.nio.file.attribute.PosixFilePermissions
+import java.nio.file.attribute.{PosixFilePermission, PosixFilePermissions}
 import java.nio.file.{Files, Paths}
 
 import com.atomist.source._
@@ -10,6 +10,7 @@ import org.apache.commons.compress.archivers.zip.{AsiExtraField, ZipFile}
 import org.apache.commons.io.FileUtils
 
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 case class ZipFileInput(is: InputStream) extends ArtifactSourceIdentifier {
 
@@ -64,14 +65,24 @@ object ZipFileArtifactSourceReader {
                 }.getOrElse(FileArtifact.DefaultMode)
               case _ => unixMode
             }
-            val permissions = FilePermissions.fromMode(mode)
-            val fileAttributes = PosixFilePermissions.asFileAttribute(permissions)
+            val perms = FilePermissions.fromMode(mode)
+            val fileAttributes = PosixFilePermissions.asFileAttribute(perms)
             val parentDir = newPath.toFile.getParentFile.toPath
             if (!Files.exists(parentDir))
-              parentDir.toFile.mkdirs()
+              parentDir.toFile.mkdirs
 
-            FileUtils.copyInputStreamToFile(zipFile.getInputStream(entry),
-              Files.createFile(newPath, fileAttributes).toFile)
+            val newFile = Try(Files.createFile(newPath, fileAttributes).toFile) match {
+              case Success(f) => f
+              case Failure(_: UnsupportedOperationException) =>
+                // In case of windows
+                val f = Files.createFile(newPath).toFile
+                f.setExecutable(perms contains PosixFilePermission.OWNER_EXECUTE)
+                f.setWritable(perms contains PosixFilePermission.OWNER_WRITE)
+                f
+              case Failure(t: Throwable) =>
+                throw ArtifactSourceCreationException(s"Failed to create file '${newPath.toString}'", t)
+            }
+            FileUtils.copyInputStreamToFile(zipFile.getInputStream(entry), newFile)
           }
         })
 
