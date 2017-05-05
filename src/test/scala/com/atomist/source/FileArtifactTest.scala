@@ -4,7 +4,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class FileArtifactTest extends FlatSpec with Matchers {
 
-  it should "change path of StringFileArtifact" in {
+  "FileArtifact" should "change path of StringFileArtifact" in {
     val sfa = StringFileArtifact("path", "this is the content")
     val newPath = "foo/bar"
     sfa.withPath(newPath) match {

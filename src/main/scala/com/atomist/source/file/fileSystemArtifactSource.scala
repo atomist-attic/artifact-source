@@ -123,7 +123,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
         FilePermissions.toMode(Files.readAttributes(f.toPath, classOf[PosixFileAttributes]).permissions())
       } match {
         case Success(mode) => mode
-        case Failure(e: UnsupportedOperationException) =>
+        case Failure(_: UnsupportedOperationException) =>
           // Windows
           if (Files.isExecutable(f.toPath))
             FileArtifact.ExecutableMode
