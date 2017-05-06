@@ -1,6 +1,6 @@
 package com.atomist.source.file
 
-import java.io.{ByteArrayInputStream, File, FileInputStream}
+import java.io.{ByteArrayInputStream, File}
 import java.nio.file.attribute.PosixFileAttributeView
 import java.nio.file.{FileSystems, Files, Paths}
 
@@ -219,12 +219,9 @@ object FileSystemArtifactSourceTest {
   val PosixSupported = FileSystems.getDefault.getFileStores.asScala
     .exists(_.supportsFileAttributeView(classOf[PosixFileAttributeView]))
 
-  def ignoreFiles1ZipId =
-    ZipFileInput(new FileInputStream(classPathResourceToFile("ignore-files/no-dot-git.zip")))
+  def ignoreFiles1ZipId = ZipFileInput(classPathResourceToFile("ignore-files/no-dot-git.zip"))
 
-  def ignoreFiles2ZipId =
-    ZipFileInput(new FileInputStream(classPathResourceToFile("ignore-files/dot-git-negated-node_modules.zip")))
+  def ignoreFiles2ZipId = ZipFileInput(classPathResourceToFile("ignore-files/dot-git-negated-node_modules.zip"))
 
-  def ignoreFiles3ZipId =
-    ZipFileInput(new FileInputStream(classPathResourceToFile("ignore-files/dot-atomist-ignored-node_modules.zip")))
+  def ignoreFiles3ZipId = ZipFileInput(classPathResourceToFile("ignore-files/dot-atomist-ignored-node_modules.zip"))
 }

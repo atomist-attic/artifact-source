@@ -58,7 +58,7 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
     val tmpFile = File.createTempFile("tmp", ".jar")
     tmpFile.deleteOnExit()
     FileUtils.copyInputStreamToFile(jarFile.get.inputStream(), tmpFile)
-    val jar = ZipFileInput(new FileInputStream(tmpFile))
+    val jar = ZipFileInput(tmpFile)
     val jarSource = ZipFileArtifactSourceReader.fromZipSource(jar)
     jarSource.allFiles.foreach(f => if (f.name.equals("MANIFEST.MF")) f.content.length shouldEqual 298)
     tmpFile.delete()
@@ -106,15 +106,11 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
 
 object ZipFileArtifactSourceReaderTest {
 
-  def springBootZipFileId =
-    ZipFileInput(new FileInputStream(classPathResourceToFile("springboot1.zip")))
+  def springBootZipFileId = ZipFileInput(classPathResourceToFile("springboot1.zip"))
 
-  def springRestServiceZipFileId =
-    ZipFileInput(new FileInputStream(classPathResourceToFile("spring-rest-service.zip")))
+  def springRestServiceZipFileId = ZipFileInput(classPathResourceToFile("spring-rest-service.zip"))
 
-  def leinTemplateZileFileId =
-    ZipFileInput(new FileInputStream(classPathResourceToFile("simple-lein-project-1.0.0.zip")))
+  def leinTemplateZileFileId = ZipFileInput(classPathResourceToFile("simple-lein-project-1.0.0.zip"))
 
-  def travisRugsZip =
-    ZipFileInput(new FileInputStream(classPathResourceToFile("travis-rugs.zip")))
+  def travisRugsZip = ZipFileInput(classPathResourceToFile("travis-rugs.zip"))
 }

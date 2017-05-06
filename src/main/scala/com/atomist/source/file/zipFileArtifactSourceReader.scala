@@ -16,7 +16,14 @@ import scala.util.{Failure, Success, Try}
 
 case class ZipFileInput(is: InputStream) extends ArtifactSourceIdentifier {
 
+  def this(file: File) = this(FileUtils.openInputStream(file))
+
   override val name: String = s"$is"
+}
+
+object ZipFileInput {
+
+  def apply(file: File) = new ZipFileInput(file)
 }
 
 /**
@@ -47,20 +54,20 @@ object ZipFileArtifactSourceReader {
       case e: IOException => throw ArtifactSourceAccessException(s"Expected zip entries in $id but none was found", e)
     }
 
-    unzipFile(zipFile.getEntries.asScala.toList, zipEntryInputStream(zipFile) _, rootFile)
+    unzipFile(zipFile.getEntries.asScala.toList, zipEntryInputStream(zipFile), rootFile)
     ZipFile.closeQuietly(zipFile)
     FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(rootFile))
   }
 
   private def zipEntryInputStream(zipFile: ZipFile)(entry: ZipArchiveEntry) = zipFile.getInputStream(entry)
 
-  private def unzipFile(entries: List[ZipArchiveEntry],
+  private def unzipFile(entryList: List[ZipArchiveEntry],
                         is: (ZipArchiveEntry) => InputStream,
                         targetFolder: File): Unit = {
     @tailrec
     def unzipEntries(entryList: List[ZipArchiveEntry],
                      is: (ZipArchiveEntry) => InputStream,
-                     targetFolder: File): Unit = {
+                     targetFolder: File): Unit =
       entryList match {
         case entry :: entries =>
           val pathName = entry.getName
@@ -84,11 +91,10 @@ object ZipFileArtifactSourceReader {
           unzipEntries(entries, is, targetFolder)
         case _ =>
       }
-    }
 
     def createFile(newPath: Path,
                    perms: JSet[PosixFilePermission],
-                   fileAttributes: FileAttribute[JSet[PosixFilePermission]]) = {
+                   fileAttributes: FileAttribute[JSet[PosixFilePermission]]) =
       Try(Files.createFile(newPath, fileAttributes).toFile) match {
         case Success(f) => f
         case Failure(_: UnsupportedOperationException) =>
@@ -100,7 +106,6 @@ object ZipFileArtifactSourceReader {
         case Failure(t: Throwable) =>
           throw ArtifactSourceCreationException(s"Failed to create file '${newPath.toString}'", t)
       }
-    }
 
     def getPermissions(entry: ZipArchiveEntry): JSet[PosixFilePermission] = {
       val unixMode = entry.getUnixMode
@@ -115,6 +120,6 @@ object ZipFileArtifactSourceReader {
       fromMode(mode)
     }
 
-    unzipEntries(entries, is, targetFolder)
+    unzipEntries(entryList, is, targetFolder)
   }
 }
