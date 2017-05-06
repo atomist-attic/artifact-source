@@ -5,13 +5,6 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import com.atomist.source.{ArtifactSource, SimpleSourceUpdateInfo, TestUtils}
 import org.scalatest.{FlatSpec, Matchers}
 
-object ZipFileArtifactSourceWriterTest {
-
-  private val Zid = ZipFileArtifactSourceReaderTest.springBootZipFileId
-  private val ZipSource = ZipFileArtifactSourceReader.fromZipSource(Zid)
-  private val Writer = ZipFileArtifactSourceWriter
-}
-
 class ZipFileArtifactSourceWriterTest extends FlatSpec with Matchers {
 
   import ZipFileArtifactSourceWriterTest._
@@ -53,3 +46,11 @@ class ZipFileArtifactSourceWriterTest extends FlatSpec with Matchers {
     }
   }
 }
+
+object ZipFileArtifactSourceWriterTest {
+
+  private val Zid = ZipFileArtifactSourceReaderTest.springBootZipFileId
+  private val ZipSource = ZipFileArtifactSourceReader.fromZipSource(Zid)
+  private val Writer = ZipFileArtifactSourceWriter
+}
+
