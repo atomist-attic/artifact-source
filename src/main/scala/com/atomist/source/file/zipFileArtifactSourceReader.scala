@@ -10,8 +10,10 @@ import com.atomist.util.FilePermissions.fromMode
 import org.apache.commons.compress.archivers.zip.{AsiExtraField, ZipArchiveEntry, ZipFile}
 import org.apache.commons.io.FileUtils
 
-import scala.annotation.tailrec
 import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.{Duration, SECONDS}
+import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}
 
 case class ZipFileInput(is: InputStream) extends ArtifactSourceIdentifier {
@@ -36,6 +38,8 @@ object ZipFileArtifactSourceReader {
 
   private val IsWindows = System.getProperty("os.name").contains("indows")
 
+  // implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(100))
+
   def fromZipSource(id: ZipFileInput): ArtifactSource = {
     val tmpFile = File.createTempFile("tmp", ".zip")
     tmpFile.deleteOnExit()
@@ -54,72 +58,62 @@ object ZipFileArtifactSourceReader {
       case e: IOException => throw ArtifactSourceAccessException(s"Expected zip entries in $id but none was found", e)
     }
 
-    unzipFile(zipFile.getEntries.asScala.toList, zipEntryInputStream(zipFile), rootFile)
+    Await.result(Future.sequence(processZipEntries(zipFile, rootFile)), Duration(60, SECONDS))
+
     ZipFile.closeQuietly(zipFile)
     FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(rootFile))
   }
 
-  private def zipEntryInputStream(zipFile: ZipFile)(entry: ZipArchiveEntry) = zipFile.getInputStream(entry)
-
-  private def unzipFile(entryList: List[ZipArchiveEntry],
-                        is: (ZipArchiveEntry) => InputStream,
-                        targetFolder: File): Unit = {
-    @tailrec
-    def unzipEntries(entryList: List[ZipArchiveEntry],
-                     is: (ZipArchiveEntry) => InputStream,
-                     targetFolder: File): Unit =
-      entryList match {
-        case entry :: entries =>
-          val pathName = entry.getName
-          val path = if (IsWindows) pathName.replace(":", "_") else pathName
-          val file = Paths.get(path).toFile
-          val newPath = Paths.get(targetFolder.getPath, file.getPath)
-
-          if (file.isDirectory || entry.isDirectory || entry.isUnixSymlink)
-            Files.createDirectories(newPath)
-          else {
-            val parentDir = newPath.toFile.getParentFile.toPath
-            if (!Files.exists(parentDir))
-              parentDir.toFile.mkdirs
-
-            val perms = getPermissions(entry)
-            val fileAttributes = PosixFilePermissions.asFileAttribute(perms)
-            val newFile = createFile(newPath, perms, fileAttributes)
-            FileUtils.copyInputStreamToFile(is(entry), newFile)
-          }
-
-          unzipEntries(entries, is, targetFolder)
-        case _ =>
-      }
-
-    def createFile(newPath: Path,
-                   perms: JSet[PosixFilePermission],
-                   fileAttributes: FileAttribute[JSet[PosixFilePermission]]) =
-      Try(Files.createFile(newPath, fileAttributes).toFile) match {
-        case Success(f) => f
-        case Failure(_: UnsupportedOperationException) =>
-          // In case of windows
-          val f = Files.createFile(newPath).toFile
-          f.setExecutable(perms contains PosixFilePermission.OWNER_EXECUTE)
-          f.setWritable(perms contains PosixFilePermission.OWNER_WRITE)
-          f
-        case Failure(t: Throwable) =>
-          throw ArtifactSourceCreationException(s"Failed to create file '${newPath.toString}'", t)
-      }
-
-    def getPermissions(entry: ZipArchiveEntry): JSet[PosixFilePermission] = {
-      val unixMode = entry.getUnixMode
-      val mode = unixMode match {
-        case 0 =>
-          entry.getExtraFields().collectFirst {
-            case aef: AsiExtraField => aef.getMode
-            case _ => FileArtifact.DefaultMode
-          }.getOrElse(FileArtifact.DefaultMode)
-        case _ => unixMode
-      }
-      fromMode(mode)
+  private def processZipEntries(zipFile: ZipFile, targetFolder: File) =
+    for (entry <- zipFile.getEntries.asScala.toList) yield Future {
+      writeZipEntryToFile(entry, zipFile.getInputStream(entry), targetFolder)
     }
 
-    unzipEntries(entryList, is, targetFolder)
+  private def writeZipEntryToFile(entry: ZipArchiveEntry, is: InputStream, targetFolder: File): Unit = {
+    val pathName = entry.getName
+    val path = if (IsWindows) pathName.replace(":", "_") else pathName
+    val file = Paths.get(path).toFile
+    val newPath = Paths.get(targetFolder.getPath, file.getPath)
+
+    if (file.isDirectory || entry.isDirectory || entry.isUnixSymlink)
+      Files.createDirectories(newPath)
+    else {
+      val parentDir = newPath.toFile.getParentFile.toPath
+      if (!Files.exists(parentDir))
+        parentDir.toFile.mkdirs
+
+      val perms = getPermissions(entry)
+      val fileAttributes = PosixFilePermissions.asFileAttribute(perms)
+      val newFile = createFile(newPath, perms, fileAttributes)
+      FileUtils.copyInputStreamToFile(is, newFile)
+    }
+  }
+
+  private def createFile(newPath: Path,
+                         perms: JSet[PosixFilePermission],
+                         fileAttributes: FileAttribute[JSet[PosixFilePermission]]) =
+    Try(Files.createFile(newPath, fileAttributes).toFile) match {
+      case Success(f) => f
+      case Failure(_: UnsupportedOperationException) =>
+        // In case of windows
+        val f = Files.createFile(newPath).toFile
+        f.setExecutable(perms contains PosixFilePermission.OWNER_EXECUTE)
+        f.setWritable(perms contains PosixFilePermission.OWNER_WRITE)
+        f
+      case Failure(t: Throwable) =>
+        throw ArtifactSourceCreationException(s"Failed to create file '${newPath.toString}'", t)
+    }
+
+  private def getPermissions(entry: ZipArchiveEntry): JSet[PosixFilePermission] = {
+    val unixMode = entry.getUnixMode
+    val mode = unixMode match {
+      case 0 =>
+        entry.getExtraFields().collectFirst {
+          case aef: AsiExtraField => aef.getMode
+          case _ => FileArtifact.DefaultMode
+        }.getOrElse(FileArtifact.DefaultMode)
+      case _ => unixMode
+    }
+    fromMode(mode)
   }
 }

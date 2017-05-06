@@ -95,10 +95,10 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
   }
 
   it should "read large zip file" in {
-    // val start = System.currentTimeMillis()
+    val start = System.currentTimeMillis()
     val zid = travisRugsZip
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
-    // println(s"elapsed time = ${System.currentTimeMillis() - start} ms")
+    println(s"elapsed time = ${System.currentTimeMillis() - start} ms")
     val atomistDir = zipSource.findDirectory(".atomist")
     atomistDir shouldBe defined
   }
