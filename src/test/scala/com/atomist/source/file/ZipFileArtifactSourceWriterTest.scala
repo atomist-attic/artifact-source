@@ -5,29 +5,35 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import com.atomist.source.{ArtifactSource, SimpleSourceUpdateInfo, TestUtils}
 import org.scalatest.{FlatSpec, Matchers}
 
+object ZipFileArtifactSourceWriterTest {
+
+  private val Zid = ZipFileArtifactSourceReaderTest.springBootZipFileId
+  private val ZipSource = ZipFileArtifactSourceReader.fromZipSource(Zid)
+  private val Writer = ZipFileArtifactSourceWriter
+}
+
 class ZipFileArtifactSourceWriterTest extends FlatSpec with Matchers {
 
-  val zid = ZipFileArtifactSourceReaderTest.springBootZipFileId
-  val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
-  val zw = ZipFileArtifactSourceWriter
+  import ZipFileArtifactSourceWriterTest._
 
   "ZipFileArtifactSourceWriter" should "create accurate copy of files" in {
     val baos = new ByteArrayOutputStream
     val zo = StreamingZipFileOutput("foobar", baos)
-    zw.write(zipSource, zo, SimpleSourceUpdateInfo(getClass.getName)) shouldBe true
-    verify(zipSource, new ByteArrayInputStream(baos.toByteArray))
+    Writer.write(ZipSource, zo, SimpleSourceUpdateInfo(getClass.getName)) shouldBe true
+    verify(ZipSource, new ByteArrayInputStream(baos.toByteArray))
   }
 
   it should "create readable archive" in {
-    val readable = ZipFileArtifactSourceWriter.getReadable(zipSource, "somename")
+    val readable = ZipFileArtifactSourceWriter.getReadable(ZipSource, "somename")
     val read = ZipFileArtifactSourceReader.fromZipSource(ZipFileInput(readable.is))
-    TestUtils.verify(read, zipSource)
+    TestUtils.verify(read, ZipSource)
   }
 
   private def verify(from: ArtifactSource, is: InputStream): Unit = {
     val zid = ZipFileInput(is)
     val zs = ZipFileArtifactSourceReader.fromZipSource(zid)
     zs.allDirectories
+    zs.allFiles
     zs.allFiles.size should equal(from.allFiles.size)
     for (f <- from.allFiles) {
       val found = zs.findFileByPath(f.name, f.pathElements)
