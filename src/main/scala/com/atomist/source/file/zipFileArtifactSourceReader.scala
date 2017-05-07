@@ -38,8 +38,6 @@ object ZipFileArtifactSourceReader {
 
   private val IsWindows = System.getProperty("os.name").contains("indows")
 
-  // implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(100))
-
   def fromZipSource(id: ZipFileInput): ArtifactSource = {
     val tmpFile = File.createTempFile("tmp", ".zip")
     tmpFile.deleteOnExit()
@@ -66,10 +64,14 @@ object ZipFileArtifactSourceReader {
 
   private def processZipEntries(zipFile: ZipFile, targetFolder: File) =
     for (entry <- zipFile.getEntries.asScala.toList) yield Future {
-      writeZipEntryToFile(entry, zipFile.getInputStream(entry), targetFolder)
+      writeZipEntryToFile(entry, zipEntryInputStream(zipFile), targetFolder)
     }
 
-  private def writeZipEntryToFile(entry: ZipArchiveEntry, is: InputStream, targetFolder: File): Unit = {
+  private def zipEntryInputStream(zipFile: ZipFile)(entry: ZipArchiveEntry) = zipFile.getInputStream(entry)
+
+  private def writeZipEntryToFile(entry: ZipArchiveEntry,
+                                  is: (ZipArchiveEntry) => InputStream,
+                                  targetFolder: File): Unit = {
     val pathName = entry.getName
     val path = if (IsWindows) pathName.replace(":", "_") else pathName
     val file = Paths.get(path).toFile
@@ -85,7 +87,7 @@ object ZipFileArtifactSourceReader {
       val perms = getPermissions(entry)
       val fileAttributes = PosixFilePermissions.asFileAttribute(perms)
       val newFile = createFile(newPath, perms, fileAttributes)
-      FileUtils.copyInputStreamToFile(is, newFile)
+      FileUtils.copyInputStreamToFile(is(entry), newFile)
     }
   }
 
