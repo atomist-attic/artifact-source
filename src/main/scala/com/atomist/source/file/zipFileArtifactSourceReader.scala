@@ -58,7 +58,7 @@ object ZipFileArtifactSourceReader {
       case e: IOException => throw ArtifactSourceAccessException(s"Expected zip entries in $id but none was found", e)
     }
 
-    Await.result(Future.sequence(processZipEntries(zipFile, rootFile)), Duration(60, SECONDS))
+    Await.result(Future.sequence(processZipEntries(zipFile, rootFile)), Duration(15, SECONDS))
 
     ZipFile.closeQuietly(zipFile)
     FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(rootFile))
