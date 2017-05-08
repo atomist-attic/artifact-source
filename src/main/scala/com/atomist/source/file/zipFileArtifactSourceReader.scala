@@ -44,22 +44,27 @@ object ZipFileArtifactSourceReader {
     try {
       FileUtils.copyInputStreamToFile(id.is, tmpFile)
     } catch {
-      case e: IOException => throw ArtifactSourceAccessException(s"Failed to copy zip contents to temp file: ${e.getMessage}", e)
+      case e: IOException =>
+        throw ArtifactSourceCreationException(s"Failed to copy zip contents to temp file: ${e.getMessage}", e)
     }
-
-    val rootFile = Files.createTempDirectory("tmp").toFile
-    rootFile.deleteOnExit()
 
     val zipFile = try {
       new ZipFile(tmpFile)
     } catch {
-      case e: IOException => throw ArtifactSourceAccessException(s"Expected zip entries in $id but none was found", e)
+      case e: IOException =>
+        throw ArtifactSourceCreationException(s"Expected zip entries in $id but none was found", e)
     }
 
-    Await.result(Future.sequence(processZipEntries(zipFile, rootFile)), Duration(15, SECONDS))
+    val rootFile = Files.createTempDirectory("artifact-source-").toFile
+    rootFile.deleteOnExit()
+    Await.ready(Future.sequence(processZipEntries(zipFile, rootFile)), Duration(60, SECONDS)).onComplete {
+      case Success(_) =>
+      case Failure(e) => throw ArtifactSourceCreationException(s"Failed to create artifact source", e)
+    }
 
     ZipFile.closeQuietly(zipFile)
-    FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(rootFile))
+    val fid = NamedFileSystemArtifactSourceIdentifier(substringAfterLast(rootFile.getName, "/"), rootFile)
+    FileSystemArtifactSource(fid)
   }
 
   private def processZipEntries(zipFile: ZipFile, targetFolder: File) =
@@ -117,6 +122,12 @@ object ZipFileArtifactSourceReader {
         f.setWritable(perms contains PosixFilePermission.OWNER_WRITE)
         f
       case Failure(t: Throwable) =>
-        throw ArtifactSourceCreationException(s"Failed to create file '${newPath.toString}'", t)
+        throw t
+    }
+
+  private def substringAfterLast(s: String, k: String) =
+    s.lastIndexOf(k) match {
+      case -1 => s;
+      case i => s.substring(i + s.length)
     }
 }
