@@ -40,33 +40,37 @@ object ZipFileArtifactSourceReader {
   private val IsWindows = System.getProperty("os.name").contains("indows")
 
   def fromZipSource(id: ZipFileInput): ArtifactSource = {
-    val tmpFile = File.createTempFile("tmp", ".zip")
-    tmpFile.deleteOnExit()
-    try {
-      FileUtils.copyInputStreamToFile(id.is, tmpFile)
-    } catch {
-      case e: IOException =>
-        throw ArtifactSourceCreationException(s"Failed to copy zip contents to temp file: ${e.getMessage}", e)
-    }
-
-    val zipFile = try {
-      new ZipFile(tmpFile)
-    } catch {
-      case e: IOException =>
-        throw ArtifactSourceCreationException(s"Expected zip entries in $id but none was found", e)
-    }
-
-    val rootFile = Files.createTempDirectory("artifact-source-").toFile
-    rootFile.deleteOnExit()
+    val zipFile = getZipFile(id)
+    val targetFolder = createTargetFolder
     withCloseable(zipFile)(zf =>
-      Await.ready(Future.sequence(processZipEntries(zf, rootFile)), Duration(60, SECONDS)).onComplete {
+      Await.ready(Future.sequence(processZipEntries(zf, targetFolder)), Duration(60, SECONDS)).onComplete {
         case Success(_) =>
-        case Failure(e) =>
-          throw ArtifactSourceCreationException(s"Failed to create artifact source", e)
+        case Failure(e) => throw ArtifactSourceCreationException(s"Failed to create artifact source", e)
       })
 
-    val fid = NamedFileSystemArtifactSourceIdentifier(substringAfterLast(rootFile.getName, "/"), rootFile)
+    val fid = NamedFileSystemArtifactSourceIdentifier(substringAfterLast(targetFolder.getName, "/"), targetFolder)
     FileSystemArtifactSource(fid)
+  }
+
+  private def getZipFile(id: ZipFileInput) = {
+    try {
+      val tmpFile = File.createTempFile("tmp", ".zip")
+      tmpFile.deleteOnExit()
+      FileUtils.copyInputStreamToFile(id.is, tmpFile)
+      new ZipFile(tmpFile)
+    } catch {
+      case e: IOException => throw ArtifactSourceCreationException("Failed to copy zip contents to temp file", e)
+    }
+  }
+
+  private def createTargetFolder = {
+    try {
+      val targetFolder = Files.createTempDirectory("artifact-source-").toFile
+      targetFolder.deleteOnExit()
+      targetFolder
+    } catch {
+      case e: IOException => throw ArtifactSourceCreationException("Failed to create folder for artifact source", e)
+    }
   }
 
   private def processZipEntries(zipFile: ZipFile, targetFolder: File) =
@@ -110,15 +114,14 @@ object ZipFileArtifactSourceReader {
     fromMode(mode)
   }
 
-  private def createFile(newPath: Path,
-                         perms: JSet[PosixFilePermission]) =
+  private def createFile(newPath: Path, perms: JSet[PosixFilePermission]) =
     Try {
       val fileAttributes = PosixFilePermissions.asFileAttribute(perms)
       Files.createFile(newPath, fileAttributes).toFile
     } match {
       case Success(f) => f
       case Failure(_: UnsupportedOperationException) =>
-        // In case of windows
+        // In case of Windows
         val f = Files.createFile(newPath).toFile
         f.setExecutable(perms contains PosixFilePermission.OWNER_EXECUTE)
         f.setWritable(perms contains PosixFilePermission.OWNER_WRITE)
