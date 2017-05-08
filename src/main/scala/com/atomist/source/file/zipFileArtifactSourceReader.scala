@@ -1,7 +1,7 @@
 package com.atomist.source.file
 
 import java.io.{File, IOException, InputStream}
-import java.nio.file.attribute.{FileAttribute, PosixFilePermission, PosixFilePermissions}
+import java.nio.file.attribute.{PosixFilePermission, PosixFilePermissions}
 import java.nio.file.{Files, Path, Paths}
 import java.util.{Set => JSet}
 
@@ -85,26 +85,10 @@ object ZipFileArtifactSourceReader {
         parentDir.toFile.mkdirs
 
       val perms = getPermissions(entry)
-      val fileAttributes = PosixFilePermissions.asFileAttribute(perms)
-      val newFile = createFile(newPath, perms, fileAttributes)
+      val newFile = createFile(newPath, perms)
       FileUtils.copyInputStreamToFile(is(entry), newFile)
     }
   }
-
-  private def createFile(newPath: Path,
-                         perms: JSet[PosixFilePermission],
-                         fileAttributes: FileAttribute[JSet[PosixFilePermission]]) =
-    Try(Files.createFile(newPath, fileAttributes).toFile) match {
-      case Success(f) => f
-      case Failure(_: UnsupportedOperationException) =>
-        // In case of windows
-        val f = Files.createFile(newPath).toFile
-        f.setExecutable(perms contains PosixFilePermission.OWNER_EXECUTE)
-        f.setWritable(perms contains PosixFilePermission.OWNER_WRITE)
-        f
-      case Failure(t: Throwable) =>
-        throw ArtifactSourceCreationException(s"Failed to create file '${newPath.toString}'", t)
-    }
 
   private def getPermissions(entry: ZipArchiveEntry): JSet[PosixFilePermission] = {
     val unixMode = entry.getUnixMode
@@ -118,4 +102,21 @@ object ZipFileArtifactSourceReader {
     }
     fromMode(mode)
   }
+
+  private def createFile(newPath: Path,
+                         perms: JSet[PosixFilePermission]) =
+    Try {
+      val fileAttributes = PosixFilePermissions.asFileAttribute(perms)
+      Files.createFile(newPath, fileAttributes).toFile
+    } match {
+      case Success(f) => f
+      case Failure(_: UnsupportedOperationException) =>
+        // In case of windows
+        val f = Files.createFile(newPath).toFile
+        f.setExecutable(perms contains PosixFilePermission.OWNER_EXECUTE)
+        f.setWritable(perms contains PosixFilePermission.OWNER_WRITE)
+        f
+      case Failure(t: Throwable) =>
+        throw ArtifactSourceCreationException(s"Failed to create file '${newPath.toString}'", t)
+    }
 }
