@@ -2,7 +2,7 @@ package com.atomist.source.git
 
 import java.io.File
 import java.net.URL
-import java.nio.file.{FileAlreadyExistsException, Files}
+import java.nio.file.{FileAlreadyExistsException, Files, Path}
 
 import com.atomist.source.ArtifactSourceCreationException
 import com.atomist.source.file.{FileSystemArtifactSource, FileSystemArtifactSourceIdentifier, NamedFileSystemArtifactSourceIdentifier}
@@ -10,6 +10,7 @@ import com.atomist.source.filter.GitDirFilter
 import org.apache.commons.io.FileUtils
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = None) {
@@ -22,30 +23,44 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
             branch: Option[String] = None,
             sha: Option[String] = None,
             dir: Option[File] = None,
-            depth: Int = Depth): FileSystemArtifactSource =
-    try {
-      val repoDir = createRepoDirectory(repo, owner, dir)
-      val commands = getCloneCommands(repo, owner, branch, depth, repoDir.getPath)
-      val rc = new ProcessBuilder(commands.asJava).start.waitFor
-      rc match {
-        case 0 =>
-          sha match {
-            case Some(commitSha) =>
-              val rc2 = new ProcessBuilder("git", "reset", "--hard", commitSha).directory(repoDir).start.waitFor
-              rc2 match {
-                case 0 =>
-                case _ => throw ArtifactSourceCreationException(s"Failed to find commit with sha $commitSha. Return code $rc2")
-              }
-            case None =>
-          }
-          val fid = NamedFileSystemArtifactSourceIdentifier(repo, repoDir)
-          FileSystemArtifactSource(fid, GitDirFilter(repoDir.getPath))
-        case _ => throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'. Return code $rc")
-      }
-    } catch {
-      case e: Exception =>
-        throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'", e)
+            depth: Int = Depth): FileSystemArtifactSource = {
+    val repoDir = Try(createRepoDirectory(repo, owner, dir)) match {
+      case Success(file) => file
+      case Failure(e) =>
+        throw new ArtifactSourceCreationException(s"Failed to create target directory for '$owner/$repo'", e)
     }
+
+    val cloneCommands = getCloneCommands(repo, owner, branch, depth, repoDir.getPath)
+    val rc = runCommands(repoDir, cloneCommands: _*)
+    rc match {
+      case 0 =>
+        sha match {
+          case Some(commitSha) =>
+            val resetCommands = Seq("git", "reset", "--hard", commitSha)
+            val rc2 = runCommands(repoDir, resetCommands: _*)
+            rc2 match {
+              case 0 =>
+              case _ =>
+                val rc3 = runCommands(repoDir, "git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
+                rc3 match {
+                  case 0 =>
+                    val rc4 = runCommands(repoDir, "git", "fetch", "--unshallow")
+                    rc4 match {
+                      case 0 => runCommands(repoDir, resetCommands: _*)
+                      case _ =>
+                        throw ArtifactSourceCreationException(s"Failed to fetch '$owner/$repo'. Return code $rc4")
+                    }
+                  case _ =>
+                    throw ArtifactSourceCreationException(s"Failed to find commit with sha $commitSha. Return code $rc3")
+                }
+            }
+          case None =>
+        }
+        val fid = NamedFileSystemArtifactSourceIdentifier(repo, repoDir)
+        FileSystemArtifactSource(fid, GitDirFilter(repoDir.getPath))
+      case _ => throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'. Return code $rc")
+    }
+  }
 
   def cleanUp(dir: File): Unit = FileUtils.deleteQuietly(dir)
 
@@ -55,16 +70,15 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
 
   def resetDirectoryContent(fid: FileSystemArtifactSourceIdentifier): Unit = resetDirectoryContent(fid.rootFile)
 
-  private def createRepoDirectory(repo: String, owner: String, dir: Option[File]) =
+  private def createRepoDirectory(repo: String, owner: String, dir: Option[File]): File =
     dir match {
       case Some(file) =>
-        Try(Files.createDirectory(file.toPath)) match {
-          case Success(path) => path.toFile
-          case Failure(_: FileAlreadyExistsException) =>
+        try {
+          Files.createDirectory(file.toPath).toFile
+        } catch {
+          case _: FileAlreadyExistsException =>
             resetDirectoryContent(file)
             file
-          case Failure(t: Throwable) =>
-            throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'", t)
         }
       case None =>
         val tempDir = Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile
@@ -72,12 +86,23 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
         tempDir
     }
 
-  private def getCloneCommands(repo: String, owner: String, branch: Option[String], depth: Int, path: String): Seq[String] = {
-    val branchSeq = branch match {
-      case Some(br) => if (br == "master") Seq.empty else Seq("-b", br)
-      case _ => Seq.empty
+  private def runCommands(repoDir: File, commands: String*): Int = {
+    // println(commands.mkString(" "))
+    new ProcessBuilder(commands.asJava).directory(repoDir).start.waitFor
+  }
+
+  private def getCloneCommands(repo: String,
+                               owner: String,
+                               branch: Option[String],
+                               depth: Int,
+                               path: String): Seq[String] = {
+    val commands = ListBuffer[String]("git", "clone")
+    branch match {
+      case Some(br) => if (br != "master") commands ++= Seq("-b", br)
+      case _ =>
     }
-    Seq("git", "clone") ++ branchSeq ++ Seq("--depth", depth + "", s"$getUrl/$owner/$repo.git", path)
+    commands ++= Seq("--depth", depth + "", "--single-branch", s"$getUrl/$owner/$repo.git", path)
+    commands
   }
 
   private def getUrl = {

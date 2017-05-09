@@ -22,12 +22,12 @@ abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactF
       val pathMatchers = patterns.map(p =>
         Try(fs.getPathMatcher(s"glob:**/$p")) match {
           case Success(matcher) => matcher
-          case Failure(e) => null
+          case Failure(_) => null
         }
       ) ++ patterns.map(p =>
         Try(fs.getPathMatcher(s"regex:**/$p")) match {
           case Success(matcher) => matcher
-          case Failure(e) => null
+          case Failure(_) => null
         }
       ).filter(_ != null)
 

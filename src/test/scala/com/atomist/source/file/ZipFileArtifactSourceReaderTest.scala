@@ -8,6 +8,10 @@ import com.atomist.util.BinaryDecider
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.scalatest.{FlatSpec, Matchers}
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.{Duration, SECONDS}
+import scala.concurrent.{Await, Future}
+
 class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
 
   import ZipFileArtifactSourceReaderTest._
@@ -95,12 +99,31 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
   }
 
   it should "read large zip file" in {
-    val start = System.currentTimeMillis()
+    // val start = System.currentTimeMillis()
     val zid = travisRugsZip
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)
-    println(s"elapsed time = ${System.currentTimeMillis() - start} ms")
+    // println(s"elapsed time = ${System.currentTimeMillis() - start} ms")
     val atomistDir = zipSource.findDirectory(".atomist")
     atomistDir shouldBe defined
+  }
+
+  ignore should "handle multiple zip files at the same time" in {
+    val f1: Future[ArtifactSource] = Future {
+      ZipFileArtifactSourceReader.fromZipSource(travisRugsZip)
+    }
+
+    val f2: Future[ArtifactSource] = Future {
+      ZipFileArtifactSourceReader.fromZipSource(springBootZipFileId)
+    }
+
+    val f3: Future[ArtifactSource] = Future {
+      ZipFileArtifactSourceReader.fromZipSource(springRestServiceZipFileId)
+    }
+
+    Await.result(Future.sequence(Seq(f1, f2, f3)), Duration(60, SECONDS))
+      .map(_.id.name).foreach(println(_))
+
+    Thread sleep 2000
   }
 }
 
