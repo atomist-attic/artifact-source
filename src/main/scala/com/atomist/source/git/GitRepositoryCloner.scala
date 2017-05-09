@@ -18,6 +18,8 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
 
   import GitRepositoryCloner._
 
+  private val outLogger = ProcessLogger(out => logger.debug(out), err => logger.debug(err))
+
   @throws[ArtifactSourceCreationException]
   def clone(repo: String,
             owner: String,
@@ -31,26 +33,20 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
         throw ArtifactSourceCreationException(s"Failed to create target directory for '$owner/$repo'", e)
     }
 
-    val outLogger = ProcessLogger(out => logger.debug(out), err => logger.debug(err))
     val br = branch match {
       case Some(b) => if (b == "master") "" else s"-b $b"
       case _ => ""
     }
 
-    Try(s"git clone $br --depth $depth --single-branch $getUrl/$owner/$repo.git ${repoDir.getPath}" !! outLogger)
-      .map(_ => {
-        sha.map(commitSha =>
-          Try(Process(s"git reset --hard $commitSha", repoDir) #||
-            Process(s"git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*", repoDir) #&&
-            Process("git fetch --unshallow", repoDir) #&&
-            Process(s"git reset --hard $commitSha", repoDir) !! outLogger) recover {
-            case _ =>
-              throw ArtifactSourceCreationException(s"Failed to find commit with sha $commitSha")
-          })
-
+    Try(
+      s"git clone $br --depth $depth --single-branch $getUrl/$owner/$repo.git ${repoDir.getPath}" !! outLogger
+    ) match {
+      case Success(_) =>
+        sha.map(resetToSha(_, repoDir))
         val fid = NamedFileSystemArtifactSourceIdentifier(repo, repoDir)
         FileSystemArtifactSource(fid, GitDirFilter(repoDir.getPath))
-      }).getOrElse(throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'"))
+      case Failure(e) => throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'", e)
+    }
   }
 
   def cleanUp(dir: File): Unit = FileUtils.deleteQuietly(dir)
@@ -75,6 +71,15 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
         val tempDir = Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile
         tempDir.deleteOnExit()
         tempDir
+    }
+
+  private def resetToSha(sha: String, repoDir: File) =
+    Try(Process(s"git reset --hard $sha", repoDir) #||
+      Process(s"git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*", repoDir) #&&
+      Process("git fetch --unshallow", repoDir) #&&
+      Process(s"git reset --hard $sha", repoDir) !! outLogger) match {
+      case Success(_) =>
+      case Failure(e) => throw ArtifactSourceCreationException(s"Failed to find commit with sha $sha", e)
     }
 
   private def getUrl = {
