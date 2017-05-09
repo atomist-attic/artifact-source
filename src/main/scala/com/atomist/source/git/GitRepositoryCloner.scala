@@ -34,11 +34,7 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
         throw ArtifactSourceCreationException(s"Failed to create target directory for $repoStr", e)
     }
 
-    val br = branch match {
-      case Some(b) => if (b == "master") "" else s"-b $b"
-      case _ => ""
-    }
-
+    val br = branch.map(b => if (b == "master") "" else s"-b $b").getOrElse("")
     Try(
       s"git clone $br --depth $depth --single-branch $getUrl/$repoStr.git ${repoDir.getPath}" !! outLogger
     ) match {
