@@ -3,6 +3,7 @@ package com.atomist.source.file
 import java.io.{File, IOException, InputStream}
 import java.nio.file.attribute.{PosixFilePermission, PosixFilePermissions}
 import java.nio.file.{Files, Path, Paths}
+import java.util.concurrent.Executors
 import java.util.{Set => JSet}
 
 import com.atomist.source._
@@ -12,9 +13,8 @@ import org.apache.commons.compress.archivers.zip.{AsiExtraField, ZipArchiveEntry
 import org.apache.commons.io.FileUtils
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, SECONDS}
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 case class ZipFileInput(is: InputStream) extends ArtifactSourceIdentifier {
@@ -37,6 +37,8 @@ object ZipFileInput {
   */
 object ZipFileArtifactSourceReader {
 
+  implicit lazy val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+
   private val IsWindows = System.getProperty("os.name").contains("indows")
 
   def fromZipSource(id: ZipFileInput): ArtifactSource = {
@@ -52,7 +54,7 @@ object ZipFileArtifactSourceReader {
     FileSystemArtifactSource(fid)
   }
 
-  private def getZipFile(id: ZipFileInput) = {
+  private def getZipFile(id: ZipFileInput) =
     try {
       val tmpFile = File.createTempFile("tmp", ".zip")
       tmpFile.deleteOnExit()
@@ -61,9 +63,8 @@ object ZipFileArtifactSourceReader {
     } catch {
       case e: IOException => throw ArtifactSourceCreationException("Failed to copy zip contents to temp file", e)
     }
-  }
 
-  private def createTargetFolder = {
+  private def createTargetFolder =
     try {
       val targetFolder = Files.createTempDirectory("artifact-source-").toFile
       targetFolder.deleteOnExit()
@@ -71,7 +72,6 @@ object ZipFileArtifactSourceReader {
     } catch {
       case e: IOException => throw ArtifactSourceCreationException("Failed to create folder for artifact source", e)
     }
-  }
 
   private def processZipEntries(zipFile: ZipFile, targetFolder: File) =
     for (entry <- zipFile.getEntries.asScala.toList) yield Future {

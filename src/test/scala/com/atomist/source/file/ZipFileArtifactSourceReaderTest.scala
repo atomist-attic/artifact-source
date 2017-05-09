@@ -108,6 +108,7 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
   }
 
   ignore should "handle multiple zip files at the same time" in {
+    val start = System.currentTimeMillis()
     val f1: Future[ArtifactSource] = Future {
       ZipFileArtifactSourceReader.fromZipSource(travisRugsZip)
     }
@@ -120,10 +121,21 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
       ZipFileArtifactSourceReader.fromZipSource(springRestServiceZipFileId)
     }
 
-    Await.result(Future.sequence(Seq(f1, f2, f3)), Duration(60, SECONDS))
-      .map(_.id.name).foreach(println(_))
+    val f4: Future[ArtifactSource] = Future {
+      ZipFileArtifactSourceReader.fromZipSource(travisRugsZip)
+    }
 
-    Thread sleep 2000
+    val f5: Future[ArtifactSource] = Future {
+      ZipFileArtifactSourceReader.fromZipSource(travisRugsZip)
+    }
+
+    val f6: Future[ArtifactSource] = Future {
+      ZipFileArtifactSourceReader.fromZipSource(travisRugsZip)
+    }
+
+    Await.result(Future.sequence(Seq(f1, f2, f3, f4, f5, f6)), Duration(60, SECONDS))
+      .map(_.id.name).foreach(println(_))
+    println(s"elapsed time = ${System.currentTimeMillis() - start} ms")
   }
 }
 
