@@ -27,10 +27,11 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
             sha: Option[String] = None,
             dir: Option[File] = None,
             depth: Int = Depth): FileSystemArtifactSource = {
+    val repoStr = s"$owner/$repo"
     val repoDir = Try(createRepoDirectory(repo, owner, dir)) match {
       case Success(file) => file
       case Failure(e) =>
-        throw ArtifactSourceCreationException(s"Failed to create target directory for '$owner/$repo'", e)
+        throw ArtifactSourceCreationException(s"Failed to create target directory for $repoStr", e)
     }
 
     val br = branch match {
@@ -39,13 +40,13 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
     }
 
     Try(
-      s"git clone $br --depth $depth --single-branch $getUrl/$owner/$repo.git ${repoDir.getPath}" !! outLogger
+      s"git clone $br --depth $depth --single-branch $getUrl/$repoStr.git ${repoDir.getPath}" !! outLogger
     ) match {
       case Success(_) =>
-        sha.map(resetToSha(_, repoDir))
+        sha.foreach(resetToSha(_, repoDir, repoStr))
         val fid = NamedFileSystemArtifactSourceIdentifier(repo, repoDir)
         FileSystemArtifactSource(fid, GitDirFilter(repoDir.getPath))
-      case Failure(e) => throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'", e)
+      case Failure(e) => throw ArtifactSourceCreationException(s"Failed to clone $repoStr", e)
     }
   }
 
@@ -73,13 +74,14 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
         tempDir
     }
 
-  private def resetToSha(sha: String, repoDir: File) =
+  private def resetToSha(sha: String, repoDir: File, repoStr: String) =
     Try(Process(s"git reset --hard $sha", repoDir) #||
       Process(s"git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*", repoDir) #&&
       Process("git fetch --unshallow", repoDir) #&&
       Process(s"git reset --hard $sha", repoDir) !! outLogger) match {
       case Success(_) =>
-      case Failure(e) => throw ArtifactSourceCreationException(s"Failed to find commit with sha $sha", e)
+      case Failure(e) =>
+        throw ArtifactSourceCreationException(s"Failed to find commit with sha $sha in $repoStr", e)
     }
 
   private def getUrl = {
