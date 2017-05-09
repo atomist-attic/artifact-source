@@ -50,7 +50,7 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
 
         val fid = NamedFileSystemArtifactSourceIdentifier(repo, repoDir)
         FileSystemArtifactSource(fid, GitDirFilter(repoDir.getPath))
-      }).getOrElse(throw ArtifactSourceCreationException(s"Failed to create target directory for '$owner/$repo'"))
+      }).getOrElse(throw ArtifactSourceCreationException(s"Failed to clone '$owner/$repo'"))
   }
 
   def cleanUp(dir: File): Unit = FileUtils.deleteQuietly(dir)
