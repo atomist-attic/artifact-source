@@ -39,7 +39,7 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
       s"git clone $br --depth $depth --single-branch $getUrl/$repoStr.git ${repoDir.getPath}" !! outLogger
     ) match {
       case Success(_) =>
-        sha.foreach(resetToSha(_, repoDir, repoStr))
+        sha.map(resetToSha(_, repoDir, repoStr))
         val fid = NamedFileSystemArtifactSourceIdentifier(repo, repoDir)
         FileSystemArtifactSource(fid, GitDirFilter(repoDir.getPath))
       case Failure(e) => throw ArtifactSourceCreationException(s"Failed to clone $repoStr", e)

@@ -41,6 +41,7 @@ object ZipFileArtifactSourceReader {
 
   private val IsWindows = System.getProperty("os.name").contains("indows")
 
+  @throws[ArtifactSourceCreationException]
   def fromZipSource(id: ZipFileInput): ArtifactSource = {
     val zipFile = getZipFile(id)
     val targetFolder = createTargetFolder
