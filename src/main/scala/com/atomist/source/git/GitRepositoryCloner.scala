@@ -38,7 +38,8 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
     Try(
       s"git clone $br --depth $depth --single-branch $getUrl/$repoStr.git ${repoDir.getPath}" !! outLogger
     ) match {
-      case Success(_) =>
+      case Success(out) =>
+        logger.debug(out)
         sha.map(resetToSha(_, repoDir, repoStr))
         val fid = NamedFileSystemArtifactSourceIdentifier(repo, repoDir)
         FileSystemArtifactSource(fid, GitDirFilter(repoDir.getPath))
@@ -73,9 +74,9 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
   private def resetToSha(sha: String, repoDir: File, repoStr: String) =
     Try(Process(s"git reset --hard $sha", repoDir) #||
       Process(s"git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*", repoDir) #&&
-      Process("git fetch --unshallow", repoDir) #&&
+      Process("git fetch --unshallow", repoDir) ###
       Process(s"git reset --hard $sha", repoDir) !! outLogger) match {
-      case Success(_) =>
+      case Success(out) => logger.debug(out)
       case Failure(e) =>
         throw ArtifactSourceCreationException(s"Failed to find commit with sha $sha in $repoStr", e)
     }
