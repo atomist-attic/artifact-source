@@ -41,7 +41,7 @@ class GitRepositoryClonerTest extends FlatSpec with Matchers {
 
     val grc = GitRepositoryCloner("")
     // val start = System.currentTimeMillis
-    val as = grc.clone("spring-service-demo", "atomisthqa", None, Some("6617df4994b0916a633bd12dfa6ce71ce8814976"), Some(repoDir))
+    val as = grc.clone("test1", "spring-team", None, Some("f94a3593c7f87df0f3e39667299e76c2420b0cb5"), Some(repoDir))
     as.allArtifacts.size should be > 0
     // println(s"ArtifactSource creation: ${System.currentTimeMillis - start} ms")
   }
