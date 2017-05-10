@@ -71,15 +71,19 @@ case class GitRepositoryCloner(oAuthToken: String, remoteUrl: Option[String] = N
         tempDir
     }
 
-  private def resetToSha(sha: String, repoDir: File, repoStr: String) =
-    Try(Process(s"git reset --hard $sha", repoDir) #||
+  private def resetToSha(sha: String, repoDir: File, repoStr: String) = {
+    val resetProcess = Process(s"git reset --hard $sha", repoDir)
+    Try(resetProcess #||
       Process(s"git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*", repoDir) #&&
       Process("git fetch --unshallow", repoDir) ###
-      Process(s"git reset --hard $sha", repoDir) !! outLogger) match {
+      resetProcess #||
+      Process("git fetch", repoDir) ###
+      resetProcess !! outLogger) match {
       case Success(out) => logger.debug(out)
       case Failure(e) =>
         throw ArtifactSourceCreationException(s"Failed to find commit with sha $sha in $repoStr", e)
     }
+  }
 
   private def getUrl = {
     val url = Try {
