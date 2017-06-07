@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.0-m.4] - 2017-06-07
+
+### Fixed
+
+-   Fixed `pathElementsFromFile` [#29][29]
+
+[29]: https://github.com/atomist/artifact-source/issues/29
+
+[1.0.0-m.4]: https://github.com/atomist/artifact-source/compare/1.0.0-m.3...1.0.0-m.4
+
 ## [0.19.0]
 
 ### Changed
