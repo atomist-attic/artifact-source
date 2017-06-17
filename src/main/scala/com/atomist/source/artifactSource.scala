@@ -197,8 +197,8 @@ trait ArtifactSource extends RootArtifactContainer {
       if (this.id.equals(from.id)) {
         // Remove deltas that deal with files that get deleted later
         val deltas = cachedDeltas.filter(d => d match {
-          case fad: FileAdditionDelta => findFile(fad.newFile.path).isDefined
-          case fud: FileUpdateDelta => findFile(fud.updatedFile.path).isDefined
+          case fad: FileAdditionDelta => this.findFile(fad.newFile.path).isDefined
+          case fud: FileUpdateDelta => this.findFile(fud.updatedFile.path).isDefined
           case _ => true
         })
         Option(from.cachedDeltas) match {
@@ -287,7 +287,7 @@ trait ArtifactSource extends RootArtifactContainer {
   def delete(path: String): ArtifactSource = filter(_ => true, !_.path.equals(path))
 
   /**
-    * Remove the file with the given path, if found
+    * Remove the file with the given path, if found.
     *
     * @param path Path of file to remove, if found
     * @return an ArtifactSource

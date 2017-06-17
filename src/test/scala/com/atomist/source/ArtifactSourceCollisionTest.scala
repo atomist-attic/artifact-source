@@ -44,6 +44,27 @@ class ArtifactSourceCollisionTest extends FlatSpec with Matchers {
     delta.path should equal(f1.path)
   }
 
+  it should "detect file collision with deletions" in {
+    val f1 = StringFileArtifact("name", "whatever")
+    val f2 = f1.copy(_content = "whatever else")
+    val f3 = StringFileArtifact("quite/something/else", "content doesn't matter")
+
+    val before = new SimpleFileBasedArtifactSource("", f1)
+    val toAdd = new SimpleFileBasedArtifactSource("", Seq(f2, f3))
+
+    val r = before + toAdd
+    val deltas = r Δ before
+    deltas.deltas.size should be >= 2
+    deltas.collisions.size should equal(1)
+    val delta = deltas.collisions.head
+    delta.path should equal(f1.path)
+
+    val r1 = r  - "quite/something/else"
+    val deltas1 = r1 Δ r
+    deltas1.deltas.size should be >= 1
+    deltas1.collisions shouldBe empty
+  }
+
   it should "detect file collision in different artifact sources" in {
     val f1 = StringFileArtifact("name", "whatever")
     val f2 = f1.copy(_content = "whatever else")
