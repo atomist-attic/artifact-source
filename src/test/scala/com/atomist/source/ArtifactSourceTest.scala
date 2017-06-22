@@ -103,6 +103,15 @@ class ArtifactSourceTest extends CommonTests {
     as.allFiles.size should equal(3)
     as.allFilesAsJava.size should equal(3)
   }
+
+  it should "create artifact source by adding files, deleting a file and adding it back" in {
+    val f1 = StringFileArtifact(".atomist/editors/name1", "whatever1")
+    val f2 = StringFileArtifact(".atomist/editors/name2", "whatever2")
+    val f3 = StringFileArtifact(".atomist/editors/name3", "whatever3")
+    val as = (ArtifactSource.fromFiles(f1, f2) + f3) - f3 + f3
+    as.allFiles.size should equal(3)
+    as.allFilesAsJava.size should equal(3)
+  }
 }
 
 object ArtifactSourceTest extends Matchers {

@@ -201,11 +201,16 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     val name = ".atomist/build/cli-build.yml"
     val classpathSource = toArtifactSource("foo")
     classpathSource.findFile(name) shouldBe defined
-    val newSource = classpathSource.delete(name)
+    val newSource = classpathSource delete name
     newSource.findFile(name) shouldBe empty
     classpathSource.cachedDeltas.size shouldBe 0
     newSource.cachedDeltas.size shouldBe 1
     newSource.deltaFrom(classpathSource).deltas.size shouldBe 1
+    newSource.allFiles.size shouldBe 9
+    newSource.allDirectories.size shouldBe 2
+    newSource.artifacts.size shouldBe 2
+    newSource.allArtifacts.size shouldBe 11
+    newSource.collisions.size shouldBe 0
   }
 
   private def validateTargetDirectory(s: ArtifactSource): Unit =
