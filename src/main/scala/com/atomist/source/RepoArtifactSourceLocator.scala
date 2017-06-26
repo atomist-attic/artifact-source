@@ -5,7 +5,5 @@ trait RepoArtifactSourceLocator
     with RepoBranchAndPath {
 
   def repo: String
-
-  def owner: String
 }
 
