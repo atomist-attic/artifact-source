@@ -1,6 +1,5 @@
 package com.atomist.source.filter
 
-import java.io.File
 import java.nio.charset.Charset
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
@@ -13,10 +12,20 @@ import scala.util.{Failure, Success, Try}
 
 abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactFilter {
 
-  private val matchedPaths: (List[String], List[String]) = {
+  override def apply(path: String): Boolean =
+    !(matched._1.exists(Paths.get(path).toAbsolutePath.toString.startsWith(_)) || matched._2.exists(_.equals(path)))
+
+  protected def filePath: String
+
+  private lazy val matched: (List[String], List[String]) = {
     val file = Paths.get(rootPath, filePath).toFile
     if (file.exists) {
-      val patterns = getPatterns(file)
+      val patterns = FileUtils.readLines(file, Charset.defaultCharset()).asScala
+        .filterNot(l => l.isEmpty || l.startsWith("#"))
+        .map(l => if (l.endsWith("/") || l.endsWith("\\")) l.dropRight(1) else l)
+        .distinct
+        .toList
+
       // val pathMatcher = new AntPathMatcher() // spring-core required
       val fs = FileSystems.getDefault
       val pathMatchers = patterns.map(p =>
@@ -51,17 +60,4 @@ abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactF
       (dirs.toList, files.toList)
     } else (Nil, Nil)
   }
-
-  protected def filePath: String
-
-  override def apply(path: String): Boolean =
-    !(matchedPaths._1.exists(Paths.get(path).toAbsolutePath.toString.startsWith(_)) ||
-      matchedPaths._2.exists(_.equals(path)))
-
-  private def getPatterns(file: File): List[String] =
-    FileUtils.readLines(file, Charset.defaultCharset()).asScala
-      .filterNot(l => l.isEmpty || l.startsWith("#"))
-      .map(l => if (l.endsWith("/") || l.endsWith("\\")) l.dropRight(1) else l)
-      .distinct
-      .toList
 }

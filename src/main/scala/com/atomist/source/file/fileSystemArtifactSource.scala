@@ -73,10 +73,11 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
     @tailrec
     def applyFilter(files: Seq[File], filters: List[ArtifactFilter]): Seq[File] = filters match {
       case Nil => files
-      case head :: tail => applyFilter(files.filter(f => head(f.getPath)), tail)
+      case head :: tail =>
+        applyFilter(files.filter(f => head(f.getPath)), tail)
     }
 
-    applyFilter(unfilteredFiles, artifactFilters.toList)
+    applyFilter(unfilteredFiles, artifactFilters.distinct.toList)
   }
 
   // Can't extend Artifact as it's a sealed trait, so these
