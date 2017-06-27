@@ -125,10 +125,10 @@ trait ArtifactSource extends RootArtifactContainer {
           ).flatten
 
       override def allDirectories: Seq[DirectoryArtifact] =
-        right.allDirectories ++ left.allDirectories.filter(d => !right.allDirectories.exists(_.path.equals(d.path)))
+        right.allDirectories ++ left.allDirectories.filter(d => !right.allDirectories.exists(_.path == d.path))
 
       override def allFiles: Seq[FileArtifact] =
-        right.allFiles ++ left.allFiles.filter(f => !right.allFiles.exists(_.path.equals(f.path)))
+        right.allFiles ++ left.allFiles.filter(f => !right.allFiles.exists(_.path == f.path))
 
       override def artifacts: Seq[Artifact] = allDirectories ++ allFiles
     }
@@ -284,7 +284,7 @@ trait ArtifactSource extends RootArtifactContainer {
     * @param path Path of file to remove, if found
     * @return an ArtifactSource
     */
-  def delete(path: String): ArtifactSource = filter(_ => true, !_.path.equals(path))
+  def delete(path: String): ArtifactSource = filter(_ => true, _.path != path)
 
   def -(path: String): ArtifactSource = this delete path
 

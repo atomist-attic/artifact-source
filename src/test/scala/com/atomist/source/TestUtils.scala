@@ -4,7 +4,7 @@ import com.atomist.source.file.ClassPathArtifactSource
 import org.scalatest.Matchers
 
 /**
-  * Utilities for ArtifactSourceTests
+  * Utilities for ArtifactSourceTests.
   */
 object TestUtils extends Matchers {
 
@@ -23,7 +23,7 @@ object TestUtils extends Matchers {
   }
 
   /**
-    * Validate a copy of an ArtifactSource
+    * Validate a copy of an ArtifactSource.
     */
   def validateCopy(from: ArtifactSource, to: ArtifactSource): Unit = {
     withClue(s"copy must have same number of files (${to.allFiles.size}") {
@@ -33,7 +33,7 @@ object TestUtils extends Matchers {
   }
 
   /**
-    * Same as validateCopy, but allow extra files in the copy
+    * Same as validateCopy, but allow extra files in the copy.
     */
   def validateCopyAllowingExtras(from: ArtifactSource, to: ArtifactSource): Unit = {
     withClue(s"copy must have at least same number of files (${to.allFiles.size}") {

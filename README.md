@@ -10,7 +10,7 @@ Defines an ArtifactSource abstraction for source code.
 A Scala library exposing the core ArtifactSource abstraction,
 representing a set of artifacts (probably source code) that may be
 read from or written to a range of sources, including the file system,
-a zip file, a local Git repository, or (in a separate library built on this), GitHub.
+a zip file, a local Git repository, or GitHub.
 
 This library is used by most Atomist Java and Scala projects.
 
