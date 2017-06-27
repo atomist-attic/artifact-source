@@ -15,7 +15,7 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
     ZipFileInput(new FileInputStream(f))
   }
 
-  it should "create repository and copy contents in root directory only" in {
+  "GitHubArtifactSourceWriter" should "create repository and copy contents in root directory only" in {
     val tempRepo = newTemporaryRepo()
 
     val helloWorldProject = ClassPathArtifactSource.toArtifactSource("java-source/HelloWorldService.java")

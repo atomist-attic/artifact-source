@@ -10,7 +10,7 @@ import scala.collection.JavaConverters._
 
 class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
-  "GitHubServicesTest" should "find valid organization" in {
+  "GitHubServices" should "find valid organization" in {
     ghs.getOrganization(TestOrg) shouldBe defined
   }
 

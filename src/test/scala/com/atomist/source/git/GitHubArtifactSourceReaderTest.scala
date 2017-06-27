@@ -17,7 +17,7 @@ class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
   private val defaultTemplates = GitHubArtifactSourceLocator.rootOfMaster("project-templates", "atomisthq")
   private val self = gitHubReader.sourceFor(DefaultGitHubArtifactSourceLocator(repo = "artifact-source", owner = "atomist"))
 
-  "GitHub" should "find a known repository" in {
+  "GitHubArtifactSourceReader" should "find a known repository" in {
     val artifacts = self.artifacts
     artifacts.size should be > 1
   }

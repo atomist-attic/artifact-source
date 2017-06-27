@@ -6,7 +6,7 @@ object TestConstants {
 
   val GheApiUrl = "https://ghe.atomist.services/api/v3/"
 
-  val Token = System.getenv("GITHUB_TOKEN")
+  val Token = System.getenv("GITHUB_TEST_TOKEN")
 
   val TemporaryRepoPrefix = "TEST_CAN_DELETE_"
 
