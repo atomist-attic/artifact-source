@@ -7,14 +7,14 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class FileSystemGitArtifactSourceTest extends FlatSpec with Matchers {
 
-  "FileSystemGitArtifactSourceTest" should "create FileSystemGitArtifactSource from Git repo on disk" in {
+  "FileSystemGitArtifactSourceTest" should "create a FileSystemGitArtifactSource from Git repo on disk" in {
     val id = FileSystemArtifactSourceIdentifier(Paths.get(System.getProperty("user.dir")).toFile)
     val as = FileSystemGitArtifactSource(id)
     as.findFile("pom.xml") shouldBe defined
     as.findDirectory(".git") shouldBe empty
   }
 
-  it should "fail to create FileSystemGitArtifactSource in a directory without a .git folder" in {
+  it should "fail to create a FileSystemGitArtifactSource in a directory without a .git folder" in {
     val id = FileSystemArtifactSourceIdentifier(Paths.get(System.getProperty("java.io.tmpdir")).toFile)
     an[IllegalArgumentException] should be thrownBy FileSystemGitArtifactSource(id)
   }

@@ -46,6 +46,16 @@ class GitRepositoryClonerTest extends FlatSpec with Matchers {
     // println(s"Cloning: ${System.currentTimeMillis - start} ms")
   }
 
+  it should "clone remote repo and verify file contents" in {
+    val grc = GitRepositoryCloner()
+    val cloned = grc.clone("artifact-source", "atomist")
+    cloned shouldBe defined
+    val repoDir = cloned.get
+    val f = Paths.get(repoDir.getPath, "src", "test", "resources", "springboot1.zip").toFile
+    val content = FileUtils.readFileToByteArray(f)
+    BinaryDecider.isBinaryContent(content) shouldBe true
+  }
+
   it should "fail to clone repo due to malformed git url" in {
     val grc = GitRepositoryCloner("", "foo://github.com")
     grc.clone("rug", "atomist") shouldBe empty

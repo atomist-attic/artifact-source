@@ -3,8 +3,8 @@ package com.atomist.source.git
 import java.time.OffsetDateTime
 import java.util.{List => JList}
 
-import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.source.{ArtifactSourceException, ArtifactSourceUpdateException, FileArtifact, StringFileArtifact, _}
+import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.util.Octal.intToOctal
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.typesafe.scalalogging.LazyLogging
@@ -78,7 +78,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = "https://api.gith
   def createBranch(repo: String, owner: String, branchName: String, fromBranch: String): GHRef =
     getRepository(repo, owner) match {
       case Some(repository) => createBranch(repository, branchName, fromBranch)
-      case None => throw ArtifactSourceUpdateException(s"Failed to find repository '$repo' for owner '$owner'")
+      case None => throw ArtifactSourceUpdateException(s"Failed to find repository '$owner/$repo'")
     }
 
   @throws[ArtifactSourceUpdateException]
@@ -101,7 +101,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = "https://api.gith
                               message: String): Seq[FileArtifact] =
     getRepository(repo, owner) match {
       case Some(repository) => createBranchFromChanges(repository, branchName, fromBranch, old, current, message)
-      case None => throw ArtifactSourceUpdateException(s"Failed to find repository '$repo' for owner '$owner'")
+      case None => throw ArtifactSourceUpdateException(s"Failed to find repository '$owner/$repo'")
     }
 
   @throws[ArtifactSourceUpdateException]
@@ -181,6 +181,24 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = "https://api.gith
   def commitFiles(sui: GitHubSourceUpdateInfo,
                   files: Seq[FileArtifact],
                   filesToDelete: Seq[FileArtifact]): Seq[FileArtifact] = {
+    val sourceId = sui.sourceId
+    val repo = sourceId.repo
+    val owner = sourceId.owner
+    getRepository(repo, owner) match {
+      case Some(repository) =>
+        commitFiles(repository, sourceId.branch, sui.message, files, filesToDelete)
+      case None =>
+        logger.debug(s"Failed to find repository '$owner/$repo'")
+        Nil
+    }
+  }
+
+  @throws[ArtifactSourceException]
+  def commitFiles(repository: GHRepository,
+                  branch: String,
+                  message: String,
+                  files: Seq[FileArtifact],
+                  filesToDelete: Seq[FileArtifact]): Seq[FileArtifact] = {
     /*
       This process is involved, so here's a summary of what we need to do:
       1. Get a reference to the desired branch's HEAD
@@ -192,39 +210,30 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = "https://api.gith
       7. Update our new branch's heads/master reference to point to our new commit from (6).
      */
 
-    val sourceId = sui.sourceId
-    val repo = sourceId.repo
-    val owner = sourceId.owner
+    val repo = repository.getName
+    val owner = repository.getOwnerName
     Try {
-      getRepository(repo, owner) match {
-        case Some(repository) =>
-          val branch = repository.getBranch(sourceId.branch)
-          val baseTreeSha = branch.getSHA1
-          val branchName = branch.getName
+      val gHBranch = repository.getBranch(branch)
+      val baseTreeSha = gHBranch.getSHA1
+      val fwbrs = files.map(fa => FileWithBlobRef(fa, createBlob(repo, owner, message, branch, fa)))
+      val newOrUpdatedTreeEntries = fwbrs.map(fwbr => TreeEntry(fwbr.fa.path, intToOctal(fwbr.fa.mode), "blob", fwbr.ref.sha))
+      val allExistingTreeEntries = treeFor(GitHubShaIdentifier(repo, owner, baseTreeSha)).allFiles
+        .map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
 
-          val fwbrs = files.map(fa => FileWithBlobRef(fa, createBlob(repo, owner, sui.message, branchName, fa)))
-          val newOrUpdatedTreeEntries = fwbrs.map(fwbr => TreeEntry(fwbr.fa.path, intToOctal(fwbr.fa.mode), "blob", fwbr.ref.sha))
-          val allExistingTreeEntries = treeFor(GitHubShaIdentifier(repo, owner, baseTreeSha)).allFiles
-            .map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
+      val treeEntriesToDelete = filesToDelete.map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
 
-          val treeEntriesToDelete = filesToDelete.map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
+      val finalTreeEntries = (newOrUpdatedTreeEntries ++ allExistingTreeEntries)
+        .groupBy(_.path)
+        .map(_._2.head)
+        .filterNot(te => treeEntriesToDelete.exists(_.path == te.path))
+        .toSeq
 
-          val finalTreeEntries = (newOrUpdatedTreeEntries ++ allExistingTreeEntries)
-            .groupBy(_.path)
-            .map(_._2.head)
-            .filterNot(te => treeEntriesToDelete.exists(_.path == te.path))
-            .toSeq
+      val tree = createTree(repo, owner, finalTreeEntries)
+      logger.debug(tree.toString)
+      val commit = createCommit(repo, owner, message, tree, Seq(baseTreeSha))
+      updateReference(repo, owner, s"heads/$branch", commit.sha)
 
-          val tree = createTree(repo, owner, finalTreeEntries)
-          logger.debug(tree.toString)
-          val commit = createCommit(repo, owner, sui.message, tree, Seq(baseTreeSha))
-          updateReference(repo, owner, s"heads/$branchName", commit.sha)
-
-          fwbrs.map(fwbr => StringFileArtifact.withNewUniqueId(fwbr.fa, fwbr.ref.sha))
-        case None =>
-          logger.debug(s"Failed to find repository '$repo' for owner '$owner'")
-          Nil
-      }
+      fwbrs.map(fwbr => StringFileArtifact.withNewUniqueId(fwbr.fa, fwbr.ref.sha))
     } match {
       case Success(fileArtifacts) => fileArtifacts
       case Failure(e) =>
@@ -235,14 +244,16 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = "https://api.gith
   @throws[ArtifactSourceUpdateException]
   def addFile(sui: GitHubSourceUpdateInfo, fa: FileArtifact): Option[FileArtifact] =
     Try {
-      val binaryContent = getBinaryContent(fa)
       val sourceId = sui.sourceId
-      getRepository(sourceId.repo, sourceId.owner) match {
+      val repo = sourceId.repo
+      val owner = sourceId.owner
+      getRepository(repo, owner) match {
         case Some(repository) =>
+          val binaryContent = getBinaryContent(fa)
           val response = repository.createContent(binaryContent, sui.message, fa.path, sourceId.branch)
           Some(StringFileArtifact(fa.name, fa.pathElements, fa.content, fa.mode, Some(response.getContent.getSha)))
         case None =>
-          logger.debug(s"Failed to find repository '${sourceId.repo}' for owner '${sourceId.owner}'")
+          logger.debug(s"Failed to find repository '$owner/$repo'")
           None
       }
     } match {

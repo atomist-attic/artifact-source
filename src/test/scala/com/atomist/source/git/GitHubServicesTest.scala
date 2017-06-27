@@ -1,9 +1,15 @@
 package com.atomist.source.git
 
+import java.io.File
+
+import com.atomist.source.FileArtifact.{DefaultMode, ExecutableMode}
+import com.atomist.source.file.FileSystemArtifactSourceIdentifier
 import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.GitHubServices.PullRequestRequest
 import com.atomist.source.git.TestConstants._
 import com.atomist.source.{Artifact, FileArtifact, SimpleCloudRepoId, StringFileArtifact}
+import com.atomist.util.{BinaryDecider, GitRepositoryCloner}
+import org.apache.commons.io.{FileUtils, IOUtils}
 import org.kohsuke.github.GHIssueState
 
 import scala.collection.JavaConverters._
@@ -152,6 +158,36 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val endAs = ghs.sourceFor(baseSource)
     endAs.allFiles.size shouldBe 4
+  }
+
+  it should "clone a remote repo, modify a file, push the changes and verify" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val zipFile = new File(getClass.getClassLoader.getResource("springboot1.zip").toURI)
+    newTempRepo.createContent(FileUtils.readFileToByteArray(zipFile), "new binary file", "springboot1.zip", "master")
+    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
+
+    val grc = GitRepositoryCloner(Token)
+    val cloned = grc.clone(cri.repo, cri.owner)
+    cloned shouldBe defined
+    val id = FileSystemArtifactSourceIdentifier(cloned.get)
+    val as = FileSystemGitArtifactSource(id)
+    val f = as.findFile("springboot1.zip")
+    f shouldBe defined
+    f.get.mode shouldBe DefaultMode
+
+    val modified = f.get.withPath("springboot2.zip").withMode(ExecutableMode)
+    val committedFiles = ghs.commitFiles(newTempRepo, MasterBranch, "changed path", Seq(modified), Seq(f.get))
+    committedFiles.size shouldBe 1
+
+    val recloned = grc.clone(cri.repo, cri.owner)
+    recloned shouldBe defined
+    val id1 = FileSystemArtifactSourceIdentifier(recloned.get)
+    val as1 = FileSystemGitArtifactSource(id1)
+    val f1 = as1.findFile("springboot2.zip")
+    f1 shouldBe defined
+    f1.get.mode shouldBe ExecutableMode
+    val content = IOUtils.toByteArray(f.get.inputStream())
+    BinaryDecider.isBinaryContent(content) shouldBe true
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {
