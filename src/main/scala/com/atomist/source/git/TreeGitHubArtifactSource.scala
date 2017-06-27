@@ -41,7 +41,7 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
 
     override lazy val content: String = IOUtils.toString(inputStream, Charset.defaultCharset())
 
-    override def inputStream: InputStream = repository.readBlob(te.getSha)
+    override def inputStream(): InputStream = repository.readBlob(te.getSha)
   }
 
   override val allFiles: Seq[FileArtifact] = {

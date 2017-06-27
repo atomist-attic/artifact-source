@@ -8,7 +8,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class GitRepositoryClonerTest extends FlatSpec with Matchers {
 
-  "GitRepositoryClonerTest" should "clone remote repo to temp directory" in {
+  "GitRepositoryCloner" should "clone remote repo to temp directory" in {
     cloneAndVerify()
   }
 

@@ -10,7 +10,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
-abstract class AbstractPatternFileFilter(val rootPath: String) extends ArtifactFilter {
+abstract class PatternMatchableArtifactFilter(val rootPath: String) extends ArtifactFilter {
 
   override def apply(path: String): Boolean =
     !(matched._1.exists(Paths.get(path).toAbsolutePath.toString.startsWith(_)) || matched._2.exists(_.equals(path)))
