@@ -417,9 +417,5 @@ trait ArtifactSource extends RootArtifactContainer {
     }
   }
 
-  override def toString = s"${
-    getClass.getSimpleName
-  }:${
-    artifacts.size
-  } artifacts"
+  override def toString = s"${getClass.getSimpleName}:${artifacts.size} artifacts"
 }

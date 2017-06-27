@@ -3,23 +3,20 @@ package com.atomist.source.git
 import com.atomist.source._
 import com.typesafe.scalalogging.LazyLogging
 
-case class GitHubArtifactSourceWriter(oAuthToken: String, apiUrl: String = "") extends LazyLogging {
+case class GitHubArtifactSourceWriter(oAuthToken: String, apiUrl: String = GitHubApi.Url) extends LazyLogging {
 
   import GitHubArtifactSourceWriter._
 
   private val ghs = GitHubServices(oAuthToken, apiUrl)
 
   @throws[ArtifactSourceException]
-  def write(as: ArtifactSource, sui: GitHubSourceUpdateInfo): Seq[FileArtifact] = {
-    if (as.allFiles.size == 1) {
-      ghs.addFile(sui, as.allFiles.head).toSeq
-    } else if (as.findFile(ProvenanceFileName).isDefined) {
+  def write(as: ArtifactSource, sui: GitHubSourceUpdateInfo): Seq[FileArtifact] =
+    if (as.findFile(ProvenanceFileName).isDefined) {
       ghs.commitFiles(sui, as.allFiles, Seq.empty)
     } else {
       val newAs = as + StringFileArtifact(ProvenanceFileName, "")
       ghs.commitFiles(sui, newAs.allFiles, Seq.empty)
     }
-  }
 
   @throws[ArtifactSourceException]
   def writeNewRepo(as: ArtifactSource,

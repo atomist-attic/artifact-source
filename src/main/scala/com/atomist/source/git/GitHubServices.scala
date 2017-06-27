@@ -14,14 +14,19 @@ import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 import scalaj.http.{Base64, Http}
 
-case class GitHubServices(oAuthToken: String, apiUrl: String = "https://api.github.com")
+object GitHubApi {
+
+  val Url = "https://api.github.com"
+}
+
+case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubApi.Url)
   extends GitHubSourceReader
     with LazyLogging {
 
   import GitHubServices._
 
   lazy val gitHub: GitHub = apiUrl match {
-    case url if Option(url).exists(_.trim.nonEmpty) && url != DefaultApiUrl => GitHub.connectToEnterprise(url, oAuthToken)
+    case url if Option(url).exists(_.trim.nonEmpty) && url != GitHubApi.Url => GitHub.connectToEnterprise(url, oAuthToken)
     case _ => GitHub.connectUsingOAuth(oAuthToken)
   }
 
@@ -242,26 +247,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = "https://api.gith
   }
 
   @throws[ArtifactSourceUpdateException]
-  def addFile(sui: GitHubSourceUpdateInfo, fa: FileArtifact): Option[FileArtifact] =
-    Try {
-      val sourceId = sui.sourceId
-      val repo = sourceId.repo
-      val owner = sourceId.owner
-      getRepository(repo, owner) match {
-        case Some(repository) =>
-          val binaryContent = getBinaryContent(fa)
-          val response = repository.createContent(binaryContent, sui.message, fa.path, sourceId.branch)
-          Some(StringFileArtifact(fa.name, fa.pathElements, fa.content, fa.mode, Some(response.getContent.getSha)))
-        case None =>
-          logger.debug(s"Failed to find repository '$owner/$repo'")
-          None
-      }
-    } match {
-      case Success(fileArtifact) => fileArtifact
-      case Failure(e) => throw ArtifactSourceUpdateException(e.getMessage, e)
-    }
-
-  @throws[ArtifactSourceUpdateException]
   def mergePullRequest(repo: String,
                        owner: String,
                        number: Int,
@@ -336,8 +321,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = "https://api.gith
 }
 
 object GitHubServices {
-
-  val DefaultApiUrl = "https://api.github.com"
 
   case class GitHubRef(url: String, sha: String)
 
