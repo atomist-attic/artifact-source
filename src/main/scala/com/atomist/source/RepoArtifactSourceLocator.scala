@@ -6,3 +6,4 @@ trait RepoArtifactSourceLocator
 
   def repo: String
 }
+

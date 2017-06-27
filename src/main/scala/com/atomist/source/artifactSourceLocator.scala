@@ -11,8 +11,7 @@ trait ArtifactSourceLocator {
 }
 
 /**
-  * Uniquely identifies an ArtifactSource. May contain
-  * a fingerprint such as a GitHub commit sha.
+  * Uniquely identifies an ArtifactSource. May contain a fingerprint such as a GitHub commit sha.
   */
 trait ArtifactSourceIdentifier extends ArtifactSourceLocator {
 }
