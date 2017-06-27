@@ -6,9 +6,9 @@ import com.atomist.source.file.{FileSystemArtifactSource, FileSystemArtifactSour
 import com.atomist.source.filter.GitDirFilter
 
 /**
-  * ArtifactSource backed by a Git repository on a file system.
+  * ArtifactSource backed by a Git repository on a local file system.
   */
-case class GitArtifactSource(override val id: FileSystemArtifactSourceIdentifier)
+case class FileSystemGitArtifactSource(override val id: FileSystemArtifactSourceIdentifier)
   extends FileSystemArtifactSource(id, GitDirFilter(id.rootFile.getPath)) {
 
   require(Files.exists(Paths.get(id.rootFile.getPath, ".git")), ".git directory must exist")
