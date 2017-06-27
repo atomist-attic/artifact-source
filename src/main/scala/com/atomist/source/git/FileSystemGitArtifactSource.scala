@@ -1,9 +1,10 @@
 package com.atomist.source.git
 
-import java.nio.file.{Files, Paths}
-
 import com.atomist.source.file.{FileSystemArtifactSource, FileSystemArtifactSourceIdentifier}
 import com.atomist.source.filter.GitDirFilter
+
+import scala.sys.process.{Process, ProcessLogger}
+import scala.util.Try
 
 /**
   * ArtifactSource backed by a Git repository on a local file system.
@@ -11,5 +12,5 @@ import com.atomist.source.filter.GitDirFilter
 case class FileSystemGitArtifactSource(override val id: FileSystemArtifactSourceIdentifier)
   extends FileSystemArtifactSource(id, GitDirFilter(id.rootFile.getPath)) {
 
-  require(Files.exists(Paths.get(id.rootFile.getPath, ".git")), ".git directory must exist")
+  require(Try(Process("git rev-parse --is-inside-work-tree", id.rootFile) ! ProcessLogger(_ => ()) == 0).getOrElse(false), "Not a git repository ")
 }
