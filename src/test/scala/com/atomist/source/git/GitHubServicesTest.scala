@@ -1,15 +1,9 @@
 package com.atomist.source.git
 
-import java.io.File
-
-import com.atomist.source.FileArtifact.{DefaultMode, ExecutableMode}
-import com.atomist.source.file.FileSystemArtifactSourceIdentifier
 import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.GitHubServices.PullRequestRequest
 import com.atomist.source.git.TestConstants._
 import com.atomist.source.{Artifact, FileArtifact, SimpleCloudRepoId, StringFileArtifact}
-import com.atomist.util.{BinaryDecider, GitRepositoryCloner}
-import org.apache.commons.io.{FileUtils, IOUtils}
 import org.kohsuke.github.GHIssueState
 
 import scala.collection.JavaConverters._
@@ -167,8 +161,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
       StringFileArtifact(placeholderFilename("tempFile3"), TestFileContents)
     )
     val multiFileCommitMessage = s"multi temp file commit at ${System.currentTimeMillis}"
-    val fileArtifacts = ghs.commitFiles(
-      GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files, Seq.empty)
+    val fileArtifacts = ghs.commitFiles(GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files, Seq.empty)
     fileArtifacts.isEmpty shouldBe false
     fileArtifacts
   }

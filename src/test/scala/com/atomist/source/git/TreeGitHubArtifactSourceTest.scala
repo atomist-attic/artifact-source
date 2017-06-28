@@ -5,8 +5,7 @@ import java.io.FileInputStream
 import com.atomist.source._
 import com.atomist.source.file.{ClassPathArtifactSource, ZipFileArtifactSourceReader, ZipFileInput}
 import com.atomist.source.filter.ArtifactFilter
-import com.atomist.source.git.TestConstants._
-import com.atomist.source.git.TestConstants.Token
+import com.atomist.source.git.TestConstants.{Token, _}
 
 class TreeGitHubArtifactSourceTest
   extends GitHubMutatorTest(Token) {

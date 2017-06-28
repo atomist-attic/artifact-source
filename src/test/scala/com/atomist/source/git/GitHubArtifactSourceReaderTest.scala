@@ -148,8 +148,9 @@ class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
   }
 
   it should "should find nested path elements" in {
-    self.allFiles.exists(_.pathElements.size > 1) should equal(true)
-    self.allFiles.exists(_.pathElements.toSet equals Set("src", "main", "scala", "com", "atomist", "source", "git")) shouldBe true
+    val files = self.allFiles
+    files.exists(_.pathElements.size > 1) should equal(true)
+    files.exists(_.pathElements.toSet equals Set("src", "main", "scala", "com", "atomist", "source", "git")) shouldBe true
   }
 
   it should "not find non-existent sha" in {
@@ -157,11 +158,11 @@ class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
       (gitHubReader treeFor GitHubShaIdentifier(TestTargetRepo, TestOrg, "strongMenAlsoCry"))
   }
 
-  ignore should "find non-existent sha" in { // Slow
+  it should "find existing sha" in { // Slow
     val as = self
     val withSha = as.id.asInstanceOf[GitHubArtifactSourceIdentifier]
     val sourceFromTree = gitHubReader treeFor withSha
-    ArtifactSourceTest.validateCopy(as, sourceFromTree)
+    sourceFromTree.totalFileCount shouldEqual as.totalFileCount
   }
 
   it should "read from large repository" in {

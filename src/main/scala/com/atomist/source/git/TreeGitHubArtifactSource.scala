@@ -2,10 +2,11 @@ package com.atomist.source.git
 
 import java.io.InputStream
 import java.nio.charset.Charset
-import com.atomist.util.Utils._
+
 import com.atomist.source._
 import com.atomist.source.filter.ArtifactFilter
 import com.atomist.util.Octal
+import com.atomist.util.Utils._
 import org.apache.commons.io.IOUtils
 import org.kohsuke.github.{GHRepository, GHTree, GHTreeEntry}
 
