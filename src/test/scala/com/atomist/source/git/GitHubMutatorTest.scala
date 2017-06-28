@@ -11,7 +11,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * Superclass for tests that mutate GitHub.
   */
-abstract class GitHubMutatorTest(val oAuthToken: String, val apiUrl: String = GitHubServices.DefaultApiUrl)
+abstract class GitHubMutatorTest(val oAuthToken: String, val apiUrl: String = GitHubApi.Url)
   extends FlatSpec
     with Matchers
     with BeforeAndAfter
