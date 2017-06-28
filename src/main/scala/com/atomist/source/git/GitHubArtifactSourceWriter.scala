@@ -11,7 +11,9 @@ case class GitHubArtifactSourceWriter(oAuthToken: String, apiUrl: String = GitHu
 
   @throws[ArtifactSourceException]
   def write(as: ArtifactSource, sui: GitHubSourceUpdateInfo): Seq[FileArtifact] =
-    if (as.findFile(ProvenanceFileName).isDefined) {
+    if (as.allFiles.size == 1) {
+      ghs.addFile(sui, as.allFiles.head).toSeq
+    } else if (as.findFile(ProvenanceFileName).isDefined) {
       ghs.commitFiles(sui, as.allFiles, Seq.empty)
     } else {
       val newAs = as + StringFileArtifact(ProvenanceFileName, "")

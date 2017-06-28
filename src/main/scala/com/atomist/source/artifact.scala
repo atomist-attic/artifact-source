@@ -119,7 +119,7 @@ object FileArtifact {
 trait StreamedFileArtifact extends FileArtifact {
 
   final override def content: String =
-    withCloseable(inputStream())(is => IOUtils.toString(is, Charset.defaultCharset()).toSystem)
+    withCloseable(inputStream())(IOUtils.toString(_, Charset.defaultCharset()).toSystem)
 }
 
 trait NonStreamedFileArtifact extends FileArtifact {

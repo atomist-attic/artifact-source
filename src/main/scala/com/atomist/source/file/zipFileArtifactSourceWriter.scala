@@ -31,7 +31,7 @@ object ZipFileArtifactSourceWriter {
         entry addExtraField aef
         entry setUnixMode fa.mode
         zip putArchiveEntry entry
-        withCloseable(fa.inputStream())(is => IOUtils.copy(is, zip))
+        withCloseable(fa.inputStream())(IOUtils.copy(_, zip))
         zip.closeArchiveEntry()
       }
 

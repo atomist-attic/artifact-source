@@ -31,5 +31,5 @@ class BinaryDeciderTest
   }
 
   private def getContent(path: String): String =
-    withCloseable(getClass.getResourceAsStream(path))(is => IOUtils.toString(is, Charset.defaultCharset))
+    withCloseable(getClass.getResourceAsStream(path))(IOUtils.toString(_, Charset.defaultCharset))
 }

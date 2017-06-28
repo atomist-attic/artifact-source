@@ -6,6 +6,7 @@ import java.nio.file.Paths
 import com.atomist.source.file.{ClassPathArtifactSource, FileSystemArtifactSourceIdentifier, ZipFileArtifactSourceReader, ZipFileInput}
 import com.atomist.source.git.TestConstants.Token
 import com.atomist.source.{ArtifactSourceTest, SimpleCloudRepoId}
+import com.atomist.util.Utils.withCloseable
 import com.atomist.util.{BinaryDecider, GitRepositoryCloner}
 import org.apache.commons.io.IOUtils
 
@@ -24,7 +25,10 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
     val helloWorldProject = ClassPathArtifactSource.toArtifactSource("java-source/HelloWorldService.java")
     val cri = SimpleCloudRepoId(tempRepo.getName, tempRepo.getOwnerName)
     val ghid = GitHubArtifactSourceLocator(cri)
-    gitHubWriter.write(helloWorldProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
+    val fa = gitHubWriter.write(helloWorldProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
+    fa.size shouldEqual 1
+    fa.head.uniqueId shouldBe defined
+
     Thread sleep 1000
     val read = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
     ArtifactSourceTest.validateCopy(helloWorldProject, read)
@@ -55,11 +59,14 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
     val clonedSeed = grc.clone(cri.repo, cri.owner)
     clonedSeed shouldBe defined
     val clonedAs = FileSystemGitArtifactSource(FileSystemArtifactSourceIdentifier(clonedSeed.get))
-    val f = clonedAs.findFile(".mvn/wrapper/maven-wrapper.jar")
-    f shouldBe defined
+    val cmdFile = clonedAs.findFile("mvnw.cmd")
+    cmdFile shouldBe defined
+    BinaryDecider.isBinaryContent(cmdFile.get.content) shouldBe false
 
-    val jarFile = f.get
-    val content = IOUtils.toByteArray(jarFile.inputStream())
+    val jar = clonedAs.findFile(".mvn/wrapper/maven-wrapper.jar")
+    jar shouldBe defined
+    val jarFile = jar.get
+    val content = withCloseable(jarFile.inputStream())(IOUtils.toByteArray)
     BinaryDecider.isBinaryContent(content) shouldBe true
     val jid = ZipFileInput(Paths.get(clonedAs.id.rootFile.getPath, jarFile.path).toFile)
     val jarSource = ZipFileArtifactSourceReader.fromZipSource(jid)

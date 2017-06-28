@@ -2,7 +2,7 @@ package com.atomist.source.git
 
 import java.io.InputStream
 import java.nio.charset.Charset
-
+import com.atomist.util.Utils._
 import com.atomist.source._
 import com.atomist.source.filter.ArtifactFilter
 import com.atomist.util.Octal
@@ -39,7 +39,7 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
 
     override val mode: Int = Octal.octalToInt(te.getMode)
 
-    override lazy val content: String = IOUtils.toString(inputStream, Charset.defaultCharset())
+    override lazy val content: String = withCloseable(inputStream())(IOUtils.toString(_, Charset.defaultCharset()))
 
     override def inputStream(): InputStream = repository.readBlob(te.getSha)
   }

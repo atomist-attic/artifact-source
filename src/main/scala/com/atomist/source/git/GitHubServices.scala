@@ -1,22 +1,20 @@
 package com.atomist.source.git
 
-import java.nio.charset.Charset
 import java.time.OffsetDateTime
 import java.util.{List => JList}
 
-import com.atomist.source.{ArtifactSourceException, ArtifactSourceUpdateException, FileArtifact, StringFileArtifact, _}
+import com.atomist.source.{ArtifactSourceException, ArtifactSourceUpdateException, FileArtifact, _}
 import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.util.Octal.intToOctal
 import com.atomist.util.Utils._
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.commons.codec.binary.Base64InputStream
 import org.apache.commons.io.IOUtils
 import org.kohsuke.github.{GHRef, GHRepository, GitHub, _}
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
-import scalaj.http.Http
+import scalaj.http.{Base64, Http}
 
 object GitHubApi {
 
@@ -37,11 +35,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubApi.Url)
   private val headers: Map[String, String] =
     Map("Authorization" -> ("token " + oAuthToken), "Accept" -> "application/vnd.github.v3+json")
 
-  override def sourceFor(id: GitHubArtifactSourceLocator): ArtifactSource =
-    TreeGitHubArtifactSource(id, this)
+  override def sourceFor(id: GitHubArtifactSourceLocator): ArtifactSource = TreeGitHubArtifactSource(id, this)
 
-  override def treeFor(id: GitHubShaIdentifier): ArtifactSource =
-    TreeGitHubArtifactSource(id, this)
+  override def treeFor(id: GitHubShaIdentifier): ArtifactSource = TreeGitHubArtifactSource(id, this)
 
   def getOrganization(owner: String): Option[GHOrganization] = {
     require(Option(owner).exists(_.trim.nonEmpty), "owner must not be null or empty")
@@ -223,9 +219,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubApi.Url)
     val owner = repository.getOwnerName
     Try {
       val gHBranch = repository.getBranch(branch)
-      val branchName = gHBranch.getName
       val baseTreeSha = gHBranch.getSHA1
-      val fwbrs = files.map(fa => FileWithBlobRef(fa, createBlob(repo, owner, message, branchName, fa)))
+      val fwbrs = files.map(fa => FileWithBlobRef(fa, createBlob(repo, owner, message, branch, fa)))
       val newOrUpdatedTreeEntries = fwbrs.map(fwbr => TreeEntry(fwbr.fa.path, intToOctal(fwbr.fa.mode), "blob", fwbr.ref.sha))
       val allExistingTreeEntries = treeFor(GitHubShaIdentifier(repo, owner, baseTreeSha)).allFiles
         .map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
@@ -241,13 +236,41 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubApi.Url)
       val tree = createTree(repo, owner, finalTreeEntries)
       logger.debug(tree.toString)
       val commit = createCommit(repo, owner, message, tree, Seq(baseTreeSha))
-      updateReference(repo, owner, s"heads/$branchName", commit.sha)
+      updateReference(repo, owner, s"heads/$branch", commit.sha)
 
-      fwbrs.map(fwbr => StringFileArtifact.withNewUniqueId(fwbr.fa, fwbr.ref.sha))
+      fwbrs.map(fwbr => fwbr.fa.withUniqueId(fwbr.ref.sha))
     } match {
       case Success(fileArtifacts) => fileArtifacts
       case Failure(e) =>
         throw ArtifactSourceUpdateException(s"Failed to commit files to '$owner/$repo': ${e.getMessage}", e)
+    }
+  }
+
+  @throws[ArtifactSourceUpdateException]
+  def addFile(sui: GitHubSourceUpdateInfo, fa: FileArtifact): Option[FileArtifact] = {
+    val sourceId = sui.sourceId
+    val repo = sourceId.repo
+    val owner = sourceId.owner
+    getRepository(repo, owner) match {
+      case Some(repository) =>
+        addFile(repository, sourceId.branch, sui.message, fa)
+      case None =>
+        logger.debug(s"Failed to find repository '$owner/$repo'")
+        None
+    }
+  }
+
+  @throws[ArtifactSourceUpdateException]
+  def addFile(repository: GHRepository, branch: String, message: String, fa: FileArtifact): Option[FileArtifact] = {
+    val repo = repository.getName
+    val owner = repository.getOwnerName
+    Try {
+      val content = withCloseable(fa.inputStream())(IOUtils.toByteArray)
+      val response = repository.createContent(content, message, fa.path, branch)
+      Some(fa.withUniqueId(response.getContent.getSha))
+    } match {
+      case Success(fileArtifact) => fileArtifact
+      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to add file to '$owner/$repo': ${e.getMessage}", e)
     }
   }
 
@@ -275,7 +298,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubApi.Url)
   }
 
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
-    val content = withCloseable(fa.inputStream())(is => IOUtils.toString(new Base64InputStream(is, true), Charset.defaultCharset()))
+    val content = withCloseable(fa.inputStream())(is => new String(Base64.encode(IOUtils.toByteArray(is))))
     val cbr = CreateBlobRequest(content)
     Http(s"${getPath(repo, owner)}/git/blobs").postData(toJson(cbr))
       .headers(headers)

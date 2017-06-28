@@ -5,7 +5,7 @@ import java.nio.file.Files
 
 import com.atomist.source._
 import com.atomist.source.file._
-import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
+import com.atomist.source.git.GitHubArtifactSourceLocator.{MasterBranch, fromStrings}
 import com.atomist.source.git.TestConstants._
 import com.atomist.util.Utils._
 import org.scalatest._
@@ -14,7 +14,7 @@ class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
 
   private val gitHubReader = GitHubServices(TestConstants.Token)
   private val zw = ZipFileArtifactSourceWriter
-  private val defaultTemplates = GitHubArtifactSourceLocator.rootOfMaster("project-templates", "atomisthq")
+  private val seeds = GitHubArtifactSourceLocator.rootOfMaster("spring-rest-seed", "atomist-seeds")
   private val self = gitHubReader.sourceFor(DefaultGitHubArtifactSourceLocator(repo = "artifact-source", owner = "atomist"))
 
   "GitHubArtifactSourceReader" should "find a known repository" in {
@@ -52,7 +52,7 @@ class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
 
   it should "find content" in {
     val artifacts = self.artifacts
-    val files = artifacts.filter(a => a.isInstanceOf[FileArtifact])
+    val files = artifacts.filter(_.isInstanceOf[FileArtifact])
     artifacts.size should be > 1
     val aFile = files.head.asInstanceOf[FileArtifact]
     aFile.contentLength should be > 0L
@@ -79,7 +79,7 @@ class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
   }
 
   it should "read org code from root in master" in {
-    val read = gitHubReader.sourceFor(GitHubArtifactSourceLocator.fromStrings(TestTargetRepo, TestOrg))
+    val read = gitHubReader.sourceFor(fromStrings(TestTargetRepo, TestOrg))
     withClue("known repository must be non-empty: ") {
       read.allFiles.nonEmpty shouldBe true
     }
@@ -106,29 +106,29 @@ class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
 
   it should "not find non-existent repository" in {
     an[ArtifactSourceException] should be thrownBy
-      (gitHubReader sourceFor GitHubArtifactSourceLocator.fromStrings("sdlfdslksdlfksjdlfkjslkdjf-lib", TestOrg))
+      (gitHubReader sourceFor fromStrings("sdlfdslksdlfksjdlfkjslkdjf-lib", TestOrg))
   }
 
   it should "not find repository for syntactically incorrect owner" in {
     an[ArtifactSourceException] should be thrownBy
-      (gitHubReader sourceFor GitHubArtifactSourceLocator.fromStrings("sdlfdslksdlfksjdlfkjslkdjf-lib", "not-the-droid(owner)-we-are-looking for"))
+      (gitHubReader sourceFor fromStrings("sdlfdslksdlfksjdlfkjslkdjf-lib", "not-the-droid(owner)-we-are-looking for"))
   }
 
   it should "not find repository for non-existent owner" in {
     an[ArtifactSourceException] should be thrownBy
-      (gitHubReader sourceFor GitHubArtifactSourceLocator.fromStrings("sdlfdslksdlfksjdlfkjslkdjf-lib", "notthedroidswearelookingfor"))
+      (gitHubReader sourceFor fromStrings("sdlfdslksdlfksjdlfkjslkdjf-lib", "notthedroidswearelookingfor"))
   }
 
-  it should "parse templates project" in {
-    val projectTemplateSource = gitHubReader sourceFor defaultTemplates
-    projectTemplateSource.findDirectory("spring-boot") shouldBe defined
-    projectTemplateSource.totalFileCount should be > 5
+  it should "parse seed project" in {
+    val seedSource = gitHubReader sourceFor seeds
+    seedSource.findDirectory("src") shouldBe defined
+    seedSource.totalFileCount should be > 5
 
-    val targetDir = projectTemplateSource.findDirectory("spring-boot/rest-service")
-    withClue(s"expectation failed about $targetDir, source files=${ArtifactSourceUtils.prettyListFiles(projectTemplateSource)}") {
+    val targetDir = seedSource.findDirectory("src")
+    withClue(s"expectation failed about $targetDir, source files=${ArtifactSourceUtils.prettyListFiles(seedSource)}") {
       targetDir shouldBe defined
       targetDir.get.directories.size should be >= 2
-      Set("project", "meta").equals(targetDir.get.directories.map(_.name).toSet)
+      Set("main", "test").equals(targetDir.get.directories.map(_.name).toSet)
     }
   }
 
@@ -157,7 +157,7 @@ class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
       (gitHubReader treeFor GitHubShaIdentifier(TestTargetRepo, TestOrg, "strongMenAlsoCry"))
   }
 
-  it should "find non-existent sha" in {
+  ignore should "find non-existent sha" in { // Slow
     val as = self
     val withSha = as.id.asInstanceOf[GitHubArtifactSourceIdentifier]
     val sourceFromTree = gitHubReader treeFor withSha
