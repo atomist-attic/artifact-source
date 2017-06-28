@@ -59,6 +59,7 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
     val content = IOUtils.toByteArray(jarFile.get.inputStream())
     BinaryDecider.isBinaryContent(content) shouldBe true
 
+    // Verify jar's contents are not corrupt
     val tmpFile = File.createTempFile("tmp", ".jar")
     tmpFile.deleteOnExit()
     FileUtils.copyInputStreamToFile(jarFile.get.inputStream(), tmpFile)

@@ -1,18 +1,22 @@
 package com.atomist.source.git
 
+import java.nio.charset.Charset
 import java.time.OffsetDateTime
 import java.util.{List => JList}
 
 import com.atomist.source.{ArtifactSourceException, ArtifactSourceUpdateException, FileArtifact, StringFileArtifact, _}
 import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.util.Octal.intToOctal
+import com.atomist.util.Utils._
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.commons.codec.binary.Base64InputStream
+import org.apache.commons.io.IOUtils
 import org.kohsuke.github.{GHRef, GHRepository, GitHub, _}
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
-import scalaj.http.{Base64, Http}
+import scalaj.http.Http
 
 object GitHubApi {
 
@@ -219,8 +223,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubApi.Url)
     val owner = repository.getOwnerName
     Try {
       val gHBranch = repository.getBranch(branch)
+      val branchName = gHBranch.getName
       val baseTreeSha = gHBranch.getSHA1
-      val fwbrs = files.map(fa => FileWithBlobRef(fa, createBlob(repo, owner, message, branch, fa)))
+      val fwbrs = files.map(fa => FileWithBlobRef(fa, createBlob(repo, owner, message, branchName, fa)))
       val newOrUpdatedTreeEntries = fwbrs.map(fwbr => TreeEntry(fwbr.fa.path, intToOctal(fwbr.fa.mode), "blob", fwbr.ref.sha))
       val allExistingTreeEntries = treeFor(GitHubShaIdentifier(repo, owner, baseTreeSha)).allFiles
         .map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
@@ -236,7 +241,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubApi.Url)
       val tree = createTree(repo, owner, finalTreeEntries)
       logger.debug(tree.toString)
       val commit = createCommit(repo, owner, message, tree, Seq(baseTreeSha))
-      updateReference(repo, owner, s"heads/$branch", commit.sha)
+      updateReference(repo, owner, s"heads/$branchName", commit.sha)
 
       fwbrs.map(fwbr => StringFileArtifact.withNewUniqueId(fwbr.fa, fwbr.ref.sha))
     } match {
@@ -269,14 +274,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubApi.Url)
     }
   }
 
-  private def getBinaryContent(fa: FileArtifact) =
-    fa match {
-      case b: ByteArrayFileArtifact => b.bytes
-      case _ => fa.content.getBytes
-    }
-
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
-    val cbr = CreateBlobRequest(new String(Base64.encode(getBinaryContent(fa))))
+    val content = withCloseable(fa.inputStream())(is => IOUtils.toString(new Base64InputStream(is, true), Charset.defaultCharset()))
+    val cbr = CreateBlobRequest(content)
     Http(s"${getPath(repo, owner)}/git/blobs").postData(toJson(cbr))
       .headers(headers)
       .execute(fromJson[GitHubRef])
@@ -418,4 +418,5 @@ object GitHubServices {
   private case class PullRequestMergeRequest(@JsonProperty("commit_title") title: String,
                                              @JsonProperty("commit_message") message: String,
                                              @JsonProperty("merge_method") mergeMethod: String)
+
 }

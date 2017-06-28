@@ -160,36 +160,6 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     endAs.allFiles.size shouldBe 4
   }
 
-  it should "clone a remote repo, modify a file, push the changes and verify" in {
-    val newTempRepo = newPopulatedTemporaryRepo()
-    val zipFile = new File(getClass.getClassLoader.getResource("springboot1.zip").toURI)
-    newTempRepo.createContent(FileUtils.readFileToByteArray(zipFile), "new binary file", "springboot1.zip", "master")
-    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
-
-    val grc = GitRepositoryCloner(Token)
-    val cloned = grc.clone(cri.repo, cri.owner)
-    cloned shouldBe defined
-    val id = FileSystemArtifactSourceIdentifier(cloned.get)
-    val as = FileSystemGitArtifactSource(id)
-    val f = as.findFile("springboot1.zip")
-    f shouldBe defined
-    f.get.mode shouldBe DefaultMode
-
-    val modified = f.get.withPath("springboot2.zip").withMode(ExecutableMode)
-    val committedFiles = ghs.commitFiles(newTempRepo, MasterBranch, "changed path", Seq(modified), Seq(f.get))
-    committedFiles.size shouldBe 1
-
-    val recloned = grc.clone(cri.repo, cri.owner)
-    recloned shouldBe defined
-    val id1 = FileSystemArtifactSourceIdentifier(recloned.get)
-    val as1 = FileSystemGitArtifactSource(id1)
-    val f1 = as1.findFile("springboot2.zip")
-    f1 shouldBe defined
-    f1.get.mode shouldBe ExecutableMode
-    val content = IOUtils.toByteArray(f.get.inputStream())
-    BinaryDecider.isBinaryContent(content) shouldBe true
-  }
-
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {
     val files: Seq[FileArtifact] = Seq(
       StringFileArtifact(placeholderFilename("tempFile1"), TestFileContents),
