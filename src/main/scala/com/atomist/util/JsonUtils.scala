@@ -18,11 +18,9 @@ object JsonUtils {
   private val Mapper = getObjectMapper
   private val Wrapper = getObjectMapper.configure(SerializationFeature.WRAP_ROOT_VALUE, true)
 
-  // Wrap should be the default to avoid breaking a bunch of stuff outside rug that use it!
   def toJsonStr(value: Any): String = Mapper.writeValueAsString(value)
 
-  def toJson(ref: Option[AnyRef]): Option[String] =
-    if (ref.isDefined) Some(toJsonStr(ref.get)) else None
+  def toJson(ref: Option[AnyRef]): Option[String] = ref.map(toJsonStr)
 
   def toJson(value: Any): Array[Byte] = Mapper.writeValueAsBytes(value)
 
