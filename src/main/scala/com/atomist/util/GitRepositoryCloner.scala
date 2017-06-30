@@ -9,7 +9,12 @@ import org.apache.commons.io.FileUtils
 
 import scala.sys.process._
 
-case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = "https://github.com")
+object GitHubApi {
+
+  val Url = "https://api.github.com"
+}
+
+case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitHubApi.Url)
   extends LazyLogging {
 
   import GitRepositoryCloner._
@@ -62,7 +67,7 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = "htt
   }
 
   private def getUrl = {
-    val url = new URL(remoteUrl)
+    val url =  if (Option(remoteUrl).exists(_.trim.nonEmpty)) new URL(remoteUrl) else new URL(GitHubApi.Url)
     if (Option(oAuthToken).exists(_.trim.nonEmpty))
       s"${url.getProtocol}://$oAuthToken@${url.getAuthority}"
     else

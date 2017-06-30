@@ -4,6 +4,7 @@ import java.time.OffsetDateTime
 import java.util.{List => JList}
 
 import com.atomist.source.{ArtifactSourceException, ArtifactSourceUpdateException, FileArtifact, _}
+import com.atomist.util.GitHubApi
 import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.util.Octal.intToOctal
 import com.atomist.util.Utils._
@@ -15,11 +16,6 @@ import org.kohsuke.github.{GHRef, GHRepository, GitHub, _}
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 import scalaj.http.{Base64, Http}
-
-object GitHubApi {
-
-  val Url = "https://api.github.com"
-}
 
 case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubApi.Url)
   extends GitHubSourceReader

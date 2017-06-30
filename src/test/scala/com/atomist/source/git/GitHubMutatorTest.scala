@@ -1,6 +1,7 @@
 package com.atomist.source.git
 
 import com.atomist.source._
+import com.atomist.util.GitHubApi
 import com.typesafe.scalalogging.LazyLogging
 import org.kohsuke.github.GHRepository
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FlatSpec, Matchers}
