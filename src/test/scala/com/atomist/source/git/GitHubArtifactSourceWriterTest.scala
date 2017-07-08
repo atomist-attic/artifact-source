@@ -40,7 +40,8 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
     val springBootProject = ZipFileArtifactSourceReader fromZipSource springBootZipFileId
     val cri = SimpleCloudRepoId(tempRepo.getName, tempRepo.getOwnerName)
     val ghid = GitHubArtifactSourceLocator(cri)
-    gitHubWriter.write(springBootProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
+    val artifacts = gitHubWriter.write(springBootProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
+    artifacts.size should be > 1
     val read = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
     ArtifactSourceTest.validateCopyAllowingExtras(springBootProject, read)
   }
