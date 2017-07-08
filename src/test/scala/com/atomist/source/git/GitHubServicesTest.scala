@@ -170,7 +170,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val path1 = "test.json"
     val newFile1 = StringFileArtifact(path1, "test content")
-    val as = startAs + newFile1
+    val as = startAs + newFile1 + StringFileArtifact("test2.json", "test content 2")
 
     val newContent = s"""{"vault_path":"test path", "repo" : { "repo":"foo","owner":"bar"}}"""
     val stringEditor = SimpleFileEditor(_.name == path1, f => StringFileArtifact(f.path, newContent))
