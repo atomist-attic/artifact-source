@@ -159,7 +159,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     endAs.allFiles.size shouldBe 4
   }
 
-  ignore should "clone a remote repository, create and edit new files, and create a pull request" in {
+  it should "clone a remote repository, create and edit new files, and create a pull request" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.getName
     val owner = newTempRepo.getOwnerName

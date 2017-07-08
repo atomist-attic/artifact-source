@@ -294,7 +294,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
     } match {
       case Success(prm) => Some(prm)
       case Failure(e) =>
-        logger.debug(s"Failed to merge pull request $number: ${e.getMessage}")
+        logger.warn(s"Failed to merge pull request $number: ${e.getMessage}")
         None
     }
   }
@@ -420,8 +420,6 @@ object GitHubServices {
   case class Links(self: LinksHref, html: LinksHref, @JsonProperty("pull_request") pullRequest: LinksHref)
 
   case class LinksHref(href: String)
-
-  private case class FileWithDelta(fa: FileArtifact, delta: Delta)
 
   private case class FileWithBlobRef(fa: FileArtifact, ref: GitHubRef)
 
