@@ -1,9 +1,11 @@
 package com.atomist.source.git
 
+import com.atomist.source._
+import com.atomist.source.file.FileSystemArtifactSourceIdentifier
 import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.GitHubServices.PullRequestRequest
 import com.atomist.source.git.TestConstants._
-import com.atomist.source.{Artifact, FileArtifact, SimpleCloudRepoId, StringFileArtifact}
+import com.atomist.util.GitRepositoryCloner
 import org.kohsuke.github.GHIssueState
 
 import scala.collection.JavaConverters._
@@ -55,7 +57,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     before.allFiles should have size 1
 
     val newBranchName = "add-multi-files-branch"
-    ghs.createBranch(newTempRepo, newBranchName, MasterBranch)
+    val gHRef = ghs.createBranch(newTempRepo, newBranchName, MasterBranch)
+    gHRef.getObject.getSha should not be empty
     val newBranchSource = GitHubArtifactSourceLocator(cri, newBranchName)
 
     val tempFiles = createTempFiles(newBranchSource)
@@ -122,7 +125,6 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val prr = PullRequestRequest(prTitle, updatedBranch, baseBranch, prBody)
     val prs = ghs.createPullRequestFromChanges(baseSource.repo, baseSource.owner, prr, startAs, withAddedFiles, "Added files and deleted files including README.md")
-
     prs shouldBe defined
     val pr0 = prs.get
     pr0.number should be > 0
@@ -152,6 +154,47 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val endAs = ghs.sourceFor(baseSource)
     endAs.allFiles.size shouldBe 4
+  }
+
+  it should "clone a remote repository, create and edit new files, and create a pull request" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.getName
+    val owner = newTempRepo.getOwnerName
+
+    val grc = GitRepositoryCloner(Token)
+    val cloned = grc.clone(repo, owner)
+    cloned shouldBe defined
+
+    val id = FileSystemArtifactSourceIdentifier(cloned.get)
+    val startAs = FileSystemGitArtifactSource(id)
+
+    val path1 = "test.json"
+    val newFile1 = StringFileArtifact(path1, "test content")
+    val as = startAs + newFile1
+
+    val newContent = s"""{"vault_path":"test path", "repo" : { "repo":"foo","owner":"bar"}}"""
+    val stringEditor = SimpleFileEditor(_.name == path1, f => StringFileArtifact(f.path, newContent))
+    val edited = as ✎ stringEditor
+    edited should not be theSameInstanceAs(as)
+    edited.findFile(path1).get.content should equal(newContent)
+
+    val prTitle = s"My pull request at ${System.currentTimeMillis}"
+    val prBody = "This is the body of my pull request"
+    val updatedBranch = s"multi-file-${System.currentTimeMillis}"
+
+    val prr = PullRequestRequest(prTitle, updatedBranch, MasterBranch, prBody)
+    val prs = ghs.createPullRequestFromChanges(repo, owner, prr, startAs, edited, "Added files")
+    prs shouldBe defined
+    val pr1 = prs.get
+
+    val merged = ghs.mergePullRequest(repo, owner, pr1.number, pr1.title, "Merged PR")
+    merged shouldBe defined
+    merged.get.merged shouldBe true
+
+    val newAs = ghs sourceFor GitHubArtifactSourceLocator.rootOfMaster(repo, owner)
+    val f1 = newAs.findFile(path1)
+    f1 shouldBe defined
+    f1.get.content shouldEqual newContent
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {

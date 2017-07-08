@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 import java.util.{List => JList}
 
 import com.atomist.source.{ArtifactSourceException, ArtifactSourceUpdateException, FileArtifact, _}
-import com.atomist.util.GitHubApi
+import com.atomist.util.GitHubHome
 import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.util.Octal.intToOctal
 import com.atomist.util.Utils._
@@ -17,14 +17,14 @@ import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 import scalaj.http.{Base64, Http}
 
-case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubApi.Url)
+case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
   extends GitHubSourceReader
     with LazyLogging {
 
   import GitHubServices._
 
   lazy val gitHub: GitHub = apiUrl match {
-    case url if Option(url).exists(_.trim.nonEmpty) && url != GitHubApi.Url => GitHub.connectToEnterprise(url, oAuthToken)
+    case url if Option(url).exists(_.trim.nonEmpty) && url != GitHubHome.Url => GitHub.connectToEnterprise(url, oAuthToken)
     case _ => GitHub.connectUsingOAuth(oAuthToken)
   }
 
@@ -119,13 +119,19 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubApi.Url)
       val deltas = current.deltaFrom(old)
       val sui = GitHubSourceUpdateInfo(
         GitHubArtifactSourceLocator.fromStrings(repository.getName, repository.getOwnerName, branchName), message)
-      val files = deltas.deltas.collect {
-        case fad: FileAdditionDelta => fad.newFile
+
+      val filesToUpdate = deltas.deltas.collect {
         case fud: FileUpdateDelta => fud.updatedFile
       }
+      val filesToAdd = deltas.deltas.collect {
+        case fad: FileAdditionDelta if !filesToUpdate.exists(_.path == fad.path) => fad.newFile
+      }
+      val files = filesToUpdate ++ filesToAdd
+
       val filesToDelete = deltas.deltas.collect {
         case fdd: FileDeletionDelta => fdd.oldFile
       }
+
       commitFiles(sui, files, filesToDelete)
     } match {
       case Success(fileArtifacts) => fileArtifacts
@@ -288,7 +294,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubApi.Url)
     } match {
       case Success(prm) => Some(prm)
       case Failure(e) =>
-        logger.debug(s"Failed to merge pull request $number: ${e.getMessage}")
+        logger.warn(s"Failed to merge pull request $number: ${e.getMessage}")
         None
     }
   }

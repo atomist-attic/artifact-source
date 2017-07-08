@@ -67,7 +67,7 @@ class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
       StringFileArtifact("another2/directory/tree/extra.txt", "Nested file")
     )
     val startAs = gitHubReader sourceFor GitHubArtifactSourceLocator(TestConstants.TestTargetRepoInfo, branch = MasterBranch)
-    startAs.findFile(files(1).path) should not be defined
+    startAs.findFile(files(1).path) shouldBe empty
     val withAddedFiles = startAs + files
 
     withAddedFiles should not be theSameInstanceAs(startAs)
