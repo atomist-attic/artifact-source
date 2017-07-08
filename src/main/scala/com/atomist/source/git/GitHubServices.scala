@@ -126,12 +126,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
       val filesToAdd = deltas.deltas.collect {
         case fad: FileAdditionDelta if !filesToUpdate.exists(_.path == fad.path) => fad.newFile
       }
-
       val files = filesToUpdate ++ filesToAdd
 
       val filesToDelete = deltas.deltas.collect {
         case fdd: FileDeletionDelta => fdd.oldFile
       }
+
       commitFiles(sui, files, filesToDelete)
     } match {
       case Success(fileArtifacts) => fileArtifacts

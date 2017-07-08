@@ -1,10 +1,12 @@
 package com.atomist.source.git
 
+import com.atomist.source.FileArtifact.ExecutableMode
 import com.atomist.source.file.FileSystemArtifactSourceIdentifier
 import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.GitHubServices.PullRequestRequest
 import com.atomist.source.git.TestConstants._
 import com.atomist.source._
+import com.atomist.util.Utils.withCloseable
 import com.atomist.util.{GitRepositoryCloner, Utils}
 import org.apache.commons.io.IOUtils
 import org.kohsuke.github.GHIssueState
@@ -157,58 +159,59 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     endAs.allFiles.size shouldBe 4
   }
 
-//  it should "clone a remote repository, create and edit a new file, and create a pull request" in {
-//    val newTempRepo = newPopulatedTemporaryRepo()
-//    val repo = newTempRepo.getName
-//    val owner = newTempRepo.getOwnerName
-//
-//    val grc = GitRepositoryCloner(Token)
-//    val cloned = grc.clone(repo, owner)
-//    cloned shouldBe defined
-//
-//    val id = FileSystemArtifactSourceIdentifier(cloned.get)
-//    val startAs = FileSystemGitArtifactSource(id)
-//
-//    val path1 = "test.json"
-//    val newFile1 = StringFileArtifact(path1, "test content")
-//    val path2 = "test"
-//    val newFile2 = ByteArrayFileArtifact(path2, "test content".getBytes, FileArtifact.DefaultMode)
-//    val as = startAs + newFile1 + newFile2
-//
-//    val newContent = s"""{"vault_path":"secret/teams/cdupuis/github", "repo" : { "repo":"spr_can_delete","owner":"atomisthqtest"}}"""
-//    val stringEditor = SimpleFileEditor(_.name == path1, f => StringFileArtifact(f.path, newContent))
-//    val edited1 = as ✎ stringEditor
-//    edited1 should not be theSameInstanceAs(as)
-//    edited1.findFile(path1).get.content should equal(newContent)
-//
-//    val binaryEditor = SimpleFileEditor(_.name == path2, f => ByteArrayFileArtifact(path2, newContent.getBytes, FileArtifact.DefaultMode))
-//    val edited2 = as ✎ binaryEditor
-//    edited2 should not be theSameInstanceAs(edited1)
-//    val binaryFile = edited2.findFile(path2).get
-//    Utils.withCloseable(binaryFile.inputStream())(is => IOUtils.toByteArray(is)) shouldEqual newContent.getBytes
-//
-//    val prTitle = s"My pull request at ${System.currentTimeMillis}"
-//    val prBody = "This is the body of my pull request"
-//    val updatedBranch = s"multi-file-${System.currentTimeMillis}"
-//
-//    val prr = PullRequestRequest(prTitle, updatedBranch, MasterBranch, prBody)
-//    val prs = ghs.createPullRequestFromChanges(repo, owner, prr, startAs, edited2, "Added files")
-//    prs shouldBe defined
-//    val pr1 = prs.get
-//
-//    val merged = ghs.mergePullRequest(repo, owner, pr1.number, pr1.title, "Merged PR")
-//    merged shouldBe defined
-//    merged.get.merged shouldBe true
-//
-//    val newAs = ghs sourceFor GitHubArtifactSourceLocator.rootOfMaster(repo, owner)
-//    val f1 = newAs.findFile(path1)
-//    f1 shouldBe defined
-//    f1.get.content shouldEqual newContent
-//
-//    val f2 = newAs.findFile(path2)
-//    f2 shouldBe defined
-//    Utils.withCloseable(f2.get.inputStream())(is => IOUtils.toByteArray(is)) shouldEqual newContent.getBytes
-//  }
+  it should "clone a remote repository, create and edit new files, and create a pull request" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.getName
+    val owner = newTempRepo.getOwnerName
+
+    val grc = GitRepositoryCloner(Token)
+    val cloned = grc.clone(repo, owner)
+    cloned shouldBe defined
+
+    val id = FileSystemArtifactSourceIdentifier(cloned.get)
+    val startAs = FileSystemGitArtifactSource(id)
+
+    val path1 = "test.json"
+    val newFile1 = StringFileArtifact(path1, "test content")
+    val path2 = "test"
+    val newFile2 = ByteArrayFileArtifact(path2, "test content".getBytes, FileArtifact.DefaultMode)
+    val as = startAs + newFile1 + newFile2
+
+    val newContent = s"""{"vault_path":"secret/teams/cdupuis/github", "repo" : { "repo":"spr_can_delete","owner":"atomisthqtest"}}"""
+    val stringEditor = SimpleFileEditor(_.name == path1, f => StringFileArtifact(f.path, newContent))
+    val edited1 = as ✎ stringEditor
+    edited1 should not be theSameInstanceAs(as)
+    edited1.findFile(path1).get.content should equal(newContent)
+
+    val binaryEditor = SimpleFileEditor(_.name == path2, f => ByteArrayFileArtifact(f.path, newContent.getBytes, ExecutableMode))
+    val edited2 = edited1 ✎ binaryEditor
+    edited2 should not be theSameInstanceAs(edited1)
+    val binaryFile = edited2.findFile(path2).get
+    withCloseable(binaryFile.inputStream())(IOUtils.toByteArray(_)) shouldEqual newContent.getBytes
+
+    val prTitle = s"My pull request at ${System.currentTimeMillis}"
+    val prBody = "This is the body of my pull request"
+    val updatedBranch = s"multi-file-${System.currentTimeMillis}"
+
+    val prr = PullRequestRequest(prTitle, updatedBranch, MasterBranch, prBody)
+    val prs = ghs.createPullRequestFromChanges(repo, owner, prr, startAs, edited2, "Added files")
+    prs shouldBe defined
+    val pr1 = prs.get
+
+    val merged = ghs.mergePullRequest(repo, owner, pr1.number, pr1.title, "Merged PR")
+    merged shouldBe defined
+    merged.get.merged shouldBe true
+
+    val newAs = ghs sourceFor GitHubArtifactSourceLocator.rootOfMaster(repo, owner)
+    val f1 = newAs.findFile(path1)
+    f1 shouldBe defined
+    f1.get.content shouldEqual newContent
+
+    val f2 = newAs.findFile(path2)
+    f2 shouldBe defined
+    withCloseable(f2.get.inputStream())(IOUtils.toByteArray(_)) shouldEqual newContent.getBytes
+    f2.get.mode shouldEqual ExecutableMode
+  }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {
     val files: Seq[FileArtifact] = Seq(
