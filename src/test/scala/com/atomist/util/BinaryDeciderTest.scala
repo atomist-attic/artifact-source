@@ -1,7 +1,5 @@
 package com.atomist.util
 
-import java.nio.charset.Charset
-
 import com.atomist.util.Utils.withCloseable
 import org.apache.commons.io.IOUtils
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -15,8 +13,8 @@ class BinaryDeciderTest
 
   val data = Table(
     ("content", "isBinary"),
-    ("Mary had a little lamb.", false),
-    ("", false),
+    ("Mary had a little lamb.".getBytes, false),
+    ("".getBytes, false),
     (getContent("/spring-boot/web-template/.mvn/wrapper/maven-wrapper.properties"), false),
     (getContent("/spring-boot/web-template/.mvn/wrapper/maven-wrapper.jar"), true),
     (getContent("/spring-boot/web-template/src/main/resources/atomist-logo-horiz.png"), true)
@@ -30,6 +28,6 @@ class BinaryDeciderTest
     }
   }
 
-  private def getContent(path: String): String =
-    withCloseable(getClass.getResourceAsStream(path))(IOUtils.toString(_, Charset.defaultCharset))
+  private def getContent(path: String): Array[Byte] =
+    withCloseable(getClass.getResourceAsStream(path))(IOUtils.toByteArray(_))
 }

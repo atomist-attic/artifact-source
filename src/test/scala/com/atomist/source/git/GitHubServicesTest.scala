@@ -174,20 +174,22 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val path1 = "test.json"
     val newFile1 = StringFileArtifact(path1, "test content")
     val path2 = "test"
-    val newFile2 = ByteArrayFileArtifact(path2, "test content".getBytes, FileArtifact.DefaultMode)
+    val binaryContent = getContent("/spring-boot/web-template/.mvn/wrapper/maven-wrapper.jar")
+    val newFile2 = ByteArrayFileArtifact(path2, binaryContent, FileArtifact.DefaultMode)
     val as = startAs + newFile1 + newFile2
 
-    val newContent = s"""{"vault_path":"secret/teams/cdupuis/github", "repo" : { "repo":"spr_can_delete","owner":"atomisthqtest"}}"""
+    val newContent = s"""{"vault_path":"test path", "repo" : { "repo":"foo","owner":"bar"}}"""
     val stringEditor = SimpleFileEditor(_.name == path1, f => StringFileArtifact(f.path, newContent))
     val edited1 = as ✎ stringEditor
     edited1 should not be theSameInstanceAs(as)
     edited1.findFile(path1).get.content should equal(newContent)
 
-    val binaryEditor = SimpleFileEditor(_.name == path2, f => ByteArrayFileArtifact(f.path, newContent.getBytes, ExecutableMode))
+    val newBinaryContent = getContent("/spring-boot/web-template/src/main/resources/atomist-logo-horiz.png")
+    val binaryEditor = SimpleFileEditor(_.name == path2, f => ByteArrayFileArtifact(f.path, newBinaryContent, ExecutableMode))
     val edited2 = edited1 ✎ binaryEditor
     edited2 should not be theSameInstanceAs(edited1)
     val binaryFile = edited2.findFile(path2).get
-    withCloseable(binaryFile.inputStream())(IOUtils.toByteArray(_)) shouldEqual newContent.getBytes
+    withCloseable(binaryFile.inputStream())(IOUtils.toByteArray(_)) shouldEqual newBinaryContent
 
     val prTitle = s"My pull request at ${System.currentTimeMillis}"
     val prBody = "This is the body of my pull request"
@@ -209,9 +211,12 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val f2 = newAs.findFile(path2)
     f2 shouldBe defined
-    withCloseable(f2.get.inputStream())(IOUtils.toByteArray(_)) shouldEqual newContent.getBytes
+    withCloseable(f2.get.inputStream())(IOUtils.toByteArray(_)) shouldEqual newBinaryContent
     f2.get.mode shouldEqual ExecutableMode
   }
+
+  private def getContent(path: String): Array[Byte] =
+    withCloseable(getClass.getResourceAsStream(path))(IOUtils.toByteArray(_))
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {
     val files: Seq[FileArtifact] = Seq(
