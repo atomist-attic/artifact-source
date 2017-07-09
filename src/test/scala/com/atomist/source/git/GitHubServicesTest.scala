@@ -1,7 +1,7 @@
 package com.atomist.source.git
 
 import com.atomist.source._
-import com.atomist.source.file.{FileSystemArtifactSourceIdentifier, NamedFileSystemArtifactSourceIdentifier}
+import com.atomist.source.file.NamedFileSystemArtifactSourceIdentifier
 import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.GitHubServices.PullRequestRequest
 import com.atomist.source.git.TestConstants._
@@ -165,7 +165,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val cloned = grc.clone(repo, owner)
     cloned shouldBe defined
 
-    val id =  NamedFileSystemArtifactSourceIdentifier(s"$owner/$repo", cloned.get)
+    val id = NamedFileSystemArtifactSourceIdentifier(s"$owner/$repo", cloned.get)
     val startAs = FileSystemGitArtifactSource(id)
 
     val path1 = "test.json"
