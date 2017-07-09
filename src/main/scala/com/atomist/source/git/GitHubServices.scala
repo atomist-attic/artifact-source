@@ -89,7 +89,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
       val ref = repository.getRef(s"heads/$fromBranch")
       repository.createRef(s"refs/heads/$branchName", ref.getObject.getSha)
     } match {
-      case Success(reference) => reference
+      case Success(reference) =>
+        val obj = reference.getObject
+        logger.info(s"createBranch: object(sha: ${obj.getSha}, type: ${obj.getType}, url: ${obj.getUrl}), ref: ${reference.getRef}, url: ${reference.getUrl}")
+        reference
       case Failure(e) => throw ArtifactSourceUpdateException(e.getMessage, e)
     }
 
@@ -124,14 +127,17 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
       val filesToUpdate = deltas.deltas.collect {
         case fud: FileUpdateDelta => fud.updatedFile
       }
+      logger.info(s"createBranchFromChanges: files to update: ${filesToUpdate.map(_.path).mkString(",")}")
       val filesToAdd = deltas.deltas.collect {
         case fad: FileAdditionDelta if !filesToUpdate.exists(_.path == fad.path) => fad.newFile
       }
+      logger.info(s"createBranchFromChanges: files to add: ${filesToAdd.map(_.path).mkString(",")}")
       val files = filesToUpdate ++ filesToAdd
 
       val filesToDelete = deltas.deltas.collect {
         case fdd: FileDeletionDelta => fdd.oldFile
       }
+      logger.info(s"createBranchFromChanges: files to delete: ${filesToDelete.map(_.path).mkString(",")}")
 
       commitFiles(sui, files, filesToDelete)
     } match {
@@ -304,7 +310,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
     val content = withCloseable(fa.inputStream())(is => new String(Base64.encode(IOUtils.toByteArray(is))))
     val cbr = CreateBlobRequest(content)
-    logger.info(s"createBlob: ${cbr.toString}")
+    logger.info(s"createBlob: branch: $branch, path: ${fa.path}, blob(${cbr.toString})")
     Http(s"${getPath(repo, owner)}/git/blobs").postData(toJson(cbr))
       .headers(headers)
       .execute(fromJson[GitHubRef])
@@ -434,7 +440,7 @@ object GitHubServices {
 
   private case class CreateBlobRequest(content: String, encoding: String = "base64") {
 
-    override def toString = s"CreateBlobRequest(${StringUtils.abbreviate(content, 20)}, $encoding)"
+    override def toString = s"${StringUtils.abbreviate(content, 20)}, encoding: $encoding"
   }
 
   private case class CreateTreeRequest(tree: Seq[TreeEntry])
