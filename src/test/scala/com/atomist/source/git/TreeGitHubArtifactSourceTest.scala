@@ -42,17 +42,22 @@ class TreeGitHubArtifactSourceTest
 
   "file retrieval and edit" should "work" in {
     val tempRepo = newPopulatedTemporaryRepo()
+    val commitMessage1 = s"file commit 1"
     val cri = SimpleCloudRepoId(tempRepo.getName, tempRepo.getOwnerName)
+    val branchSource = GitHubArtifactSourceLocator(cri, "master")
+    val file = StringFileArtifact("animals/fox.txt", TestFileContents2)
+    ghs.commitFiles(GitHubSourceUpdateInfo(branchSource, commitMessage1), Seq(file), Seq.empty)
 
     val springBootProject = ZipFileArtifactSourceReader fromZipSource springBootZipFileId
     val ghid = GitHubArtifactSourceLocator(cri)
     githubWriter.write(springBootProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
+    val tghasSize = tghas.allArtifacts.size
 
     val newContent = "newContent"
     val javaEditor = SimpleFileEditor(_.name.endsWith(".java"), f => StringFileArtifact(f.path, newContent))
     val edited = tghas ✎ javaEditor
-    edited.allFiles should have size 10
+    edited.allArtifacts should have size tghasSize
     edited.findFile("src/main/java/com/example/DemoApplication.java").get.content should equal(newContent)
   }
 }

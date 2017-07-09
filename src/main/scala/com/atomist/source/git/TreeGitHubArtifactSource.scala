@@ -66,7 +66,7 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
     if (tree.isTruncated)
       throw ArtifactSourceAccessException(s"Tree is truncated for $id")
 
-    val files = tree.getTree.asScala.filter(_.getType != "tree").map(new LazyGitHubFileArtifact(_))
+    val files = tree.getTree.asScala.filter(_.getType == "blob").map(new LazyGitHubFileArtifact(_))
     if (artifactFilters.isEmpty) files else filterFiles(files)
   }
 

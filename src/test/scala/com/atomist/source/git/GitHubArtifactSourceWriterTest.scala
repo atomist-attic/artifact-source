@@ -3,7 +3,7 @@ package com.atomist.source.git
 import java.io.FileInputStream
 import java.nio.file.Paths
 
-import com.atomist.source.file.{ClassPathArtifactSource, FileSystemArtifactSourceIdentifier, ZipFileArtifactSourceReader, ZipFileInput}
+import com.atomist.source.file._
 import com.atomist.source.git.TestConstants.Token
 import com.atomist.source.{ArtifactSourceTest, SimpleCloudRepoId}
 import com.atomist.util.Utils.withCloseable
@@ -50,7 +50,8 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
     val grc = GitRepositoryCloner(Token)
     val cloned = grc.clone("spring-rest-seed", "atomist-seeds")
     cloned shouldBe defined
-    val id = FileSystemArtifactSourceIdentifier(cloned.get)
+    val repo = "atomist-seeds/spring-rest-seed"
+    val id = NamedFileSystemArtifactSourceIdentifier(repo, cloned.get)
     val as = FileSystemGitArtifactSource(id)
 
     val newTempRepo = newPopulatedTemporaryRepo()
@@ -59,7 +60,7 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
 
     val clonedSeed = grc.clone(cri.repo, cri.owner)
     clonedSeed shouldBe defined
-    val clonedAs = FileSystemGitArtifactSource(FileSystemArtifactSourceIdentifier(clonedSeed.get))
+    val clonedAs = FileSystemGitArtifactSource( NamedFileSystemArtifactSourceIdentifier(repo, clonedSeed.get))
     val cmdFile = clonedAs.findFile("mvnw.cmd")
     cmdFile shouldBe defined
     BinaryDecider.isBinaryContent(cmdFile.get.content) shouldBe false

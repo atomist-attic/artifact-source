@@ -1,7 +1,7 @@
 package com.atomist.source.git
 
 import com.atomist.source._
-import com.atomist.source.file.FileSystemArtifactSourceIdentifier
+import com.atomist.source.file.{FileSystemArtifactSourceIdentifier, NamedFileSystemArtifactSourceIdentifier}
 import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.GitHubServices.PullRequestRequest
 import com.atomist.source.git.TestConstants._
@@ -95,8 +95,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
   it should "create new branch and create and delete pull request via create pull request from delta" in {
     val newTempRepo = newPopulatedTemporaryRepo()
-    newTempRepo.createContent("some text".getBytes, "new file 1", "test.txt", "master")
-    newTempRepo.createContent("some other text".getBytes, "new file 2", "test2.txt", "master")
+    newTempRepo.createContent("some text".getBytes, "new file 1", "src/test.txt", "master")
+    newTempRepo.createContent("some other text".getBytes, "new file 2", "src/test2.txt", "master")
 
     val repo = newTempRepo.getName
     val owner = newTempRepo.getOwnerName
@@ -110,13 +110,13 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val startAs = ghs.sourceFor(baseSource)
     startAs.empty shouldBe false
-    val modifiedAs = startAs delete "README.md" delete "test.txt"
+    val modifiedAs = startAs delete "README.md" delete "src/test.txt"
 
     val files: Seq[Artifact] = Seq(
       StringFileArtifact("some.txt", TestFileContents),
       StringFileArtifact("scripts/other.txt", "This file isn't in the root"),
       StringFileArtifact("another/directory/tree/extra.txt", "Nested file"),
-      StringFileArtifact("test2.txt", "New content")
+      StringFileArtifact("src/test2.txt", "New content")
     )
 
     val withAddedFiles = modifiedAs + files
@@ -165,7 +165,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val cloned = grc.clone(repo, owner)
     cloned shouldBe defined
 
-    val id = FileSystemArtifactSourceIdentifier(cloned.get)
+    val id =  NamedFileSystemArtifactSourceIdentifier(s"$owner/$repo", cloned.get)
     val startAs = FileSystemGitArtifactSource(id)
 
     val path1 = "test.json"
