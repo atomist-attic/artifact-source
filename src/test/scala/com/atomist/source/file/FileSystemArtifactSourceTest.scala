@@ -200,16 +200,20 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   it should "delete files by name and path" in {
     val name = ".atomist/build/cli-build.yml"
     val classpathSource = toArtifactSource("foo")
+    val filesSize = classpathSource.allFiles.size
+    val dirsSize = classpathSource.allDirectories.size
+    val artifactsSize = classpathSource.artifacts.size
+    val allArtifactsSize = classpathSource.allArtifacts.size
     classpathSource.findFile(name) shouldBe defined
     val newSource = classpathSource delete name
     newSource.findFile(name) shouldBe empty
     classpathSource.cachedDeltas.size shouldBe 0
     newSource.cachedDeltas.size shouldBe 1
     newSource.deltaFrom(classpathSource).deltas.size shouldBe 1
-    newSource.allFiles.size shouldBe 9
-    newSource.allDirectories.size shouldBe 2
-    newSource.artifacts.size shouldBe 2
-    newSource.allArtifacts.size shouldBe 11
+    newSource.allFiles.size shouldBe filesSize - 1
+    newSource.allDirectories.size shouldBe dirsSize
+    newSource.artifacts.size shouldBe artifactsSize
+    newSource.allArtifacts.size shouldBe allArtifactsSize -1
     newSource.collisions.size shouldBe 0
   }
 

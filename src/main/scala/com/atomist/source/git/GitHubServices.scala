@@ -11,6 +11,7 @@ import com.atomist.util.Utils._
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.IOUtils
+import org.apache.commons.lang3.StringUtils
 import org.kohsuke.github.{GHRef, GHRepository, GitHub, _}
 
 import scala.collection.JavaConverters._
@@ -195,7 +196,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
       case Some(repository) =>
         commitFiles(repository, sourceId.branch, sui.message, files, filesToDelete)
       case None =>
-        logger.debug(s"Failed to find repository '$owner/$repo'")
+        logger.warn(s"Failed to find repository '$owner/$repo'")
         Nil
     }
   }
@@ -236,7 +237,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
         .toSeq
 
       val tree = createTree(repo, owner, finalTreeEntries)
-      logger.debug(tree.toString)
+      logger.info(s"commitFiles: ${tree.toString}")
       val commit = createCommit(repo, owner, message, tree, Seq(baseTreeSha))
       updateReference(repo, owner, s"heads/$branch", commit.sha)
 
@@ -257,7 +258,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
       case Some(repository) =>
         addFile(repository, sourceId.branch, sui.message, fa)
       case None =>
-        logger.debug(s"Failed to find repository '$owner/$repo'")
+        logger.warn(s"Failed to find repository '$owner/$repo'")
         None
     }
   }
@@ -284,6 +285,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
                        message: String,
                        mergeMethod: String = "squash"): Option[PullRequestMerged] = {
     val prmr = PullRequestMergeRequest(title, message, mergeMethod)
+    logger.info(s"mergePullRequest: ${prmr.toString}")
     Try {
       Http(s"${getPath(repo, owner)}/pulls/$number/merge").postData(toJson(prmr))
         .method("PUT")
@@ -294,7 +296,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
     } match {
       case Success(prm) => Some(prm)
       case Failure(e) =>
-        logger.warn(s"Failed to merge pull request $number: ${e.getMessage}")
+        logger.warn(s"Failed to merge pull request $number: ${e.getMessage}", e)
         None
     }
   }
@@ -302,6 +304,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
     val content = withCloseable(fa.inputStream())(is => new String(Base64.encode(IOUtils.toByteArray(is))))
     val cbr = CreateBlobRequest(content)
+    logger.info(s"createBlob: ${cbr.toString}")
     Http(s"${getPath(repo, owner)}/git/blobs").postData(toJson(cbr))
       .headers(headers)
       .execute(fromJson[GitHubRef])
@@ -311,7 +314,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
 
   private def createTree(repo: String, owner: String, treeEntries: Seq[TreeEntry]): CreateTreeResponse = {
     val ctr = CreateTreeRequest(treeEntries)
-    logger.debug(ctr.toString)
+    logger.info(s"createTree: ${ctr.toString}")
     Http(s"${getPath(repo, owner)}/git/trees").postData(toJson(ctr))
       .headers(headers)
       .execute(fromJson[CreateTreeResponse])
@@ -325,6 +328,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
                            tree: CreateTreeResponse,
                            parents: Seq[String]): CommitResponse = {
     val cr = CommitRequest(message, tree.sha, parents)
+    logger.info(s"createCommit: ${cr.toString}")
     Http(s"${getPath(repo, owner)}/git/commits").postData(toJson(cr))
       .headers(headers)
       .execute(fromJson[CommitResponse])
@@ -334,6 +338,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
 
   private def updateReference(repo: String, owner: String, ref: String, newSha: String): Unit = {
     val urr = UpdateReferenceRequest(newSha, force = true)
+    logger.info(s"updateReference: ${urr.toString}")
     Http(s"${getPath(repo, owner)}/git/refs/$ref").postData(toJson(urr))
       .method("PATCH")
       .headers(headers)
@@ -427,7 +432,10 @@ object GitHubServices {
 
   private case class CommitRequest(message: String, tree: String, parents: Seq[String])
 
-  private case class CreateBlobRequest(content: String, encoding: String = "base64")
+  private case class CreateBlobRequest(content: String, encoding: String = "base64") {
+
+    override def toString = s"CreateBlobRequest(${StringUtils.abbreviate(content, 20)}, $encoding)"
+  }
 
   private case class CreateTreeRequest(tree: Seq[TreeEntry])
 
