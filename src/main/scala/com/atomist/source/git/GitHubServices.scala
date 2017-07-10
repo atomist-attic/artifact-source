@@ -1,5 +1,7 @@
 package com.atomist.source.git
 
+import java.io.InputStream
+import java.nio.charset.Charset
 import java.time.OffsetDateTime
 import java.util.{List => JList}
 
@@ -136,13 +138,13 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
         case fdd: FileDeletionDelta => fdd.oldFile
       }
 
-      logger.info(s"""createBranchFromChanges:
+      logger.info(
+        s"""createBranchFromChanges:
       added ${filesToAdd.map(_.path).mkString(",")}
       updated ${filesToUpdate.map(_.path).mkString(",")}
       deleted ${filesToDelete.map(_.path).mkString(",")}""")
       commitFiles(sui, files, filesToDelete)
     } match {
-
       case Success(fileArtifacts) => fileArtifacts
       case Failure(e) => throw ArtifactSourceUpdateException(e.getMessage, e)
     }
@@ -244,7 +246,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
         .filterNot(te => treeEntriesToDelete.exists(_.path == te.path))
         .toSeq
 
-      val tree = createTree(repo, owner, finalTreeEntries)
+      val tree = createTree(repo, owner, finalTreeEntries) match {
+        case Left(msg) => throw ArtifactSourceUpdateException(s"Failed to create tree: $msg")
+        case Right(response) => response
+      }
       logger.info(s"commitFiles: ${tree.toString}")
       val commit = createCommit(repo, owner, message, tree, Seq(baseTreeSha))
       updateReference(repo, owner, s"heads/$branch", commit.sha)
@@ -320,14 +325,17 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
       .body
   }
 
-  private def createTree(repo: String, owner: String, treeEntries: Seq[TreeEntry]): CreateTreeResponse = {
+  private def createTree(repo: String, owner: String, treeEntries: Seq[TreeEntry]): Either[String, CreateTreeResponse] = {
     val ctr = CreateTreeRequest(treeEntries)
     logger.info(s"createTree: ${ctr.toString}")
     Http(s"${getPath(repo, owner)}/git/trees").postData(toJson(ctr))
       .headers(headers)
-      .execute(fromJson[CreateTreeResponse])
-      .throwError
-      .body
+      .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
+        case 201 => Right(fromJson[CreateTreeResponse](is))
+        case _ =>
+          logger.info(s"Status ${headers("Status")}")
+          Left(IOUtils.toString(is, Charset.defaultCharset))
+      }).body
   }
 
   private def createCommit(repo: String,
@@ -459,5 +467,4 @@ object GitHubServices {
   private case class PullRequestMergeRequest(@JsonProperty("commit_title") title: String,
                                              @JsonProperty("commit_message") message: String,
                                              @JsonProperty("merge_method") mergeMethod: String)
-
 }

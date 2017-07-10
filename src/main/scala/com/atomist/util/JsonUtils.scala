@@ -34,6 +34,8 @@ object JsonUtils {
 
   def fromJson[T](is: InputStream)(implicit m: Manifest[T]): T = Mapper.readValue[T](is)
 
+  def fromJson[T](bytes: Array[Byte])(implicit m: Manifest[T]): T = Mapper.readValue[T](bytes)
+
   private def getObjectMapper = {
     val objectMapper = new ObjectMapper() with ScalaObjectMapper
     objectMapper.registerModule(DefaultScalaModule)
