@@ -54,7 +54,7 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
 
       if (id.path == null || id.path.isEmpty) root
       else {
-        val treeElement = root.getTree.asScala.find(te => te.getSize == 0 && te.getPath.equals(id.path)).getOrElse(
+        val treeElement = root.getTree.asScala.find(te => te.getSize == 0 && te.getPath == id.path).getOrElse(
           throw ArtifactSourceAccessException(s"Path not found: ${id.path}")
         )
         repository.getTreeRecursive(treeElement.getSha, 1)

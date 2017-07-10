@@ -43,7 +43,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
     Try(gitHub.getOrganization(owner)) match {
       case Success(organization) => Some(organization)
       case Failure(e) =>
-        logger.debug(e.getMessage, e)
+        logger.warn(e.getMessage, e)
         None
     }
   }
@@ -54,7 +54,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
     Try(gitHub.getRepository(s"$owner/$repo")) match {
       case Success(repository) => Option(repository)
       case Failure(e) =>
-        logger.debug(e.getMessage, e)
+        logger.warn(e.getMessage, e)
         Option(getOrganization(owner).map(_.getRepository(repo)).orNull)
     }
   }
@@ -91,10 +91,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
       val ref = repository.getRef(s"heads/$fromBranch")
       repository.createRef(s"refs/heads/$branchName", ref.getObject.getSha)
     } match {
-      case Success(reference) =>
-        val obj = reference.getObject
-        logger.info(s"createBranch: GHObject(${obj.getType},${obj.getSha},${obj.getUrl}),${reference.getRef},${reference.getUrl}")
-        reference
+      case Success(reference) => reference
       case Failure(e) => throw ArtifactSourceUpdateException(e.getMessage, e)
     }
 
@@ -119,8 +116,11 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
                               current: ArtifactSource,
                               message: String): Seq[FileArtifact] =
     Try {
-      if (branchName != fromBranch)
-        createBranch(repository, branchName, fromBranch)
+      if (branchName != fromBranch) {
+        val gHRef = createBranch(repository, branchName, fromBranch)
+        val gHObject = gHRef.getObject
+        logger.debug(s"${gHRef.getRef},${gHRef.getUrl},GHObject(${gHObject.getType},${gHObject.getSha},${gHObject.getUrl})")
+      }
 
       val deltas = current deltaFrom old
       val sui = GitHubSourceUpdateInfo(
@@ -129,20 +129,19 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
       val filesToUpdate = deltas.deltas.collect {
         case fud: FileUpdateDelta => fud.updatedFile
       }
+      logger.debug(s"Updating files ${filesToUpdate.map(_.path).mkString(",")}")
+
       val filesToAdd = deltas.deltas.collect {
         case fad: FileAdditionDelta if !filesToUpdate.exists(_.path == fad.path) => fad.newFile
       }
+      logger.debug(s"Adding files ${filesToAdd.map(_.path).mkString(",")}")
       val files = filesToUpdate ++ filesToAdd
 
       val filesToDelete = deltas.deltas.collect {
         case fdd: FileDeletionDelta => fdd.oldFile
       }
+      logger.debug(s"Deleting files ${filesToDelete.map(_.path).mkString(",")}")
 
-      logger.info(
-        s"""createBranchFromChanges:
-      added ${filesToAdd.map(_.path).mkString(",")}
-      updated ${filesToUpdate.map(_.path).mkString(",")}
-      deleted ${filesToDelete.map(_.path).mkString(",")}""")
       commitFiles(sui, files, filesToDelete)
     } match {
       case Success(fileArtifacts) => fileArtifacts
@@ -177,6 +176,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
                           path: String,
                           position: Int): ReviewComment = {
     val crc = CreateReviewComment(body, commitId, path, position)
+    logger.debug(crc.toString)
     Try {
       Http(s"${getPath(repo, owner)}/pulls/$number/comments").postData(toJson(crc))
         .headers(headers)
@@ -237,7 +237,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
       val newOrUpdatedTreeEntries = fwbrs.map(fwbr => TreeEntry(fwbr.fa.path, intToOctal(fwbr.fa.mode), "blob", fwbr.ref.sha))
       val allExistingTreeEntries = treeFor(GitHubShaIdentifier(repo, owner, baseTreeSha)).allFiles
         .map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
-
       val treeEntriesToDelete = filesToDelete.map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
 
       val finalTreeEntries = (newOrUpdatedTreeEntries ++ allExistingTreeEntries)
@@ -247,18 +246,18 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
         .toSeq
 
       val tree = createTree(repo, owner, finalTreeEntries) match {
-        case Left(msg) => throw ArtifactSourceUpdateException(s"Failed to create tree: $msg")
-        case Right(response) => response
+        case Left(msg) => throw new IllegalArgumentException(msg)
+        case Right(ctr) => ctr
       }
-      logger.info(s"commitFiles: ${tree.toString}")
+      logger.debug(tree.toString)
+
       val commit = createCommit(repo, owner, message, tree, Seq(baseTreeSha))
       updateReference(repo, owner, s"heads/$branch", commit.sha)
 
       fwbrs.map(fwbr => fwbr.fa.withUniqueId(fwbr.ref.sha))
     } match {
       case Success(fileArtifacts) => fileArtifacts
-      case Failure(e) =>
-        throw ArtifactSourceUpdateException(s"Failed to commit files to '$owner/$repo': ${e.getMessage}", e)
+      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to commit files to '$owner/$repo': ${e.getMessage}", e)
     }
   }
 
@@ -298,7 +297,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
                        message: String,
                        mergeMethod: String = "squash"): Option[PullRequestMerged] = {
     val prmr = PullRequestMergeRequest(title, message, mergeMethod)
-    logger.info(s"mergePullRequest: ${prmr.toString}")
+    logger.debug(prmr.toString)
     Try {
       Http(s"${getPath(repo, owner)}/pulls/$number/merge").postData(toJson(prmr))
         .method("PUT")
@@ -317,7 +316,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
     val content = withCloseable(fa.inputStream())(is => new String(Base64.encode(IOUtils.toByteArray(is))))
     val cbr = CreateBlobRequest(content)
-    logger.info(s"createBlob: $branch,${fa.path},${cbr.toString}")
+    logger.debug(s"$branch,${fa.path},$cbr")
     Http(s"${getPath(repo, owner)}/git/blobs").postData(toJson(cbr))
       .headers(headers)
       .execute(fromJson[GitHubRef])
@@ -327,14 +326,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
 
   private def createTree(repo: String, owner: String, treeEntries: Seq[TreeEntry]): Either[String, CreateTreeResponse] = {
     val ctr = CreateTreeRequest(treeEntries)
-    logger.info(s"createTree: ${ctr.toString}")
+    logger.debug(ctr.toString)
     Http(s"${getPath(repo, owner)}/git/trees").postData(toJson(ctr))
       .headers(headers)
       .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
         case 201 => Right(fromJson[CreateTreeResponse](is))
-        case _ =>
-          logger.info(s"Status ${headers("Status")}")
-          Left(IOUtils.toString(is, Charset.defaultCharset))
+        case _ => Left(s"${headers("Status").head}, ${IOUtils.toString(is, Charset.defaultCharset)}")
       }).body
   }
 
@@ -344,7 +341,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
                            tree: CreateTreeResponse,
                            parents: Seq[String]): CommitResponse = {
     val cr = CommitRequest(message, tree.sha, parents)
-    logger.info(s"createCommit: ${cr.toString}")
+    logger.debug(cr.toString)
     Http(s"${getPath(repo, owner)}/git/commits").postData(toJson(cr))
       .headers(headers)
       .execute(fromJson[CommitResponse])
@@ -354,7 +351,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
 
   private def updateReference(repo: String, owner: String, ref: String, newSha: String): Unit = {
     val urr = UpdateReferenceRequest(newSha, force = true)
-    logger.info(s"updateReference: ${urr.toString}")
+    logger.debug(urr.toString)
     Http(s"${getPath(repo, owner)}/git/refs/$ref").postData(toJson(urr))
       .method("PATCH")
       .headers(headers)

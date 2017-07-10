@@ -1,5 +1,7 @@
 package com.atomist.source
 
+import java.nio.file.Paths
+
 import com.atomist.source.FileArtifact.DefaultMode
 import com.atomist.util.Utils.StringImprovements
 
@@ -17,7 +19,7 @@ case class StringFileArtifact(name: String,
 
   def this(name: String, path: String, _content: String, mode: Int) =
     this(name = name,
-      pathElements = if (path == null || "".equals(path)) Nil else path.split("/").toSeq,
+      pathElements = if (path == null || "".equals(path)) Nil else Paths.get(path).normalize.toString.split("/").toSeq,
       _content = _content,
       mode = mode,
       None)

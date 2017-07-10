@@ -2,6 +2,7 @@ package com.atomist.source
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.charset.Charset
+import java.nio.file.Paths
 
 import com.atomist.util.Utils.{StringImprovements, withCloseable}
 import org.apache.commons.io.IOUtils
@@ -160,7 +161,7 @@ object NameAndPathElements {
     if (stripped.isEmpty)
       throw new IllegalArgumentException("Path may not contain only /")
 
-    val splitPath = stripped.split("/")
+    val splitPath = Paths.get(stripped).normalize.toString.split("/")
     val name = splitPath.last
     val pathElements = splitPath.dropRight(1).toSeq
     NameAndPathElements(name, pathElements)

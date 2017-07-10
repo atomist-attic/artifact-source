@@ -1,6 +1,7 @@
 package com.atomist.source
 
 import java.io.ByteArrayInputStream
+import java.nio.file.Paths
 
 import com.atomist.source.FileArtifact.DefaultMode
 import com.atomist.util.Utils.{StringImprovements, withCloseable}
@@ -20,7 +21,7 @@ case class ByteArrayFileArtifact(name: String,
 
   def this(name: String, path: String, content: Array[Byte], mode: Int) =
     this(name = name,
-      pathElements = if (path == null || "".equals(path)) Nil else path.split("/").toSeq,
+      pathElements = if (path == null || "".equals(path)) Nil else Paths.get(path).normalize.toString.split("/").toSeq,
       bytes = content,
       mode,
       None)
