@@ -239,7 +239,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
         .map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
       val treeEntriesToDelete = filesToDelete.map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
 
-      val finalTreeEntries = (newOrUpdatedTreeEntries ++ allExistingTreeEntries)
+      val finalTreeEntries = (allExistingTreeEntries ++ newOrUpdatedTreeEntries)
         .groupBy(_.path)
         .map(_._2.last)
         .filterNot(te => treeEntriesToDelete.exists(_.path == te.path))
