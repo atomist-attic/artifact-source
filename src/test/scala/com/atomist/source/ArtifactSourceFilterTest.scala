@@ -6,8 +6,8 @@ class ArtifactSourceFilterTest extends FlatSpec with Matchers {
 
   it should "filter file outside root" in {
     val as = EmptyArtifactSource("erer")
-    val f1 = new StringFileArtifact("name", Nil, "contents")
-    val f2 = new StringFileArtifact("name2", Nil, "contents")
+    val f1 = StringFileArtifact("name", Nil, "contents")
+    val f2 = StringFileArtifact("name2", Nil, "contents")
     val f3 = StringFileArtifact("name", "my/other/path", "contents")
     val result = as plus Seq(f1, f2, f3)
 

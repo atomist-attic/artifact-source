@@ -34,7 +34,7 @@ class ArtifactSourceDeltasTest extends FlatSpec with Matchers {
     val as = EmptyArtifactSource("erer")
     val f1 = StringFileArtifact("name", "", "contents")
     val withFile = as + f1
-    val withoutFile = withFile filter(d => true, f => false)
+    val withoutFile = withFile filter(_ => true, _ => false)
     withoutFile.empty shouldBe true
     val deltas = withoutFile Δ withFile
     deltas.deltas.size should equal(1)
@@ -47,7 +47,7 @@ class ArtifactSourceDeltasTest extends FlatSpec with Matchers {
     val as = EmptyArtifactSource()
     val f1 = StringFileArtifact("name", "", originalContent)
     val start = as + f1
-    val edited = start ✎ SimpleFileEditor(file => true, f => StringFileArtifact(f.path, f.content.reverse))
+    val edited = start ✎ SimpleFileEditor(_ => true, f => StringFileArtifact(f.path, f.content.reverse))
 
     val deltas = edited Δ start
     deltas.deltas.size should equal(1)

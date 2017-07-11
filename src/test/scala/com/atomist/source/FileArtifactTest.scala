@@ -17,7 +17,7 @@ class FileArtifactTest extends FlatSpec with Matchers {
   it should "change path of ByteArrayFileArtifact" in {
     val sfa = StringFileArtifact("path", "this is the content")
     val newPath = "foo/bar"
-    ByteArrayFileArtifact.toByteArrayFileArtifact(sfa).withPath(newPath) match {
+    ByteArrayFileArtifact(sfa).withPath(newPath) match {
       case updated: ByteArrayFileArtifact =>
         updated.path should equal (newPath)
         updated.content should equal (sfa.content)
@@ -27,7 +27,7 @@ class FileArtifactTest extends FlatSpec with Matchers {
   it should "change mode of ByteArrayFileArtifact" in {
     val sfa = StringFileArtifact("path", "this is the content")
     val newMode = 66
-    ByteArrayFileArtifact.toByteArrayFileArtifact(sfa).withMode(newMode) match {
+    ByteArrayFileArtifact(sfa).withMode(newMode) match {
       case updated: ByteArrayFileArtifact =>
         updated.path should equal (sfa.path)
         updated.pathElements should equal (sfa.pathElements)
@@ -51,7 +51,7 @@ class FileArtifactTest extends FlatSpec with Matchers {
   it should "change id of ByteArrayFileArtifact" in {
     val sfa = StringFileArtifact("path", "this is the content")
     val newId = "werwerqewrweqtwe"
-    ByteArrayFileArtifact.toByteArrayFileArtifact(sfa).withUniqueId(newId) match {
+    ByteArrayFileArtifact(sfa).withUniqueId(newId) match {
       case updated: ByteArrayFileArtifact =>
         updated.path should equal (sfa.path)
         updated.pathElements should equal (sfa.pathElements)

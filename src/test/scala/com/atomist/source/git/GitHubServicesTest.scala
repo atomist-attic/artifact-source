@@ -170,16 +170,15 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val id = NamedFileSystemArtifactSourceIdentifier(s"$owner/$repo", cloned.get)
     val startAs = FileSystemGitArtifactSource(id)
 
-    val path1 = "./test.json" // Deliberate leading relative path - to test that it gets normalized
+    val path1 = "test.json"
     val newFile1 = StringFileArtifact(path1, "test content")
     val as = startAs + newFile1 + StringFileArtifact("test2.json", "test content 2")
 
     val newContent = s"""{"vault_path":"test path", "repo" : { "repo":"foo","owner":"bar"}}"""
-    val normalized = Paths.get(path1).normalize.toString
-    val stringEditor = SimpleFileEditor(_.name == normalized, f => StringFileArtifact(f.path, newContent))
+    val stringEditor = SimpleFileEditor(_.name == path1, f => StringFileArtifact(f.path, newContent))
     val edited = as ✎ stringEditor
     edited should not be theSameInstanceAs(as)
-    edited.findFile(normalized).get.content should equal(newContent)
+    edited.findFile(path1).get.content should equal(newContent)
 
     val prTitle = s"My pull request at ${System.currentTimeMillis}"
     val prBody = "This is the body of my pull request"
@@ -195,7 +194,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     merged.get.merged shouldBe true
 
     val newAs = ghs sourceFor GitHubArtifactSourceLocator.rootOfMaster(repo, owner)
-    val f1 = newAs.findFile(normalized)
+    val f1 = newAs.findFile(path1)
     f1 shouldBe defined
     f1.get.content shouldEqual newContent
   }

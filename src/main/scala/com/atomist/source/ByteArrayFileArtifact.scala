@@ -1,9 +1,8 @@
 package com.atomist.source
 
 import java.io.ByteArrayInputStream
-import java.nio.file.Paths
 
-import com.atomist.source.FileArtifact.DefaultMode
+import com.atomist.source.FileArtifact._
 import com.atomist.util.Utils.{StringImprovements, withCloseable}
 import org.apache.commons.io.IOUtils
 
@@ -18,26 +17,6 @@ case class ByteArrayFileArtifact(name: String,
   extends FileArtifact {
 
   require(!name.isEmpty, "Name must not be empty")
-
-  def this(name: String, path: String, content: Array[Byte], mode: Int) =
-    this(name = name,
-      pathElements = if (path == null || "".equals(path)) Nil else Paths.get(path).normalize.toString.split("/").toSeq,
-      bytes = content,
-      mode,
-      None)
-
-  def this(name: String, path: String, content: Array[Byte]) =
-    this(name, path, content, DefaultMode)
-
-  def this(name: String, pathElements: Seq[String], content: Array[Byte]) =
-    this(name, pathElements, content, DefaultMode, None)
-
-  def this(name: String, pathElements: Seq[String], content: Array[Byte], mode: Int) =
-    this(name, pathElements, content, mode, None)
-
-  def this(fa: FileArtifact) =
-    this(name = fa.name, pathElements = fa.pathElements,
-      bytes = withCloseable(fa.inputStream())(is => IOUtils.toByteArray(is)), fa.mode, fa.uniqueId)
 
   override def isCached = true
 
@@ -57,30 +36,40 @@ object ByteArrayFileArtifact {
     * Forward slashes will be ignored if present.
     * For example, pathName=com/mypackage/filename content=filecontent
     */
-  def apply(pathName: String, bytes: Array[Byte], mode: Int): ByteArrayFileArtifact = {
+  def apply(pathName: String, bytes: Array[Byte], mode: Int, uniqueId: Option[String]): ByteArrayFileArtifact = {
+    validatePath(pathName)
     val npath = NameAndPathElements(pathName)
-    ByteArrayFileArtifact(npath.name, npath.pathElements, bytes, mode, None)
+    ByteArrayFileArtifact(npath.name, npath.pathElements, bytes, mode, uniqueId)
   }
 
-  def apply(fa: FileArtifact) = new ByteArrayFileArtifact(fa)
+  def apply(pathName: String, content: Array[Byte]): ByteArrayFileArtifact =
+    apply(pathName, content, DefaultMode, None)
 
-  def toByteArrayFileArtifact(fa: FileArtifact): ByteArrayFileArtifact = fa match {
+  def apply(name: String, path: String, content: Array[Byte]) =
+    new ByteArrayFileArtifact(name = name,
+      pathElements = path.split("/").toSeq,
+      bytes = content,
+      mode = DefaultMode,
+      None)
+
+  def apply(fa: FileArtifact): ByteArrayFileArtifact = fa match {
     case bafa: ByteArrayFileArtifact => bafa
-    case fa: FileArtifact => new ByteArrayFileArtifact(fa)
+    case fa: FileArtifact => new ByteArrayFileArtifact(name = fa.name, pathElements = fa.pathElements,
+      bytes = withCloseable(fa.inputStream())(is => IOUtils.toByteArray(is)), fa.mode, fa.uniqueId)
   }
 
   /**
     * Return an updated version of this file.
     */
   def updated(fa: FileArtifact, newContent: Array[Byte]): ByteArrayFileArtifact =
-    toByteArrayFileArtifact(fa).copy(bytes = newContent)
+    apply(fa).copy(bytes = newContent)
 
   /**
     * Copy the FileArtifact with a new path.
     */
   def repathed(fa: FileArtifact, pathElements: Seq[String]): ByteArrayFileArtifact =
-    toByteArrayFileArtifact(fa).copy(pathElements = pathElements)
+    apply(fa).copy(pathElements = pathElements)
 
   def withNewUniqueId(fa: FileArtifact, id: String): ByteArrayFileArtifact =
-    toByteArrayFileArtifact(fa).copy(uniqueId = Some(id))
+    apply(fa).copy(uniqueId = Some(id))
 }

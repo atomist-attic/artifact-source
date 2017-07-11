@@ -1,8 +1,6 @@
 package com.atomist.source
 
-import java.nio.file.Paths
-
-import com.atomist.source.FileArtifact.DefaultMode
+import com.atomist.source.FileArtifact.{DefaultMode, _}
 import com.atomist.util.Utils.StringImprovements
 
 /**
@@ -17,28 +15,6 @@ case class StringFileArtifact(name: String,
 
   require(!name.isEmpty, "Name must not be empty")
 
-  def this(name: String, path: String, _content: String, mode: Int) =
-    this(name = name,
-      pathElements = if (path == null || "".equals(path)) Nil else Paths.get(path).normalize.toString.split("/").toSeq,
-      _content = _content,
-      mode = mode,
-      None)
-
-  /**
-    * For example, name=filename path=com/mypackage content=filecontent
-    */
-  def this(name: String, path: String, content: String) =
-    this(name, path, content, DefaultMode)
-
-  def this(name: String, pathElements: Seq[String], content: String) =
-    this(name, pathElements, content, DefaultMode, None)
-
-  def this(name: String, pathElements: Seq[String], content: String, mode: Int) =
-    this(name, pathElements, content, mode, None)
-
-  def this(fa: FileArtifact) =
-    this(name = fa.name, pathElements = fa.pathElements, _content = fa.content, mode = fa.mode, fa.uniqueId)
-
   override def isCached = true
 
   def contentLength: Long = _content.toSystem.length
@@ -52,26 +28,37 @@ object StringFileArtifact {
 
   /**
     * Convenient way to construct StringFileArtifacts.
-    * Forward slashes will be ignored if present.
+    * Forward slashes will be ignored if present and relative paths are not permitted.
     * For example, pathName=com/mypackage/filename content=filecontent
     */
   def apply(pathName: String, content: String, mode: Int, uniqueId: Option[String]): StringFileArtifact = {
+    validatePath(pathName)
     val npath = NameAndPathElements(pathName)
     StringFileArtifact(npath.name, npath.pathElements, content, mode, uniqueId)
   }
 
-  def apply(name: String, pathElements: Seq[String], content: String) =
-    new StringFileArtifact(name, pathElements, content)
-
-  def apply(name: String, path: String, content: String) =
-    new StringFileArtifact(name, path, content, DefaultMode)
-
   def apply(pathName: String, content: String): StringFileArtifact =
     apply(pathName, content, DefaultMode, None)
 
-  def toStringFileArtifact(fa: FileArtifact): StringFileArtifact = fa match {
+  /**
+    * For example, name=filename path=com/mypackage content=filecontent
+    */
+  def apply(name: String, path: String, content: String) = {
+    validatePath(path)
+    new StringFileArtifact(name = name,
+      pathElements = if (Option(path).exists(_.trim.nonEmpty)) path.split("/").toSeq else Nil,
+      _content = content,
+      mode = DefaultMode,
+      None)
+  }
+
+  def apply(name: String, pathElements: Seq[String], content: String) =
+    new StringFileArtifact(name, pathElements, content, DefaultMode, None)
+
+  def apply(fa: FileArtifact) = fa match {
     case sfa: StringFileArtifact => sfa
-    case fa: FileArtifact => new StringFileArtifact(fa)
+    case fa: FileArtifact => new StringFileArtifact(name = fa.name, pathElements = fa.pathElements,
+      _content = fa.content, mode = fa.mode, fa.uniqueId)
   }
 
   /**

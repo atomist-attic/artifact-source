@@ -2,10 +2,9 @@ package com.atomist.source
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.charset.Charset
-import java.nio.file.Paths
 
 import com.atomist.util.Utils.{StringImprovements, withCloseable}
-import org.apache.commons.io.IOUtils
+import org.apache.commons.io.{FilenameUtils, IOUtils}
 
 /**
   * Represents a file or directory artifact.
@@ -72,8 +71,8 @@ trait FileArtifact extends Artifact {
   override final def parentPathElements: Seq[String] = pathElements
 
   protected def sameContentsAs(fa: FileArtifact): Boolean = {
-    val sf1 = StringFileArtifact.toStringFileArtifact(this)
-    val sf2 = StringFileArtifact.toStringFileArtifact(fa)
+    val sf1 = StringFileArtifact(this)
+    val sf2 = StringFileArtifact(fa)
     sf1.content.equals(sf2.content)
   }
 
@@ -87,7 +86,7 @@ trait FileArtifact extends Artifact {
     case _: StringFileArtifact =>
       StringFileArtifact(pathName, this.content, this.mode, this.uniqueId)
     case _ =>
-      val base = ByteArrayFileArtifact.toByteArrayFileArtifact(this)
+      val base = ByteArrayFileArtifact(this)
       val npath = NameAndPathElements(pathName)
       base.copy(name = npath.name, pathElements = npath.pathElements)
   }
@@ -96,7 +95,7 @@ trait FileArtifact extends Artifact {
     case _: StringFileArtifact =>
       StringFileArtifact(this.name, this.pathElements, this.content, mode, this.uniqueId)
     case _ =>
-      val base = ByteArrayFileArtifact.toByteArrayFileArtifact(this)
+      val base = ByteArrayFileArtifact(this)
       base.copy(mode = mode)
   }
 
@@ -104,7 +103,7 @@ trait FileArtifact extends Artifact {
     case _: StringFileArtifact =>
       StringFileArtifact(this.name, this.pathElements, this.content, mode, Some(id))
     case _ =>
-      val base = ByteArrayFileArtifact.toByteArrayFileArtifact(this)
+      val base = ByteArrayFileArtifact(this)
       base.copy(uniqueId = Some(id))
   }
 
@@ -115,6 +114,9 @@ object FileArtifact {
 
   val DefaultMode = 33188
   val ExecutableMode = 33261
+
+  def validatePath(path: String): Unit =
+    require(path != null && !path.startsWith("./") && FilenameUtils.normalize(path) != null, "Path must not be a relative path")
 }
 
 trait StreamedFileArtifact extends FileArtifact {
@@ -151,17 +153,12 @@ case class NameAndPathElements(name: String, pathElements: Seq[String])
 object NameAndPathElements {
 
   def apply(pathName: String): NameAndPathElements = {
-    if (pathName == null)
-      throw new IllegalArgumentException("Path may not be null")
-
-    if (pathName.isEmpty)
-      throw new IllegalArgumentException("Path may not be empty")
+    require(Option(pathName).exists(_.trim.nonEmpty), "Path may not be null or empty")
 
     val stripped = if (pathName.startsWith("/")) pathName.substring(1) else pathName
-    if (stripped.isEmpty)
-      throw new IllegalArgumentException("Path may not contain only /")
+    require(!stripped.isEmpty, "Path may not contain only /")
 
-    val splitPath = Paths.get(stripped).normalize.toString.split("/")
+    val splitPath = stripped.split("/")
     val name = splitPath.last
     val pathElements = splitPath.dropRight(1).toSeq
     NameAndPathElements(name, pathElements)
