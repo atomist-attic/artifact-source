@@ -233,7 +233,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
     Try {
       val gHBranch = repository.getBranch(branch)
       val baseTreeSha = gHBranch.getSHA1
-      val fwbrs = files.map(fa => FileWithBlobRef(fa, createBlob(repo, owner, message, branch, fa)))
+      val fwbrs = files
+        .groupBy(_.path)
+        .map(_._2.last)
+        .map(fa => FileWithBlobRef(fa, createBlob(repo, owner, message, branch, fa)))
+        .toSeq
+
       val newOrUpdatedTreeEntries = fwbrs.map(fwbr => TreeEntry(fwbr.fa.path, intToOctal(fwbr.fa.mode), "blob", fwbr.ref.sha))
       val allExistingTreeEntries = treeFor(GitHubShaIdentifier(repo, owner, baseTreeSha)).allFiles
         .map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
