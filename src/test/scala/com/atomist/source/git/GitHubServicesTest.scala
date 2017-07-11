@@ -1,7 +1,5 @@
 package com.atomist.source.git
 
-import java.nio.file.Paths
-
 import com.atomist.source._
 import com.atomist.source.file.NamedFileSystemArtifactSourceIdentifier
 import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
@@ -174,18 +172,24 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val newFile1 = StringFileArtifact(path1, "test content")
     val as = startAs + newFile1 + StringFileArtifact("test2.json", "test content 2")
 
-    val newContent = s"""{"vault_path":"test path", "repo" : { "repo":"foo","owner":"bar"}}"""
+    val newContent = "new content"
     val stringEditor = SimpleFileEditor(_.name == path1, f => StringFileArtifact(f.path, newContent))
     val edited = as ✎ stringEditor
     edited should not be theSameInstanceAs(as)
     edited.findFile(path1).get.content should equal(newContent)
+
+    val newContent1 = "new content 1"
+    val stringEditor1 = SimpleFileEditor(_.name == path1, f => StringFileArtifact(f.path, newContent1))
+    val editedAgain = edited ✎ stringEditor1
+    editedAgain should not be theSameInstanceAs(edited)
+    editedAgain.findFile(path1).get.content should equal(newContent1)
 
     val prTitle = s"My pull request at ${System.currentTimeMillis}"
     val prBody = "This is the body of my pull request"
     val updatedBranch = s"multi-file-${System.currentTimeMillis}"
 
     val prr = PullRequestRequest(prTitle, updatedBranch, MasterBranch, prBody)
-    val prs = ghs.createPullRequestFromChanges(repo, owner, prr, startAs, edited, "Added files")
+    val prs = ghs.createPullRequestFromChanges(repo, owner, prr, startAs, editedAgain, "Added files")
     prs shouldBe defined
     val pr1 = prs.get
 
@@ -196,7 +200,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val newAs = ghs sourceFor GitHubArtifactSourceLocator.rootOfMaster(repo, owner)
     val f1 = newAs.findFile(path1)
     f1 shouldBe defined
-    f1.get.content shouldEqual newContent
+    f1.get.content shouldEqual newContent1
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {

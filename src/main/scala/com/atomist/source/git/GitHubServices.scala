@@ -241,7 +241,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
 
       val finalTreeEntries = (newOrUpdatedTreeEntries ++ allExistingTreeEntries)
         .groupBy(_.path)
-        .map(_._2.head)
+        .map(_._2.last)
         .filterNot(te => treeEntriesToDelete.exists(_.path == te.path))
         .toSeq
 
