@@ -5,13 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.0.0-m.12] - 2017-07-11
+## [1.0.0-m.13] - 2017-07-12
 
 ### Fixed
 
--   Fixed commitFiles to commit the right set of files
+-   Fixed issue where multiple blobs were created for the same file
+
+## [1.0.0-m.12] - 2017-07-11
 
 [1.0.0-m.12]: https://github.com/atomist/artifact-source/compare/1.0.0-m.11...1.0.0-m.12
+
+### Fixed
+
+-   Fixed commitFiles to commit the right set of files [#38][38]
+
+[38]: https://github.com/atomist/artifact-source/issues/38
 
 ## [1.0.0-m.11] - 2017-07-11
 
