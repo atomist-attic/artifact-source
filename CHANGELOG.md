@@ -5,9 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.0-m.12] - 2017-07-11
+
+### Fixed
+
+-   Fixed commitFiles to commit the right set of files
+
+[1.0.0-m.12]: https://github.com/atomist/artifact-source/compare/1.0.0-m.11...1.0.0-m.12
+
 ## [1.0.0-m.11] - 2017-07-11
 
-[1.0.0-m.11]: https://github.com/atomist/artifact-source/compare/1.0.0-m.10...1.0.0-m.11
+[1.0.0-m.11]: https://github.com/atomist/artifact-source/compare/1.0.0-m.5...1.0.0-m.11
 
 ### Changed
 
@@ -23,27 +31,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 [36]: https://github.com/atomist/artifact-source/issues/36
 
-## [1.0.0-m.10]
-
-[1.0.0-m.10]: https://github.com/atomist/artifact-source/compare/1.0.0-m.9...1.0.0-m.10
-
-## [1.0.0-m.9]
-
-[1.0.0-m.9]: https://github.com/atomist/artifact-source/compare/1.0.0-m.8...1.0.0-m.9
-
-## [1.0.0-m.8]
-
-[1.0.0-m.8]: https://github.com/atomist/artifact-source/compare/1.0.0-m.7...1.0.0-m.8
-
-## [1.0.0-m.7]
-
-[1.0.0-m.7]: https://github.com/atomist/artifact-source/compare/1.0.0-m.6...1.0.0-m.7
-
-## [1.0.0-m.6]
-
-[1.0.0-m.6]: https://github.com/atomist/artifact-source/compare/1.0.0-m.5...1.0.0-m.6
-
-## [1.0.0-m.5] 
+## [1.0.0-m.5] - 2017-06-28
 
 [1.0.0-m.5]: https://github.com/atomist/artifact-source/compare/1.0.0-m.4...1.0.0-m.5
 
