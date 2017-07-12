@@ -19,7 +19,7 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
 
   import GitRepositoryCloner._
 
-  private val outLogger = ProcessLogger(out => logger.debug(out), err => logger.debug(err))
+  private val outLogger = ProcessLogger(out => logger.info(out), err => logger.warn(err))
 
   def clone(repo: String,
             owner: String,
@@ -31,12 +31,17 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
     try {
       val br = branch.map(b => if (b == "master") "" else s"-b $b").getOrElse("")
       val repoDir = createRepoDirectory(repo, owner, dir)
-      s"git clone $br --depth $depth --single-branch $getUrl/$repoStr.git ${repoDir.getPath}" !! outLogger
-      sha.map(resetToSha(_, repoDir, repoStr))
+      val cloneCmd = s"git clone $br --depth $depth --single-branch $getUrl/$repoStr.git ${repoDir.getPath}"
+      logger.info(s"Executing $cloneCmd")
+      cloneCmd !! outLogger
+      sha.map(s => {
+        logger.info(s"Commit sha '$s' specified so attempting to reset")
+        resetToSha(s, repoDir, repoStr)
+      })
       Some(repoDir)
     } catch {
       case e: Exception =>
-        logger.warn(s"Failed to clone '$repoStr'", e)
+        logger.error(s"Failed to clone '$repoStr'", e)
         None
     }
   }
@@ -58,16 +63,20 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
 
   private def resetToSha(sha: String, repoDir: File, repoStr: String) = {
     val resetProcess = Process(s"git reset --hard $sha", repoDir)
-    resetProcess #||
+
+    val rc = resetProcess ! outLogger
+    if (rc != 0) {
+      logger.warn(s"Failed to reset to sha $sha. Attempting to fetch entire repo")
       Process("git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*", repoDir) #&&
-      Process("git fetch --unshallow", repoDir) ###
-      resetProcess #||
-      Process("git fetch", repoDir) ###
-      resetProcess !! outLogger
+        Process("git fetch --unshallow", repoDir) ###
+        resetProcess #||
+        Process("git fetch", repoDir) ###
+        resetProcess !! outLogger
+    }
   }
 
   private def getUrl = {
-    val url =  if (Option(remoteUrl).exists(_.trim.nonEmpty)) new URL(remoteUrl) else new URL(GitHubHome.Url)
+    val url = if (Option(remoteUrl).exists(_.trim.nonEmpty)) new URL(remoteUrl) else new URL(GitHubHome.Url)
     if (Option(oAuthToken).exists(_.trim.nonEmpty))
       s"${url.getProtocol}://$oAuthToken@${url.getAuthority}"
     else

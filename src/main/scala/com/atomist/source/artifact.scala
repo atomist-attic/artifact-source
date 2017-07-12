@@ -116,7 +116,8 @@ object FileArtifact {
   val ExecutableMode = 33261
 
   def validatePath(path: String): Unit =
-    require(path != null && !path.startsWith("./") && FilenameUtils.normalize(path) != null, "Path must not be a relative path")
+    require(!(path == null || path.startsWith("./") || path.contains("../") || FilenameUtils.normalize(path) == null),
+      s"Path must not contain relative path elements: $path")
 }
 
 trait StreamedFileArtifact extends FileArtifact {

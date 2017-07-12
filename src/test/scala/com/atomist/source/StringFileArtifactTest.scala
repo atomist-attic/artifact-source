@@ -45,6 +45,10 @@ class StringFileArtifactTest extends FlatSpec with Matchers {
     an[IllegalArgumentException] should be thrownBy StringFileArtifact("../test.txt", "contents")
   }
 
+  it should "not permit paths containing parent paths" in {
+    an[IllegalArgumentException] should be thrownBy StringFileArtifact("src/main/../test.txt", "contents")
+  }
+
   it should "remove opening / from artifacts in root" in {
     val (name, contents) = ("name", "contents")
     val withoutSlash = StringFileArtifact(name, contents)

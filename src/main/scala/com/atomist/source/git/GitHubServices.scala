@@ -318,6 +318,15 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
     }
   }
 
+  def getCommits(repo: String, owner: String): Seq[Commit] =
+    Http(s"${getPath(repo, owner)}/git/refs")
+      .headers(headers)
+      .execute(fromJson[Seq[RefCommit]])
+      .throwError
+      .body
+      .filter(_.`object`.`type` == "commit")
+      .map(c => Commit(c.`object`.sha))
+
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
     val content = withCloseable(fa.inputStream())(is => new String(Base64.encode(IOUtils.toByteArray(is))))
     val cbr = CreateBlobRequest(content)
@@ -444,6 +453,8 @@ object GitHubServices {
 
   case class LinksHref(href: String)
 
+  case class Commit(sha: String)
+
   private case class FileWithBlobRef(fa: FileArtifact, ref: GitHubRef)
 
   private case class FileDeleteRequest(message: String, sha: String, branch: String)
@@ -469,4 +480,8 @@ object GitHubServices {
   private case class PullRequestMergeRequest(@JsonProperty("commit_title") title: String,
                                              @JsonProperty("commit_message") message: String,
                                              @JsonProperty("merge_method") mergeMethod: String)
+
+  private case class RefCommit(ref: String, url: String, `object`: RefObject)
+
+  private case class RefObject(`type`: String, url: String, sha: String)
 }

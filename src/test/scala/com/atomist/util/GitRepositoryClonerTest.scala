@@ -3,10 +3,12 @@ package com.atomist.util
 import java.io.File
 import java.nio.file.Paths
 
+import com.atomist.source.git.TestConstants.Token
+import com.atomist.source.git.{GitHubArtifactSourceLocator, GitHubMutatorTest, GitHubSourceUpdateInfo}
+import com.atomist.source.{FileArtifact, SimpleCloudRepoId, StringFileArtifact}
 import org.apache.commons.io.FileUtils
-import org.scalatest.{FlatSpec, Matchers}
 
-class GitRepositoryClonerTest extends FlatSpec with Matchers {
+class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
 
   "GitRepositoryCloner" should "clone remote repo to temp directory" in {
     cloneAndVerify()
@@ -36,11 +38,37 @@ class GitRepositoryClonerTest extends FlatSpec with Matchers {
     cloneAndVerify(Some("path-into-as"), Some("966b8f992fb27558c06ef9dc44b4dcc6cd7626de"))
   }
 
-  ignore should "clone repo and reset to specified sha and branch without knowing depth" in {
+  it should "clone repo and reset to specified sha and branch without knowing depth" in {
     val repoDir = createRepoDir
     val grc = GitRepositoryCloner()
     // val start = System.currentTimeMillis
-    val cloned = grc.clone("test1", "spring-team", None, Some("f94a3593c7f87df0f3e39667299e76c2420b0cb5"), Some(repoDir))
+    val cloned = grc.clone("artifact-source", "atomist", None, Some("4983a4822e885ee3e1d917d9b1d980bedef349c1"), Some(repoDir))
+    cloned shouldBe defined
+    FileUtils.sizeOf(cloned.get) should be > 0L
+    // println(s"Cloning: ${System.currentTimeMillis - start} ms")
+  }
+
+  it should "clone new repo and reset to specified sha and branch without knowing depth" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.getName
+    val owner = newTempRepo.getOwnerName
+    val cri = SimpleCloudRepoId(repo, owner)
+    val files: Seq[FileArtifact] = Seq(
+      StringFileArtifact("animals/fox.txt", TestFileContents2),
+      StringFileArtifact("animals/fox.txt", TestFileContents2), // Deliberate duplicate
+      StringFileArtifact("people/politics.txt", "Now is the time for all good men to come to the aid of their party")
+    )
+    val newBranchSource = GitHubArtifactSourceLocator(cri, "master")
+    val multiFileCommitMessage = s"multi file commit at ${System.currentTimeMillis}"
+    val fileCommit = ghs.commitFiles(GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files, Seq())
+    fileCommit.isEmpty shouldBe false
+
+    val commits = ghs.getCommits(repo, owner)
+    val sha = commits.last.sha
+    val repoDir = createRepoDir
+    val grc = GitRepositoryCloner(Token)
+    // val start = System.currentTimeMillis
+    val cloned = grc.clone(repo, owner, None, Some(sha), Some(repoDir), 1)
     cloned shouldBe defined
     FileUtils.sizeOf(cloned.get) should be > 0L
     // println(s"Cloning: ${System.currentTimeMillis - start} ms")
