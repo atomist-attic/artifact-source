@@ -22,7 +22,7 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
     with DirectoryInferringArtifactContainer {
 
   protected lazy val repository: GHRepository =
-    Try(ghs.getRepository(id.repo, id.owner)) match {
+    Try(ghs getRepository(id.repo, id.owner)) match {
       case Success(Some(repo)) => repo
       case Success(None) => throw ArtifactSourceAccessException(s"Failed to find repository '${id.repo}' for owner '${id.owner}'")
       case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
@@ -84,7 +84,7 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
 object TreeGitHubArtifactSource {
 
   def apply(asl: GitHubArtifactSourceLocator, ghs: GitHubServices, artifactFilters: ArtifactFilter*): TreeGitHubArtifactSource =
-    Try(ghs.getRepository(asl.repo, asl.owner)) match {
+    Try(ghs getRepository(asl.repo, asl.owner)) match {
       case Success(Some(repository)) =>
         Try(repository.getBranch(asl.branch)) match {
           case Success(branch) => new TreeGitHubArtifactSource(GitHubArtifactSourceIdentifier(asl, branch.getSHA1), ghs, artifactFilters: _*)

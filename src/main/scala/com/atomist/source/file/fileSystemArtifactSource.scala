@@ -51,7 +51,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
     this(id, artifactFilters.asScala: _*)
 
   def this(id: FileSystemArtifactSourceIdentifier) =
-    this(id, Seq(): _*)
+    this(id, Seq.empty: _*)
 
   if (!id.rootFile.exists)
     throw ArtifactSourceAccessException(s"File '${id.rootFile}' does not exist")

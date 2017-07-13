@@ -14,7 +14,7 @@ class ArtifactSourceFilterTest extends FlatSpec with Matchers {
     result.allFiles.size should equal(3)
     result.allDirectories.size should equal(3)
     result.findFile("name") shouldBe defined
-    val filtered = result.filter(d => true, f => !f.name.equals("name"))
+    val filtered = result.filter(_ => true, f => !f.name.equals("name"))
     filtered.allFiles.size should equal(1)
     filtered.allDirectories.map(_.path).sorted should equal(Seq("my", "my/other", "my/other/path").sorted)
   }
@@ -28,7 +28,7 @@ class ArtifactSourceFilterTest extends FlatSpec with Matchers {
     result.allFiles.size should equal(2)
     result.allDirectories.size should equal(3)
     result.findFile("name") shouldBe defined
-    val filtered = result.filter(d => true, f => !f.name.equals("name"))
+    val filtered = result.filter(_ => true, f => !f.name.equals("name"))
     filtered.allFiles.size should equal(1)
     filtered.allDirectories.size should equal(3)
   }
@@ -46,7 +46,7 @@ class ArtifactSourceFilterTest extends FlatSpec with Matchers {
     result.allFiles.size should equal(3)
     result.allDirectories.size should equal(3)
     result.findFile("name") shouldBe defined
-    val filtered = result.filter(d => !d.path.equals("my/new"), f => true)
+    val filtered = result.filter(d => !d.path.equals("my/new"), _ => true)
     filtered.allFiles.size should equal(1)
     filtered.allDirectories.size should equal(1)
   }
@@ -96,7 +96,7 @@ class ArtifactSourceFilterTest extends FlatSpec with Matchers {
     result.allFiles.size should equal(4)
     result.allDirectories.size should equal(5)
     result.findFile("name") shouldBe defined
-    val filtered = result.filter(d => true, f => !f.name.equals("name2")).removeEmptyDirectories()
+    val filtered = result.filter(_ => true, f => !f.name.equals("name2")).removeEmptyDirectories()
     filtered.allFiles.size should equal(2)
     filtered.allDirectories.foreach(_.empty shouldBe false)
     filtered.allDirectories.size should equal(3)

@@ -35,10 +35,10 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
   }
 
   it should "create repository and write contents in many directories" in {
-    val tempRepo = newPopulatedTemporaryRepo()
+    val newTempRepo = newPopulatedTemporaryRepo()
 
     val springBootProject = ZipFileArtifactSourceReader fromZipSource springBootZipFileId
-    val cri = SimpleCloudRepoId(tempRepo.getName, tempRepo.getOwnerName)
+    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
     val ghid = GitHubArtifactSourceLocator(cri)
     val artifacts = gitHubWriter.write(springBootProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
     artifacts.size should be > 1

@@ -53,17 +53,14 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     val repo = newTempRepo.getName
     val owner = newTempRepo.getOwnerName
     val cri = SimpleCloudRepoId(repo, owner)
-    val files: Seq[FileArtifact] = Seq(
-      StringFileArtifact("animals/fox.txt", TestFileContents2),
-      StringFileArtifact("animals/fox.txt", TestFileContents2), // Deliberate duplicate
-      StringFileArtifact("people/politics.txt", "Now is the time for all good men to come to the aid of their party")
-    )
+    val files = testFiles :+ StringFileArtifact("somethingOrOther.txt", testFileContents) // Duplicate
+
     val newBranchSource = GitHubArtifactSourceLocator(cri, "master")
     val multiFileCommitMessage = s"multi file commit at ${System.currentTimeMillis}"
-    val fileCommit = ghs.commitFiles(GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files, Seq())
+    val fileCommit = ghs commitFiles(GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files, Seq.empty)
     fileCommit.isEmpty shouldBe false
 
-    val commits = ghs.getCommits(repo, owner)
+    val commits = ghs getCommits(repo, owner)
     val sha = commits.last.sha
     val repoDir = createRepoDir
     val grc = GitRepositoryCloner(Token)

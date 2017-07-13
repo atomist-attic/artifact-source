@@ -8,9 +8,8 @@ import org.scalatest.Matchers
   */
 object TestUtils extends Matchers {
 
-  val ValidSource = ClassPathArtifactSource.toArtifactSource("java-source/HelloWorldService.java")
-
-  val SpringBootSource = ClassPathArtifactSource.toArtifactSource("spring-boot/web-template")
+  val ValidSource: ArtifactSource = ClassPathArtifactSource.toArtifactSource("java-source/HelloWorldService.java")
+  val SpringBootSource: ArtifactSource = ClassPathArtifactSource.toArtifactSource("spring-boot/web-template")
 
   def validateSourceTree(source: ArtifactSource) {
     val dirName = "src/main"

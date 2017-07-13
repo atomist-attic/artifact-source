@@ -32,7 +32,7 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
       val br = branch.map(b => if (b == "master") "" else s"-b $b").getOrElse("")
       val repoDir = createRepoDirectory(repo, owner, dir)
       val cloneCmd = s"git clone $br --depth $depth --single-branch $getUrl/$repoStr.git ${repoDir.getPath}"
-      logger.info(s"Executing $cloneCmd")
+      logger.info(s"Executing command $cloneCmd")
       cloneCmd !! outLogger
       sha.map(s => {
         logger.info(s"Commit sha '$s' specified so attempting to reset")
@@ -68,10 +68,13 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
     if (rc != 0) {
       logger.warn(s"Failed to reset to sha $sha. Attempting to fetch entire repo")
       Process("git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*", repoDir) #&&
-        Process("git fetch --unshallow", repoDir) ###
-        resetProcess #||
-        Process("git fetch", repoDir) ###
-        resetProcess !! outLogger
+        Process("git fetch --unshallow", repoDir) !! outLogger
+      logger.info(s"Successfully fetched entire repo. Attempting to reset to sha $sha")
+      val rc2 = resetProcess ! outLogger
+      if (rc2 != 0) {
+        logger.warn(s"Failed to reset to sha $sha. Attempting to fetch repo without --unshallow")
+        Process("git fetch", repoDir) #&& resetProcess !! outLogger
+      }
     }
   }
 

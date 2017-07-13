@@ -119,7 +119,7 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
   it should "be able to filter directories" in {
     val s = AtomistTemplatesSource
     s.allFiles.exists(_.name contains "Application") shouldBe true
-    val filtered = s.filter(!_.name.contains("spring"), f => true)
+    val filtered = s.filter(!_.name.contains("spring"), _ => true)
     filtered.allFiles.exists(_.name contains "Java") shouldBe false
   }
 
@@ -223,9 +223,9 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
 
 object FileSystemArtifactSourceTest {
 
-  val AtomistTemplatesSource = toArtifactSource("spring-boot")
+  val AtomistTemplatesSource: ArtifactSource = toArtifactSource("spring-boot")
 
-  val PosixSupported = FileSystems.getDefault.getFileStores.asScala
+  val PosixSupported: Boolean = FileSystems.getDefault.getFileStores.asScala
     .exists(_.supportsFileAttributeView(classOf[PosixFileAttributeView]))
 
   def ignoreFiles1ZipId = ZipFileInput(classPathResourceToFile("ignore-files/no-dot-git.zip"))

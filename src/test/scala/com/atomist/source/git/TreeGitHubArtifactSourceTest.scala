@@ -5,10 +5,10 @@ import java.io.FileInputStream
 import com.atomist.source._
 import com.atomist.source.file.{ClassPathArtifactSource, ZipFileArtifactSourceReader, ZipFileInput}
 import com.atomist.source.filter.ArtifactFilter
-import com.atomist.source.git.TestConstants.{Token, _}
+import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
+import com.atomist.source.git.TestConstants.Token
 
-class TreeGitHubArtifactSourceTest
-  extends GitHubMutatorTest(Token) {
+class TreeGitHubArtifactSourceTest extends GitHubMutatorTest(Token) {
 
   private val githubWriter = GitHubArtifactSourceWriter(Token)
 
@@ -18,7 +18,10 @@ class TreeGitHubArtifactSourceTest
   }
 
   "file retrieval" should "work" in {
-    val cri = SimpleCloudRepoId(TestTargetRepo, TestOrg)
+    val newTempRepo = newPopulatedTemporaryRepo()
+    ghs commitFiles(newTempRepo, MasterBranch, "new files", testFiles, Seq.empty)
+
+    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
     val files = tghas.allFiles
     files.size should be > 1
@@ -26,7 +29,10 @@ class TreeGitHubArtifactSourceTest
   }
 
   "file retrieval and filter" should "work" in {
-    val cri = SimpleCloudRepoId(TestTargetRepo, TestOrg)
+    val newTempRepo = newPopulatedTemporaryRepo()
+    ghs commitFiles(newTempRepo, MasterBranch, "new files", testFiles, Seq.empty)
+
+    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs, new MarkdownFilter)
     val files = tghas.allFiles
     files.size should be > 0
@@ -41,16 +47,16 @@ class TreeGitHubArtifactSourceTest
   }
 
   "file retrieval and edit" should "work" in {
-    val tempRepo = newPopulatedTemporaryRepo()
+    val newTempRepo = newPopulatedTemporaryRepo()
+
     val commitMessage1 = s"file commit 1"
-    val cri = SimpleCloudRepoId(tempRepo.getName, tempRepo.getOwnerName)
+    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
     val branchSource = GitHubArtifactSourceLocator(cri, "master")
-    val file = StringFileArtifact("animals/fox.txt", TestFileContents2)
-    ghs.commitFiles(GitHubSourceUpdateInfo(branchSource, commitMessage1), Seq(file), Seq.empty)
+    ghs commitFiles(GitHubSourceUpdateInfo(branchSource, commitMessage1), testFiles, Seq.empty)
 
     val springBootProject = ZipFileArtifactSourceReader fromZipSource springBootZipFileId
     val ghid = GitHubArtifactSourceLocator(cri)
-    githubWriter.write(springBootProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
+    githubWriter write(springBootProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
     val tghasSize = tghas.allArtifacts.size
 

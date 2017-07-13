@@ -13,12 +13,12 @@ case class GitHubArtifactSourceWriter(oAuthToken: String, apiUrl: String = GitHu
   @throws[ArtifactSourceException]
   def write(as: ArtifactSource, sui: GitHubSourceUpdateInfo): Seq[FileArtifact] =
     if (as.allFiles.size == 1) {
-      ghs.addFile(sui, as.allFiles.head).toSeq
+      ghs addFile(sui, as.allFiles.head) toSeq
     } else if (as.findFile(ProvenanceFileName).isDefined) {
-      ghs.commitFiles(sui, as.allFiles, Seq.empty)
+      ghs commitFiles(sui, as.allFiles, Seq.empty)
     } else {
       val newAs = as + StringFileArtifact(ProvenanceFileName, "")
-      ghs.commitFiles(sui, newAs.allFiles, Seq.empty)
+      ghs commitFiles(sui, newAs.allFiles, Seq.empty)
     }
 
   @throws[ArtifactSourceException]
@@ -29,7 +29,7 @@ case class GitHubArtifactSourceWriter(oAuthToken: String, apiUrl: String = GitHu
                    privateFlag: Boolean = false,
                    issues: Boolean = true,
                    autoInit: Boolean = false): Seq[FileArtifact] = {
-    ghs.createRepository(cri.repo, cri.owner, description, privateFlag, issues, autoInit)
+    ghs createRepository(cri.repo, cri.owner, description, privateFlag, issues, autoInit)
     write(as, sui)
   }
 }

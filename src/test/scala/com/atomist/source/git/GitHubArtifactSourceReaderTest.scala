@@ -8,14 +8,12 @@ import com.atomist.source.file._
 import com.atomist.source.git.GitHubArtifactSourceLocator.{MasterBranch, fromStrings}
 import com.atomist.source.git.TestConstants._
 import com.atomist.util.Utils._
-import org.scalatest._
 
-class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
+class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
 
-  private val gitHubReader = GitHubServices(TestConstants.Token)
   private val zw = ZipFileArtifactSourceWriter
   private val seeds = GitHubArtifactSourceLocator.rootOfMaster("spring-rest-seed", "atomist-seeds")
-  private val self = gitHubReader.sourceFor(DefaultGitHubArtifactSourceLocator(repo = "artifact-source", owner = "atomist"))
+  private val self = ghs sourceFor DefaultGitHubArtifactSourceLocator(repo = "artifact-source", owner = "atomist")
 
   "GitHubArtifactSourceReader" should "find a known repository" in {
     val artifacts = self.artifacts
@@ -61,25 +59,25 @@ class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
   }
 
   it should "support addition" in {
-    val files: Seq[Artifact] = Seq(
-      StringFileArtifact("somethingOrOther.txt", "The quick brown fox jumped over the lazy dog"),
-      StringFileArtifact("scripts2/other.txt", "This file isn't in the root"),
-      StringFileArtifact("another2/directory/tree/extra.txt", "Nested file")
-    )
-    val startAs = gitHubReader sourceFor GitHubArtifactSourceLocator(TestConstants.TestTargetRepoInfo, branch = MasterBranch)
-    startAs.findFile(files(1).path) shouldBe empty
-    val withAddedFiles = startAs + files
+    val newTempRepo = newPopulatedTemporaryRepo()
+
+    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
+    val startAs = ghs sourceFor GitHubArtifactSourceLocator(cri, branch = MasterBranch)
+    startAs.findFile(testFiles(1).path) shouldBe empty
+    val withAddedFiles = startAs + testFiles
 
     withAddedFiles should not be theSameInstanceAs(startAs)
 
-    startAs.findFile(files(1).path) should not be defined
-    withAddedFiles.findFile(files(1).path) shouldBe defined
+    startAs.findFile(testFiles(1).path) should not be defined
+    withAddedFiles.findFile(testFiles(1).path) shouldBe defined
 
     (withAddedFiles Δ startAs).deltas.isEmpty shouldBe false
   }
 
   it should "read org code from root in master" in {
-    val read = gitHubReader.sourceFor(fromStrings(TestTargetRepo, TestOrg))
+    val newTempRepo = newPopulatedTemporaryRepo()
+
+    val read = ghs sourceFor fromStrings(newTempRepo.getName, newTempRepo.getOwnerName)
     withClue("known repository must be non-empty: ") {
       read.allFiles.nonEmpty shouldBe true
     }
@@ -89,38 +87,47 @@ class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
   }
 
   it should "read from branch other than master" in {
-    val readMaster = gitHubReader.sourceFor(GitHubArtifactSourceLocator(TestTargetRepoInfo, MasterBranch))
+    val newTempRepo = newPopulatedTemporaryRepo()
+
+    val branch = "test_branch"
+    ghs createBranch(newTempRepo, branch, MasterBranch)
+    ghs commitFiles(newTempRepo, branch, "new files", testFiles, Seq.empty)
+
+    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
+    val readMaster = ghs sourceFor GitHubArtifactSourceLocator(cri, MasterBranch)
     withClue("known repository master must contain more files") {
       readMaster.allFiles.nonEmpty shouldBe true
     }
-    val readBranch = gitHubReader.sourceFor(GitHubArtifactSourceLocator(TestTargetRepoInfo, TestTargetExpectedBranch))
-    withClue(s"branch $TestTargetExpectedBranch must contain more files than master") {
+    val readBranch = ghs sourceFor GitHubArtifactSourceLocator(cri, branch)
+    withClue(s"branch $branch must contain more files than master") {
       readBranch.allFiles.size should be > readMaster.allFiles.size
     }
   }
 
   it should "not find non-existent branch" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
     an[ArtifactSourceException] should be thrownBy
-      (gitHubReader sourceFor GitHubArtifactSourceLocator(TestTargetRepoInfo, "this-is-complete-nonsense"))
+      (ghs sourceFor GitHubArtifactSourceLocator(cri, "this-is-complete-nonsense"))
   }
 
   it should "not find non-existent repository" in {
     an[ArtifactSourceException] should be thrownBy
-      (gitHubReader sourceFor fromStrings("sdlfdslksdlfksjdlfkjslkdjf-lib", TestOrg))
+      (ghs sourceFor fromStrings("sdlfdslksdlfksjdlfkjslkdjf-lib", TestOrg))
   }
 
   it should "not find repository for syntactically incorrect owner" in {
     an[ArtifactSourceException] should be thrownBy
-      (gitHubReader sourceFor fromStrings("sdlfdslksdlfksjdlfkjslkdjf-lib", "not-the-droid(owner)-we-are-looking for"))
+      (ghs sourceFor fromStrings("sdlfdslksdlfksjdlfkjslkdjf-lib", "not-the-droid(owner)-we-are-looking for"))
   }
 
   it should "not find repository for non-existent owner" in {
     an[ArtifactSourceException] should be thrownBy
-      (gitHubReader sourceFor fromStrings("sdlfdslksdlfksjdlfkjslkdjf-lib", "notthedroidswearelookingfor"))
+      (ghs sourceFor fromStrings("sdlfdslksdlfksjdlfkjslkdjf-lib", "notthedroidswearelookingfor"))
   }
 
   it should "parse seed project" in {
-    val seedSource = gitHubReader sourceFor seeds
+    val seedSource = ghs sourceFor seeds
     seedSource.findDirectory("src") shouldBe defined
     seedSource.totalFileCount should be > 5
 
@@ -154,20 +161,21 @@ class GitHubArtifactSourceReaderTest extends FlatSpec with Matchers {
   }
 
   it should "not find non-existent sha" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
     an[ArtifactSourceException] should be thrownBy
-      (gitHubReader treeFor GitHubShaIdentifier(TestTargetRepo, TestOrg, "strongMenAlsoCry"))
+      (ghs treeFor GitHubShaIdentifier(newTempRepo.getName, newTempRepo.getOwnerName, "strongMenAlsoCry"))
   }
 
   it should "find existing sha" in { // Slow
     val as = self
     val withSha = as.id.asInstanceOf[GitHubArtifactSourceIdentifier]
-    val sourceFromTree = gitHubReader treeFor withSha
+    val sourceFromTree = ghs treeFor withSha
     sourceFromTree.totalFileCount shouldEqual as.totalFileCount
   }
 
   it should "read from large repository" in {
     val cloudRepoId = SimpleCloudRepoId(owner = "spring-projects", repo = "spring-framework")
-    val as = gitHubReader sourceFor GitHubArtifactSourceLocator(cloudRepoId)
+    val as = ghs sourceFor GitHubArtifactSourceLocator(cloudRepoId)
     as.totalFileCount should be > 1000
   }
 }

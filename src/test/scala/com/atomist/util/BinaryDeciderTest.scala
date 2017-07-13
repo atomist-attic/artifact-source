@@ -29,5 +29,5 @@ class BinaryDeciderTest
   }
 
   private def getContent(path: String): Array[Byte] =
-    withCloseable(getClass.getResourceAsStream(path))(IOUtils.toByteArray(_))
+    withCloseable(getClass.getResourceAsStream(path))(IOUtils.toByteArray)
 }

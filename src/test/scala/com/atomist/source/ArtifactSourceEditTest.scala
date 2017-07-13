@@ -6,10 +6,10 @@ class ArtifactSourceEditTest extends FlatSpec with Matchers {
 
   val f1 = StringFileArtifact("Name.java", "my/new/path", "contents")
   val f2 = StringFileArtifact("Name2.scala", "my/other", "contents")
-  val test1 = EmptyArtifactSource() + Seq(f1, f2)
+  val test1: ArtifactSource = EmptyArtifactSource() + Seq(f1, f2)
 
   "ArtifactSource edit" should "make no change when no edits apply" in {
-    val nopEditor = SimpleFileEditor(p => false, f => f)
+    val nopEditor = SimpleFileEditor(_ => false, f => f)
     val edited = test1 ✎ nopEditor
     edited should be theSameInstanceAs test1
   }

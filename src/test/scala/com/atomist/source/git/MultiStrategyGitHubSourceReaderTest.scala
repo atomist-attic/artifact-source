@@ -8,7 +8,7 @@ class MultiStrategyGitHubSourceReaderTest extends FlatSpec with Matchers {
   private val gitHubLocatorThatWontBeFoundOnGitHub = GitHubArtifactSourceLocator.fromStrings("owner", "repository")
 
   "MultiStrategyGitHubSourceReader" should "always fail with no readers" in {
-    val msg = new MultiStrategyGitHubSourceReader(Seq())
+    val msg = new MultiStrategyGitHubSourceReader(Seq.empty)
     an[ArtifactSourceAccessException] should be thrownBy msg.sourceFor(gitHubLocatorThatWontBeFoundOnGitHub)
   }
 
@@ -50,5 +50,4 @@ class MultiStrategyGitHubSourceReaderTest extends FlatSpec with Matchers {
       EmptyArtifactSource(id)
     }
   }
-
 }

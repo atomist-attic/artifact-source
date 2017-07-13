@@ -23,9 +23,13 @@ abstract class GitHubMutatorTest(val oAuthToken: String, val apiUrl: String = Gi
 
   protected def placeholderFilename(testName: String) = s"${testName}_${System.currentTimeMillis}.txt"
 
-  protected val TestFileContents = "The quick brown fox jumped over the lazy dog"
-  protected val TestFileContents2 = "There is nothing as sure as change"
   protected val ghs = GitHubServices(oAuthToken, apiUrl)
+  protected val testFileContents = "The quick brown fox jumped over the lazy dog"
+  protected val testFiles: Seq[FileArtifact] = Seq(
+    StringFileArtifact("somethingOrOther.txt", testFileContents),
+    StringFileArtifact("scripts2/other.txt", "This file isn't in the root"),
+    StringFileArtifact("another2/directory/tree/extra.txt", "Nested file")
+  )
 
   override protected def afterAll(): Unit = cleanUp()
 
@@ -33,7 +37,7 @@ abstract class GitHubMutatorTest(val oAuthToken: String, val apiUrl: String = Gi
     * Return a temporary repository callers can use.
     */
   def newTemporaryRepo(autoInit: Boolean = false): GHRepository =
-    ghs.createRepository(getRepoName, TestOrg, "temporary test repository", privateFlag = true, autoInit = autoInit)
+    ghs createRepository(getRepoName, TestOrg, "temporary test repository", privateFlag = true, autoInit = autoInit)
 
   /**
     * Most callers will want a repository with something in it. Otherwise there isn't even a default branch,
