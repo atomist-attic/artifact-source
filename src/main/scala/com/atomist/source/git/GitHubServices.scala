@@ -168,6 +168,17 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
     }
 
   @throws[ArtifactSourceUpdateException]
+  def createPullRequest(repo: String,
+                        owner: String,
+                        prr: PullRequestRequest,
+                        message: String): PullRequestStatus =
+    Http(s"${getPath(repo, owner)}/pulls").postData(toJson(prr))
+      .headers(headers)
+      .execute(fromJson[PullRequestStatus])
+      .throwError
+      .body
+
+  @throws[ArtifactSourceUpdateException]
   def createReviewComment(repo: String,
                           owner: String,
                           number: Int,
@@ -302,7 +313,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
                        message: String,
                        mergeMethod: String = "squash"): Option[PullRequestMerged] = {
     val prmr = PullRequestMergeRequest(title, message, mergeMethod)
-    logger.debug(prmr.toString)
+    logger.info(prmr.toString)
     Try {
       Http(s"${getPath(repo, owner)}/pulls/$number/merge").postData(toJson(prmr))
         .method("PUT")

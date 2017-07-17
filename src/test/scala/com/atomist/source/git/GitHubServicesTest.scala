@@ -149,6 +149,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val repo = newTempRepo.getName
     val owner = newTempRepo.getOwnerName
 
+    val start = System.currentTimeMillis()
     val grc = GitRepositoryCloner(Token)
     val cloned = grc clone(repo, owner)
     cloned shouldBe defined
@@ -184,6 +185,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val merged = ghs mergePullRequest(repo, owner, pr1.number, pr1.title, "Merged PR")
     merged shouldBe defined
     merged.get.merged shouldBe true
+    println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
 
     val newAs = ghs sourceFor GitHubArtifactSourceLocator.rootOfMaster(repo, owner)
     val f1 = newAs.findFile(path1)
