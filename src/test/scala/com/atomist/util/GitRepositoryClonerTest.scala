@@ -5,7 +5,7 @@ import java.nio.file.Paths
 
 import com.atomist.source.git.TestConstants.Token
 import com.atomist.source.git.{GitHubArtifactSourceLocator, GitHubMutatorTest, GitHubSourceUpdateInfo}
-import com.atomist.source.{FileArtifact, SimpleCloudRepoId, StringFileArtifact}
+import com.atomist.source.{SimpleCloudRepoId, StringFileArtifact}
 import org.apache.commons.io.FileUtils
 
 class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
@@ -16,6 +16,12 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
 
   it should "clone remote repo to specified directory" in {
     val repoDir = createRepoDir
+    cloneAndVerify(None, None, Some(repoDir))
+  }
+
+  it should "clone remote repo to specified directory and clone again to same directory" in {
+    val repoDir = createRepoDir
+    cloneAndVerify(None, None, Some(repoDir))
     cloneAndVerify(None, None, Some(repoDir))
   }
 
@@ -94,12 +100,12 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
 
   private def cloneAndVerify(branch: Option[String] = None, sha: Option[String] = None, dir: Option[File] = None): Unit = {
     val grc = GitRepositoryCloner()
-    // val start = System.currentTimeMillis
+    val start = System.currentTimeMillis
     val cloned = grc.clone("rug", "atomist", branch, sha, dir)
     val repoDir = cloned.get
     val size = FileUtils.sizeOf(repoDir)
     size should be > 0L
-    // println(s"Cloning: ${System.currentTimeMillis - start} ms")
+    println(s"Cloning: ${System.currentTimeMillis - start} ms")
     grc.cleanUp(repoDir)
   }
 }

@@ -8,6 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 
 import scala.sys.process._
+import scala.util.{Failure, Success, Try}
 
 object GitHubHome {
 
@@ -27,17 +28,19 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
             sha: Option[String] = None,
             dir: Option[File] = None,
             depth: Int = Depth): Option[File] = {
+    val start = System.currentTimeMillis
     val repoStr = s"$owner/$repo"
     try {
-      val br = branch.map(b => if (b == "master") "" else s"-b $b").getOrElse("")
+      val br = branch.map(b => if (b == "master") "" else s" -b $b").getOrElse("")
       val repoDir = createRepoDirectory(repo, owner, dir)
-      val cloneCmd = s"git clone $br --depth $depth --single-branch $getUrl/$repoStr.git ${repoDir.getPath}"
+      val cloneCmd = s"git clone$br --depth $depth --single-branch $getUrl/$repoStr.git ${repoDir.getPath}"
       logger.info(s"Executing command $cloneCmd")
       cloneCmd !! outLogger
       sha.map(s => {
         logger.info(s"Commit sha '$s' specified so attempting to reset")
         resetToSha(s, repoDir, repoStr)
       })
+      logger.info(s"Time to clone repo = ${System.currentTimeMillis - start} ms")
       Some(repoDir)
     } catch {
       case e: Exception =>
@@ -51,15 +54,15 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
   def resetDirectoryContent(dir: File): Unit = FileUtils.cleanDirectory(dir)
 
   private def createRepoDirectory(repo: String, owner: String, dir: Option[File]): File =
-    dir.map(file => {
-      try {
-        Files.createDirectory(file.toPath).toFile
-      } catch {
-        case _: FileAlreadyExistsException =>
+    dir.map(file =>
+      Try(Files.createDirectory(file.toPath)) match {
+        case Success(path) => path.toFile
+        case Failure(e: FileAlreadyExistsException) =>
+          logger.warn(s"Directory ${file.getPath} already exists, resetting directory content: ${e.getMessage}")
           resetDirectoryContent(file)
           file
-      }
-    }).getOrElse(Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile)
+        case Failure(t: Throwable) => throw new IllegalArgumentException(t)
+      }).getOrElse(Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile)
 
   private def resetToSha(sha: String, repoDir: File, repoStr: String) = {
     val resetProcess = Process(s"git reset --hard $sha", repoDir)
