@@ -20,8 +20,6 @@ object JsonUtils {
 
   def toJsonStr(value: Any): String = Mapper.writeValueAsString(value)
 
-  def toJson(ref: Option[AnyRef]): Option[String] = ref.map(toJsonStr)
-
   def toJson(value: Any): Array[Byte] = Mapper.writeValueAsBytes(value)
 
   def toWrappedJson(value: Any): String = Wrapper.writeValueAsString(value)
