@@ -28,15 +28,13 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
   it should "clone remote repo to specified directory, reset directory content, and clone again" in {
     val grc = GitRepositoryCloner()
     val cloned = grc.clone("rug", "atomist")
-    cloned shouldBe defined
-    val repoDir = cloned.get
+    val repoDir = cloned
     val size = FileUtils.sizeOf(repoDir)
     size should be > 0L
     grc.resetDirectoryContent(repoDir)
     FileUtils.sizeOf(repoDir) shouldEqual 0L
-    val recloned = grc.clone("rug", "atomist", None, None, cloned)
-    recloned shouldBe defined
-    FileUtils.sizeOf(recloned.get) shouldEqual size
+    val recloned = grc.clone("rug", "atomist", None, None, Some(cloned))
+    FileUtils.sizeOf(recloned) shouldEqual size
     grc.cleanUp(repoDir)
   }
 
@@ -49,8 +47,7 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     val grc = GitRepositoryCloner()
     // val start = System.currentTimeMillis
     val cloned = grc.clone("artifact-source", "atomist", None, Some("4983a4822e885ee3e1d917d9b1d980bedef349c1"), Some(repoDir))
-    cloned shouldBe defined
-    FileUtils.sizeOf(cloned.get) should be > 0L
+    FileUtils.sizeOf(cloned) should be > 0L
     // println(s"Cloning: ${System.currentTimeMillis - start} ms")
   }
 
@@ -72,16 +69,14 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     val grc = GitRepositoryCloner(Token)
     // val start = System.currentTimeMillis
     val cloned = grc.clone(repo, owner, None, Some(sha), Some(repoDir), 1)
-    cloned shouldBe defined
-    FileUtils.sizeOf(cloned.get) should be > 0L
+    FileUtils.sizeOf(cloned) should be > 0L
     // println(s"Cloning: ${System.currentTimeMillis - start} ms")
   }
 
   it should "clone remote repo and verify file contents" in {
     val grc = GitRepositoryCloner()
     val cloned = grc.clone("artifact-source", "atomist")
-    cloned shouldBe defined
-    val repoDir = cloned.get
+    val repoDir = cloned
     val f = Paths.get(repoDir.getPath, "src", "test", "resources", "springboot1.zip").toFile
     val content = FileUtils.readFileToByteArray(f)
     BinaryDecider.isBinaryContent(content) shouldBe true
@@ -89,7 +84,7 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
 
   it should "fail to clone repo due to malformed git url" in {
     val grc = GitRepositoryCloner("", "foo://github.com")
-    grc.clone("rug", "atomist") shouldBe empty
+    val repoDir = grc.clone("rug", "atomist")
   }
 
   private def createRepoDir = {
@@ -102,10 +97,9 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     val grc = GitRepositoryCloner()
     val start = System.currentTimeMillis
     val cloned = grc.clone("rug", "atomist", branch, sha, dir)
-    val repoDir = cloned.get
-    val size = FileUtils.sizeOf(repoDir)
+    val size = FileUtils.sizeOf(cloned)
     size should be > 0L
     println(s"Cloning: ${System.currentTimeMillis - start} ms")
-    grc.cleanUp(repoDir)
+    grc.cleanUp(cloned)
   }
 }

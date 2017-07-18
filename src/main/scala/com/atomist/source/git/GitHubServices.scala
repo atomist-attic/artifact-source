@@ -313,7 +313,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
                        message: String,
                        mergeMethod: String = "squash"): Option[PullRequestMerged] = {
     val prmr = PullRequestMergeRequest(title, message, mergeMethod)
-    logger.info(prmr.toString)
+    logger.debug(prmr.toString)
     Try {
       Http(s"${getPath(repo, owner)}/pulls/$number/merge").postData(toJson(prmr))
         .method("PUT")
