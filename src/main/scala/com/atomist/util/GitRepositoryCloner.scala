@@ -70,7 +70,7 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
     val rc = resetProcess ! outLogger
     if (rc != 0) {
       logger.warn(s"Failed to reset to sha $sha. Attempting to fetch entire repo")
-      Process("git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*", repoDir) #&&
+      Process("git remote set-branches origin '*'", repoDir) #&&
         Process("git fetch --unshallow", repoDir) !! outLogger
       logger.info(s"Successfully fetched entire repo. Attempting to reset to sha $sha")
       val rc2 = resetProcess ! outLogger
