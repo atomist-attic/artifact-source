@@ -8,12 +8,6 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 
 import scala.sys.process._
-import scala.util.{Failure, Success, Try}
-
-object GitHubHome {
-
-  val Url = "https://github.com"
-}
 
 case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitHubHome.Url)
   extends LazyLogging {
@@ -27,25 +21,18 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
             branch: Option[String] = None,
             sha: Option[String] = None,
             dir: Option[File] = None,
-            depth: Int = Depth): Option[File] = {
-    val start = System.currentTimeMillis
+            depth: Int = Depth): File = {
     val repoStr = s"$owner/$repo"
     try {
       val br = branch.map(b => if (b == "master") "" else s" -b $b").getOrElse("")
       val repoDir = createRepoDirectory(repo, owner, dir)
       val cloneCmd = s"git clone$br --depth $depth --single-branch $getUrl/$repoStr.git ${repoDir.getPath}"
-      logger.info(s"Executing command $cloneCmd")
+      logger.debug(s"Executing command $cloneCmd")
       cloneCmd !! outLogger
-      sha.map(s => {
-        logger.info(s"Commit sha '$s' specified so attempting to reset")
-        resetToSha(s, repoDir, repoStr)
-      })
-      logger.info(s"Time to clone repo = ${System.currentTimeMillis - start} ms")
-      Some(repoDir)
+      sha.map(resetToSha(_, repoDir, repoStr))
+      repoDir
     } catch {
-      case e: Exception =>
-        logger.error(s"Failed to clone '$repoStr'", e)
-        None
+      case e: Exception => throw new IllegalArgumentException(s"Failed to clone $repoStr", e)
     }
   }
 
@@ -55,16 +42,17 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
 
   private def createRepoDirectory(repo: String, owner: String, dir: Option[File]): File =
     dir.map(file =>
-      Try(Files.createDirectory(file.toPath)) match {
-        case Success(path) => path.toFile
-        case Failure(e: FileAlreadyExistsException) =>
+      try {
+        Files.createDirectory(file.toPath).toFile
+      } catch {
+        case e: FileAlreadyExistsException =>
           logger.warn(s"Directory ${file.getPath} already exists, resetting directory content: ${e.getMessage}")
           resetDirectoryContent(file)
           file
-        case Failure(t: Throwable) => throw new IllegalArgumentException(t)
       }).getOrElse(Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile)
 
   private def resetToSha(sha: String, repoDir: File, repoStr: String) = {
+    logger.warn(s"Commit sha $sha specified so attempting to reset")
     val resetProcess = Process(s"git reset --hard $sha", repoDir)
 
     val rc = resetProcess ! outLogger
@@ -72,7 +60,7 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
       logger.warn(s"Failed to reset to sha $sha. Attempting to fetch entire repo")
       Process("git remote set-branches origin '*'", repoDir) #&&
         Process("git fetch --unshallow", repoDir) !! outLogger
-      logger.info(s"Successfully fetched entire repo. Attempting to reset to sha $sha")
+      logger.debug(s"Successfully fetched entire repo. Attempting to reset to sha $sha")
       val rc2 = resetProcess ! outLogger
       if (rc2 != 0) {
         logger.warn(s"Failed to reset to sha $sha. Attempting to fetch repo without --unshallow")

@@ -5,67 +5,71 @@ import com.atomist.source.file.NamedFileSystemArtifactSourceIdentifier
 import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.GitHubServices.PullRequestRequest
 import com.atomist.source.git.TestConstants.Token
+import com.atomist.util.GitRepositoryCloner
+import org.kohsuke.github.GHRepository
 
 class GitServicesTest extends GitHubMutatorTest(Token) {
 
-  private val (repo, owner) = ("github-service", "atomisthq")
+  private val grc = GitRepositoryCloner(Token)
+  private val gs = GitServices(Token)
 
-  "GitServices" should "clone remote repo" in {
-    val gs = GitServices(Token)
-    val start = System.currentTimeMillis()
-    val repository = gs.clone(repo, owner)
-    println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
-    repository should not be null
-  }
-
-  it should "clone remote repo with git command" in {
-    val gs = GitServices(Token)
-    val start = System.currentTimeMillis()
-    gs.cloneCmd(repo, owner)
-    println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
-  }
-
-  it should "delete files with valid path in multi file commit" in {
+  "GitServices" should "clone repo, update, delete files, and create a pull request from deltas" in {
     val newTempRepo = newPopulatedTemporaryRepo()
-    newTempRepo.createContent("some text".getBytes, "new file 1", "src/test.txt", MasterBranch)
-    newTempRepo.createContent("some other text".getBytes, "new file 2", "src/test2.txt", MasterBranch)
+    createContent(newTempRepo)
+
     val newBranchName = "add-multi-files-branch"
+    populateAndVerify(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName)
+  }
+
+  it should "clone repo, add, update, delete files, and create a pull request from deltas" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    createContent(newTempRepo)
+
+    val newBranchName = "add-multi-files-branch"
+
     ghs.createBranch(newTempRepo, newBranchName, MasterBranch)
     newTempRepo.createContent("alan stewart".getBytes, "new file 3", "alan.txt", newBranchName)
 
-    val start = System.currentTimeMillis
+    populateAndVerify(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName)
+  }
+
+  private def createContent(newTempRepo: GHRepository) = {
+    newTempRepo.createContent("some text".getBytes, "new file 1", "src/test.txt", MasterBranch)
+    newTempRepo.createContent("some other text".getBytes, "new file 2", "src/test2.txt", MasterBranch)
+  }
+
+  private def populateAndVerify(repo: String, ownwer: String, newBranchName: String) = {
+    val cri = SimpleCloudRepoId(repo, ownwer)
+    val master = GitHubArtifactSourceLocator(cri, branch = MasterBranch)
+    val startAs = ghs sourceFor master
+
+    val path = "test.json"
+    val newFile = StringFileArtifact(path, "test content")
+    val as = startAs + newFile + StringFileArtifact("test2.json", "test content 2")
+    val newContent = "new content"
+    val stringEditor = SimpleFileEditor(_.name == path, f => StringFileArtifact(f.path, newContent))
+    val edited = as ✎ stringEditor
+    edited should not be theSameInstanceAs(as)
+    edited.findFile(path).get.content should equal(newContent)
+
+    val modifiedAs = edited delete "src/test.txt"
     val multiFileCommitMessage = s"multi file commit at ${System.currentTimeMillis}"
 
-    val gs = GitServices(Token)
-    gs.cloneCmd(newTempRepo.getName, newTempRepo.getOwnerName).map(f => {
-      val startAs = FileSystemGitArtifactSource(NamedFileSystemArtifactSourceIdentifier("foo", f))
+    val start = System.currentTimeMillis
+    gs.createBranchFromChanges(repo, ownwer, newBranchName, startAs, modifiedAs, multiFileCommitMessage)
+    println(s"Elapsed time to create branch from deltas = ${System.currentTimeMillis() - start} ms")
 
-      val path1 = "test.json"
-      val newFile1 = StringFileArtifact(path1, "test content")
-      val as = startAs + newFile1 + StringFileArtifact("test2.json", "test content 2")
-      val newContent = "new content"
-      val stringEditor = SimpleFileEditor(_.name == path1, f => StringFileArtifact(f.path, newContent))
-      val edited = as ✎ stringEditor
-      edited should not be theSameInstanceAs(as)
-      edited.findFile(path1).get.content should equal(newContent)
+    val prTitle = s"My pull request at ${System.currentTimeMillis}"
+    val prBody = "This is the body of my pull request"
+    val prr = PullRequestRequest(prTitle, newBranchName, MasterBranch, prBody)
+    val prs = ghs createPullRequest(repo, ownwer, prr, "Added files and deleted files")
 
-      val modifiedAs = edited delete "src/test.txt"
-      gs.createBranchFromChanges(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName, MasterBranch, startAs, modifiedAs, multiFileCommitMessage)
+    val merged = ghs mergePullRequest(repo, ownwer, prs.number, prs.title, "Merged PR")
+    merged shouldBe defined
 
-      val prTitle = s"My pull request at ${System.currentTimeMillis}"
-      val prBody = "This is the body of my pull request"
-      val prr = PullRequestRequest(prTitle, newBranchName, MasterBranch, prBody)
-      val prs = ghs createPullRequest(newTempRepo.getName, newTempRepo.getOwnerName, prr, "Added files and deleted files")
-
-      val merged = ghs mergePullRequest(newTempRepo.getName, newTempRepo.getOwnerName, prs.number, prs.title, "Merged PR")
-      merged shouldBe defined
-      println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
-
-      val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
-      val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
-      tghas.findFile("src/test.txt") shouldBe empty
-      tghas.findFile("test.json").map(_.content shouldEqual newContent)
-        .getOrElse(fail("expected test.json but not found"))
-    }).getOrElse(fail("Failed to clone repo"))
+    val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
+    tghas.findFile("src/test.txt") shouldBe empty
+    tghas.findFile("test.json").map(_.content shouldEqual newContent)
+      .getOrElse(fail("expected test.json but not found"))
   }
 }

@@ -6,11 +6,13 @@ import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.GitHubServices.PullRequestRequest
 import com.atomist.source.git.TestConstants._
 import com.atomist.util.GitRepositoryCloner
-import org.kohsuke.github.GHIssueState
+import org.kohsuke.github.{GHIssueState, GHRepository}
 
 import scala.collection.JavaConverters._
 
 class GitHubServicesTest extends GitHubMutatorTest(Token) {
+
+  private val grc = GitRepositoryCloner(Token)
 
   "GitHubServices" should "find valid organization" in {
     ghs getOrganization TestOrg shouldBe defined
@@ -144,17 +146,15 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     endAs.allFiles.size shouldBe 4
   }
 
-  it should "clone a remote repository, create and edit a new file, and create a pull request" in {
+  it should "clone remote repository, create and edit a new file, and create a pull request" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.getName
     val owner = newTempRepo.getOwnerName
 
     val start = System.currentTimeMillis()
-    val grc = GitRepositoryCloner(Token)
     val cloned = grc clone(repo, owner)
-    cloned shouldBe defined
 
-    val id = NamedFileSystemArtifactSourceIdentifier(repo, cloned.get)
+    val id = NamedFileSystemArtifactSourceIdentifier(repo, cloned)
     val startAs = FileSystemGitArtifactSource(id)
 
     val path1 = "test.json"
@@ -193,6 +193,31 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     f1.get.content shouldEqual newContent1
   }
 
+  it should "clone repo, update, delete files, and create a pull request from deltas" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    createContent(newTempRepo)
+
+    val newBranchName = "add-multi-files-branch"
+    populateAndVerify(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName)
+  }
+
+  it should "create repo, add, update, delete files, and create a pull request from deltas" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    createContent(newTempRepo)
+
+    val newBranchName = "add-multi-files-branch"
+
+    ghs.createBranch(newTempRepo, newBranchName, MasterBranch)
+    newTempRepo.createContent("alan stewart".getBytes, "new file 3", "alan.txt", newBranchName)
+
+    populateAndVerify(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName)
+  }
+
+  private def createContent(newTempRepo: GHRepository) = {
+    newTempRepo.createContent("some text".getBytes, "new file 1", "src/test.txt", MasterBranch)
+    newTempRepo.createContent("some other text".getBytes, "new file 2", "src/test2.txt", MasterBranch)
+  }
+
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {
     val files: Seq[FileArtifact] = Seq(
       StringFileArtifact(placeholderFilename("tempFile1"), testFileContents),
@@ -203,5 +228,40 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val fileArtifacts = ghs commitFiles(GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files, Seq.empty)
     fileArtifacts.isEmpty shouldBe false
     fileArtifacts
+  }
+
+  private def populateAndVerify(repo: String, ownwer: String, newBranchName: String) = {
+    val cri = SimpleCloudRepoId(repo, ownwer)
+    val master = GitHubArtifactSourceLocator(cri, branch = MasterBranch)
+    val startAs = ghs sourceFor master
+
+    val path = "test.json"
+    val newFile = StringFileArtifact(path, "test content")
+    val as = startAs + newFile + StringFileArtifact("test2.json", "test content 2")
+    val newContent = "new content"
+    val stringEditor = SimpleFileEditor(_.name == path, f => StringFileArtifact(f.path, newContent))
+    val edited = as ✎ stringEditor
+    edited should not be theSameInstanceAs(as)
+    edited.findFile(path).get.content should equal(newContent)
+
+    val modifiedAs = edited delete "src/test.txt"
+    val multiFileCommitMessage = s"multi file commit at ${System.currentTimeMillis}"
+
+    val start = System.currentTimeMillis
+    ghs.createBranchFromChanges(repo, ownwer, newBranchName, newBranchName, startAs, modifiedAs, multiFileCommitMessage)
+    println(s"Elapsed time to create branch from deltas = ${System.currentTimeMillis() - start} ms")
+
+    val prTitle = s"My pull request at ${System.currentTimeMillis}"
+    val prBody = "This is the body of my pull request"
+    val prr = PullRequestRequest(prTitle, newBranchName, MasterBranch, prBody)
+    val prs = ghs createPullRequest(repo, ownwer, prr, "Added files and deleted files")
+
+    val merged = ghs mergePullRequest(repo, ownwer, prs.number, prs.title, "Merged PR")
+    merged shouldBe defined
+
+    val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
+    tghas.findFile("src/test.txt") shouldBe empty
+    tghas.findFile("test.json").map(_.content shouldEqual newContent)
+      .getOrElse(fail("expected test.json but not found"))
   }
 }

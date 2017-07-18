@@ -49,9 +49,8 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
   it should "clone a remote repository, push contents to a new repository, and verify contents" in {
     val grc = GitRepositoryCloner(Token)
     val cloned = grc.clone("spring-rest-seed", "atomist-seeds")
-    cloned shouldBe defined
     val repo = "atomist-seeds/spring-rest-seed"
-    val id = NamedFileSystemArtifactSourceIdentifier(repo, cloned.get)
+    val id = NamedFileSystemArtifactSourceIdentifier(repo, cloned)
     val as = FileSystemGitArtifactSource(id)
 
     val newTempRepo = newPopulatedTemporaryRepo()
@@ -59,8 +58,7 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
     gitHubWriter.write(as, GitHubSourceUpdateInfo(GitHubArtifactSourceLocator(cri), "new project from seed"))
 
     val clonedSeed = grc.clone(cri.repo, cri.owner)
-    clonedSeed shouldBe defined
-    val clonedAs = FileSystemGitArtifactSource( NamedFileSystemArtifactSourceIdentifier(repo, clonedSeed.get))
+    val clonedAs = FileSystemGitArtifactSource( NamedFileSystemArtifactSourceIdentifier(repo, clonedSeed))
     val cmdFile = clonedAs.findFile("mvnw.cmd")
     cmdFile shouldBe defined
     BinaryDecider.isBinaryContent(cmdFile.get.content) shouldBe false
