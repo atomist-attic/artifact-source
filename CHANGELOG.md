@@ -5,11 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.0.0-m.13] - 2017-07-12
+## [1.0.0-m.13] - 2017-07-18
 
 ### Fixed
 
 -   Fixed issue where multiple blobs were created for the same file
+
+### Changed
+
+-   Removed ambiguous `toJson` method with an Option as parameter in `JsonUtils`
 
 ## [1.0.0-m.12] - 2017-07-11
 
