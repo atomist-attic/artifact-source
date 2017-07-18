@@ -25,7 +25,7 @@ class GitServicesTest extends GitHubMutatorTest(Token) {
     println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
   }
 
-  it should "delete files with valid path in multi file commit" in pendingUntilFixed {
+  it should "delete files with valid path in multi file commit" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     newTempRepo.createContent("some text".getBytes, "new file 1", "src/test.txt", MasterBranch)
     newTempRepo.createContent("some other text".getBytes, "new file 2", "src/test2.txt", MasterBranch)
@@ -57,15 +57,15 @@ class GitServicesTest extends GitHubMutatorTest(Token) {
       val prr = PullRequestRequest(prTitle, newBranchName, MasterBranch, prBody)
       val prs = ghs createPullRequest(newTempRepo.getName, newTempRepo.getOwnerName, prr, "Added files and deleted files")
 
-      println("**** PR number = " + prs.number)
-
       val merged = ghs mergePullRequest(newTempRepo.getName, newTempRepo.getOwnerName, prs.number, prs.title, "Merged PR")
       merged shouldBe defined
+      println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
 
       val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
       val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
-      val files = tghas.findFile("src/test.txt") shouldBe empty
-    })
-    println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
+      tghas.findFile("src/test.txt") shouldBe empty
+      tghas.findFile("test.json").map(_.content shouldEqual newContent)
+        .getOrElse(fail("expected test.json but not found"))
+    }).getOrElse(fail("Failed to clone repo"))
   }
 }
