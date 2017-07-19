@@ -26,7 +26,7 @@ class GitServicesTest extends GitHubMutatorTest(Token) {
 
     val newBranchName = "add-multi-files-branch"
 
-    ghs.createBranch(newTempRepo, newBranchName, MasterBranch)
+    ghs.createBranch(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName, MasterBranch)
     newTempRepo.createContent("alan stewart".getBytes, "new file 3", "alan.txt", newBranchName)
 
     populateAndVerify(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName)

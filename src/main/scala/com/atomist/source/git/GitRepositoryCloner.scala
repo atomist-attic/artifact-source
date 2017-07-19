@@ -25,10 +25,10 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
             depth: Int = Depth): Either[Throwable, File] =
     try {
       val repoDir = createRepoDirectory(repo, owner, dir)
-      branch.collect {
+      val br = branch.collect {
+        case b if b != "master" => s" -b $b"
+      }.getOrElse("")
 
-      }
-      val br = branch.map(b => if (b == "master") "" else s" -b $b").getOrElse("")
       s"git clone$br --depth $depth --single-branch $getUrl/$owner/$repo.git ${repoDir.getPath}" !! outLogger
       sha.map(resetToSha(_, repoDir))
       Right(repoDir)
