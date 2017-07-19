@@ -2,17 +2,14 @@ package com.atomist.source.git.github
 
 import java.io.InputStream
 import java.nio.charset.Charset
-import java.util.{List => JList}
 
 import com.atomist.source.git.github.GitHubConstants.ApiUrl
 import com.atomist.source.git.github.domain._
 import com.atomist.source.{ArtifactSourceException, ArtifactSourceUpdateException, FileArtifact, _}
 import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.util.Octal.intToOctal
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.IOUtils
-import org.apache.commons.lang3.StringUtils
 import org.kohsuke.github.{GHRepository, GitHub, _}
 import resource._
 
@@ -22,8 +19,6 @@ import scalaj.http.{Base64, Http}
 case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   extends GitHubSourceReader
     with LazyLogging {
-
-  import GitHubServices._
 
   lazy val gitHub: GitHub = apiUrl.collect {
     case url if url != ApiUrl => GitHub.connectToEnterprise(url, oAuthToken)
@@ -176,7 +171,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                                    current: ArtifactSource,
                                    message: String): Option[PullRequestStatus] = {
     createBranchFromChanges(repo, owner, prr.head, prr.base, old, current, message)
-    Option(Http(s"${getPath(repo, owner)}/pulls").postData(toJson(prr))
+    Option(Http(s"$ApiUrl/repos/$owner/$repo/pulls").postData(toJson(prr))
       .headers(headers)
       .execute(fromJson[PullRequestStatus])
       .throwError
@@ -188,7 +183,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                         owner: String,
                         prr: PullRequestRequest,
                         message: String): PullRequestStatus =
-    Http(s"${getPath(repo, owner)}/pulls").postData(toJson(prr))
+    Http(s"$ApiUrl/repos/$owner/$repo/pulls").postData(toJson(prr))
       .headers(headers)
       .execute(fromJson[PullRequestStatus])
       .throwError
@@ -212,7 +207,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     val crc = CreateReviewComment(body, commitId, path, position)
     logger.debug(crc.toString)
     Try {
-      Http(s"${getPath(repo, owner)}/pulls/$number/comments").postData(toJson(crc))
+      Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/comments").postData(toJson(crc))
         .headers(headers)
         .execute(fromJson[ReviewComment])
         .throwError
@@ -261,7 +256,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         .toSeq
 
       val newOrUpdatedTreeEntries = fwbrs.map(fwbr => TreeEntry(fwbr.fa.path, intToOctal(fwbr.fa.mode), "blob", fwbr.ref.sha))
-      val allExistingTreeEntries = treeFor(GitHubShaIdentifier(repo, owner, baseTreeSha)).allFiles
+      val allExistingTreeEntries = treeFor(GitHubShaIdentifier(repo, owner, baseTreeSha))
+        .allFiles
         .map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
       val treeEntriesToDelete = filesToDelete.map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
 
@@ -304,7 +300,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
     val cf = CreateFile(fa.path, message, content, branch)
     Try {
-      val cfr = Http(s"${getPath(repo, owner)}/contents/${fa.path}").postData(toJson(cf))
+      val cfr = Http(s"$ApiUrl/repos/$owner/$repo/contents/${fa.path}").postData(toJson(cf))
         .method("PUT")
         .headers(headers)
         .execute(fromJson[CreateFileResponse])
@@ -327,7 +323,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     val prmr = PullRequestMergeRequest(title, message, mergeMethod)
     logger.debug(prmr.toString)
     Try {
-      Http(s"${getPath(repo, owner)}/pulls/$number/merge").postData(toJson(prmr))
+      Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/merge").postData(toJson(prmr))
         .method("PUT")
         .headers(headers)
         .execute(fromJson[PullRequestMerged])
@@ -342,7 +338,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   }
 
   def getCommits(repo: String, owner: String): Seq[String] =
-    Http(s"${getPath(repo, owner)}/git/refs")
+    Http(s"$ApiUrl/repos/$owner/$repo/git/refs")
       .headers(headers)
       .execute(fromJson[Seq[Reference]])
       .throwError
@@ -350,13 +346,13 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .filter(_.`object`.`type` == "commit")
       .map(_.`object`.sha)
 
-  private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): Ref = {
+  private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
     val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
     val cbr = CreateBlobRequest(content)
     logger.debug(s"$branch,${fa.path},$cbr")
-    Http(s"${getPath(repo, owner)}/git/blobs").postData(toJson(cbr))
+    Http(s"$ApiUrl/repos/$owner/$repo/git/blobs").postData(toJson(cbr))
       .headers(headers)
-      .execute(fromJson[Ref])
+      .execute(fromJson[GitHubRef])
       .throwError
       .body
   }
@@ -364,7 +360,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   private def createTree(repo: String, owner: String, treeEntries: Seq[TreeEntry]): Either[String, CreateTreeResponse] = {
     val ctr = CreateTreeRequest(treeEntries)
     logger.debug(ctr.toString)
-    Http(s"${getPath(repo, owner)}/git/trees").postData(toJson(ctr))
+    Http(s"$ApiUrl/repos/$owner/$repo/git/trees").postData(toJson(ctr))
       .headers(headers)
       .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
         case 201 => Right(fromJson[CreateTreeResponse](is))
@@ -379,7 +375,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                            parents: Seq[String]): CommitResponse = {
     val cr = CommitRequest(message, tree.sha, parents)
     logger.debug(cr.toString)
-    Http(s"${getPath(repo, owner)}/git/commits").postData(toJson(cr))
+    Http(s"$ApiUrl/repos/$owner/$repo/git/commits").postData(toJson(cr))
       .headers(headers)
       .execute(fromJson[CommitResponse])
       .throwError
@@ -389,47 +385,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   private def updateReference(repo: String, owner: String, ref: String, newSha: String): Unit = {
     val urr = UpdateReferenceRequest(newSha, force = true)
     logger.debug(urr.toString)
-    Http(s"${getPath(repo, owner)}/git/refs/$ref").postData(toJson(urr))
+    Http(s"$ApiUrl/repos/$owner/$repo/git/refs/$ref").postData(toJson(urr))
       .method("PATCH")
       .headers(headers)
       .asBytes
       .throwError
   }
-
-  private def getPath(repo: String, owner: String) =
-    s"$ApiUrl/repos/$owner/$repo"
-}
-
-object GitHubServices {
-
-  private case class FileWithBlobRef(fa: FileArtifact, ref: Ref)
-
-  private case class FileDeleteRequest(message: String, sha: String, branch: String)
-
-  private case class CommitRequest(message: String, tree: String, parents: Seq[String])
-
-  private case class CreateBlobRequest(content: String, encoding: String = "base64") {
-
-    override def toString = s"CreateBlobRequest(${StringUtils.abbreviate(content, 20)},$encoding)"
-  }
-
-  private case class CreateTreeRequest(tree: Seq[TreeEntry])
-
-  private case class TreeEntry(path: String, mode: String, `type`: String, sha: String)
-
-  private case class UpdateReferenceRequest(sha: String, force: Boolean)
-
-  private case class CreateReviewComment(body: String,
-                                         @JsonProperty("commit_id") commitId: String,
-                                         path: String,
-                                         position: Int)
-
-  private case class PullRequestMergeRequest(@JsonProperty("commit_title") title: String,
-                                             @JsonProperty("commit_message") message: String,
-                                             @JsonProperty("merge_method") mergeMethod: String)
-
-  case class Reference(ref: String, url: String, `object`: RefObject)
-
-  case class RefObject(`type`: String, url: String, sha: String)
-
 }
