@@ -3,8 +3,9 @@ package com.atomist.source
 import java.io.ByteArrayInputStream
 
 import com.atomist.source.FileArtifact._
-import com.atomist.util.Utils.{StringImprovements, withCloseable}
+import com.atomist.util.Utils.StringImprovements
 import org.apache.commons.io.IOUtils
+import resource._
 
 /**
   * Simple artifact class containing byte array content.
@@ -55,7 +56,7 @@ object ByteArrayFileArtifact {
   def apply(fa: FileArtifact): ByteArrayFileArtifact = fa match {
     case bafa: ByteArrayFileArtifact => bafa
     case fa: FileArtifact => new ByteArrayFileArtifact(name = fa.name, pathElements = fa.pathElements,
-      bytes = withCloseable(fa.inputStream())(is => IOUtils.toByteArray(is)), fa.mode, fa.uniqueId)
+      bytes = managed(fa.inputStream()).acquireAndGet(IOUtils.toByteArray), fa.mode, fa.uniqueId)
   }
 
   /**

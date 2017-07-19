@@ -1,6 +1,6 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
-import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
+import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 
 case class DefaultGitHubArtifactSourceLocator(repo: String,
                                               owner: String,

@@ -1,6 +1,8 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
 import com.atomist.source.CloudRepoId
+import com.atomist.source.git.GitArtifactSourceLocator
+import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 
 /**
   * Trait for objects that can locate GitHub repos.
@@ -17,8 +19,6 @@ trait GitHubArtifactSourceLocator extends GitArtifactSourceLocator with CloudRep
 }
 
 object GitHubArtifactSourceLocator {
-
-  val MasterBranch: String = "master"
 
   def apply(cri: CloudRepoId, branch: String = MasterBranch) =
     DefaultGitHubArtifactSourceLocator(cri.repo, cri.owner, "", branch)

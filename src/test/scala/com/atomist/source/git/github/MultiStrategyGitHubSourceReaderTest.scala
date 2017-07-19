@@ -1,4 +1,4 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
 import com.atomist.source.{ArtifactSource, ArtifactSourceAccessException, EmptyArtifactSource}
 import org.scalatest.{FlatSpec, Matchers}

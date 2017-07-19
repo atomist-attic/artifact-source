@@ -1,13 +1,14 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
 import java.io.{FileInputStream, FileOutputStream}
 import java.nio.file.Files
 
 import com.atomist.source._
 import com.atomist.source.file._
-import com.atomist.source.git.GitHubArtifactSourceLocator.{MasterBranch, fromStrings}
+import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants._
-import com.atomist.util.Utils._
+import com.atomist.source.git.github.GitHubArtifactSourceLocator.fromStrings
+import resource._
 
 class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
 
@@ -27,10 +28,10 @@ class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
 
     val f = Files.createTempFile("tmp", ".zip").toFile
     f.deleteOnExit()
-    withCloseable(new FileOutputStream(f))(fos => {
+    for (fos <- managed(new FileOutputStream(f))) {
       val zo = StreamingZipFileOutput("foobar", fos)
       zw.write(as, zo, SimpleSourceUpdateInfo(getClass.getName)) shouldBe true
-    })
+    }
 
     val zid = ZipFileInput(new FileInputStream(f))
     val zipSource = ZipFileArtifactSourceReader.fromZipSource(zid)

@@ -1,11 +1,11 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
 import com.atomist.source._
 import com.atomist.source.file.NamedFileSystemArtifactSourceIdentifier
-import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
+import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants._
 import com.atomist.source.git.github.domain.PullRequestRequest
-import com.atomist.util.GitRepositoryCloner
+import com.atomist.source.git.{FileSystemGitArtifactSource, GitRepositoryCloner}
 import org.kohsuke.github.{GHIssueState, GHRepository}
 
 import scala.collection.JavaConverters._

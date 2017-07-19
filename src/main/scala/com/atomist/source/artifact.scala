@@ -3,8 +3,9 @@ package com.atomist.source
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.charset.Charset
 
-import com.atomist.util.Utils.{StringImprovements, withCloseable}
+import com.atomist.util.Utils.StringImprovements
 import org.apache.commons.io.{FilenameUtils, IOUtils}
+import resource._
 
 /**
   * Represents a file or directory artifact.
@@ -123,7 +124,7 @@ object FileArtifact {
 trait StreamedFileArtifact extends FileArtifact {
 
   final override def content: String =
-    withCloseable(inputStream())(IOUtils.toString(_, Charset.defaultCharset()).toSystem)
+    managed(inputStream()).acquireAndGet(IOUtils.toString(_, Charset.defaultCharset()).toSystem)
 }
 
 trait NonStreamedFileArtifact extends FileArtifact {

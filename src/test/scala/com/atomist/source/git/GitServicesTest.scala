@@ -1,10 +1,10 @@
 package com.atomist.source.git
 
 import com.atomist.source._
-import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
+import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants.Token
 import com.atomist.source.git.github.domain.PullRequestRequest
-import com.atomist.util.GitRepositoryCloner
+import com.atomist.source.git.github.{GitHubArtifactSourceLocator, GitHubMutatorTest, TreeGitHubArtifactSource}
 import org.kohsuke.github.GHRepository
 
 class GitServicesTest extends GitHubMutatorTest(Token) {
