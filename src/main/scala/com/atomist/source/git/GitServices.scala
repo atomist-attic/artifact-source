@@ -26,7 +26,7 @@ case class GitServices(oAuthToken: String, remoteUrl: String = GitHubHome.Url)
                               branchName: String,
                               old: ArtifactSource,
                               current: ArtifactSource,
-                              message: String): Unit = {
+                              message: String): File = {
     grc.clone(repo, owner) match {
       case Right(repoDir) =>
         val git = Git.open(repoDir)
@@ -54,6 +54,8 @@ case class GitServices(oAuthToken: String, remoteUrl: String = GitHubHome.Url)
 
         git.commit.setMessage(message).call
         git.push.setCredentialsProvider(credentialsProvider).call
+
+        repoDir
       case Left(e) => throw new IllegalArgumentException(s"Failed to clone $owner/$repo", e)
     }
   }
