@@ -91,8 +91,8 @@ class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
     val newTempRepo = newPopulatedTemporaryRepo()
 
     val branch = "test_branch"
-    ghs createBranch(newTempRepo, branch, MasterBranch)
-    ghs commitFiles(newTempRepo, branch, "new files", testFiles, Seq.empty)
+    ghs createBranch(newTempRepo.getName, newTempRepo.getOwnerName, branch, MasterBranch)
+    ghs commitFiles(newTempRepo.getName, newTempRepo.getOwnerName, branch, "new files", testFiles, Seq.empty)
 
     val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
     val readMaster = ghs sourceFor GitHubArtifactSourceLocator(cri, MasterBranch)

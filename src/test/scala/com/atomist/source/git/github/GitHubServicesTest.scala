@@ -59,8 +59,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     before.allFiles should have size 1
 
     val newBranchName = "add-multi-files-branch"
-    val gHRef = ghs createBranch(newTempRepo, newBranchName, MasterBranch)
-    gHRef.getObject.getSha should not be empty
+    val gHRef = ghs createBranch(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName, MasterBranch)
+    gHRef.`object`.sha should not be empty
     val newBranchSource = GitHubArtifactSourceLocator(cri, newBranchName)
 
     val tempFiles = createTempFiles(newBranchSource)
@@ -69,7 +69,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val files = testFiles :+ StringFileArtifact("somethingOrOther.txt", testFileContents) // Duplicate
     val multiFileCommitMessage = s"multi file commit at ${System.currentTimeMillis}"
     val fileCommit2 = ghs commitFiles(
-      GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files.asJava, filesToDelete.asJava)
+      GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files, filesToDelete)
     fileCommit2.isEmpty shouldBe false
 
     val masterRead = ghs sourceFor master
@@ -209,7 +209,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val newBranchName = "add-multi-files-branch"
 
-    ghs.createBranch(newTempRepo, newBranchName, MasterBranch)
+    ghs.createBranch(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName, MasterBranch)
     newTempRepo.createContent("alan stewart".getBytes, "new file 3", "alan.txt", newBranchName)
 
     populateAndVerify(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName, newBranchName)
