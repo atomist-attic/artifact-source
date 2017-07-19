@@ -21,20 +21,18 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
             branch: Option[String] = None,
             sha: Option[String] = None,
             dir: Option[File] = None,
-            depth: Int = Depth): File = {
-    val repoStr = s"$owner/$repo"
+            depth: Int = Depth): Either[Throwable, File] =
     try {
       val br = branch.map(b => if (b == "master") "" else s" -b $b").getOrElse("")
       val repoDir = createRepoDirectory(repo, owner, dir)
-      val cloneCmd = s"git clone$br --depth $depth --single-branch $getUrl/$repoStr.git ${repoDir.getPath}"
+      val cloneCmd = s"git clone$br --depth $depth --single-branch $getUrl/$owner/$repo.git ${repoDir.getPath}"
       logger.debug(s"Executing command $cloneCmd")
       cloneCmd !! outLogger
-      sha.map(resetToSha(_, repoDir, repoStr))
-      repoDir
+      sha.map(resetToSha(_, repoDir))
+      Right(repoDir)
     } catch {
-      case e: Exception => throw new IllegalArgumentException(s"Failed to clone $repoStr", e)
+      case e: Exception => Left(e)
     }
-  }
 
   def cleanUp(dir: File): Unit = FileUtils.deleteQuietly(dir)
 
@@ -51,19 +49,18 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: String = GitH
           file
       }).getOrElse(Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile)
 
-  private def resetToSha(sha: String, repoDir: File, repoStr: String) = {
-    logger.warn(s"Commit sha $sha specified so attempting to reset")
+  private def resetToSha(sha: String, repoDir: File) = {
     val resetProcess = Process(s"git reset --hard $sha", repoDir)
-
     val rc = resetProcess ! outLogger
-    if (rc != 0) {
-      logger.warn(s"Failed to reset to sha $sha. Attempting to fetch entire repo")
-      Process("git remote set-branches origin '*'", repoDir) #&&
-        Process("git fetch --unshallow", repoDir) !! outLogger
-      logger.debug(s"Successfully fetched entire repo. Attempting to reset to sha $sha")
+    if (rc == 0)
+      logger.info(s"Successfully reset HEAD to $sha")
+    else {
+      logger.warn(s"Failed to reset HEAD to $sha. Attempting to fetch entire repo")
+      Process("git remote set-branches origin '*'", repoDir) #&& Process("git fetch --unshallow", repoDir) !! outLogger
+      logger.info(s"Successfully fetched entire repo. Attempting to reset HEAD to $sha")
       val rc2 = resetProcess ! outLogger
       if (rc2 != 0) {
-        logger.warn(s"Failed to reset to sha $sha. Attempting to fetch repo without --unshallow")
+        logger.warn(s"Failed to reset HEAD to $sha. Attempting to fetch repo without --unshallow")
         Process("git fetch", repoDir) #&& resetProcess !! outLogger
       }
     }

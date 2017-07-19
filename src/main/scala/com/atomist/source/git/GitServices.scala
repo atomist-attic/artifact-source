@@ -19,7 +19,7 @@ case class GitServices(oAuthToken: String, remoteUrl: String = GitHubHome.Url)
   extends LazyLogging {
 
   private val credentialsProvider = new UsernamePasswordCredentialsProvider(oAuthToken, "")
-  private lazy val grc = GitRepositoryCloner(oAuthToken, remoteUrl)
+  private val grc = GitRepositoryCloner(oAuthToken, remoteUrl)
 
   def createBranchFromChanges(repo: String,
                               owner: String,
@@ -27,57 +27,54 @@ case class GitServices(oAuthToken: String, remoteUrl: String = GitHubHome.Url)
                               old: ArtifactSource,
                               current: ArtifactSource,
                               message: String): Unit = {
-    val gitDir = grc.clone(repo, owner)
-    val git = Git.open(gitDir)
+    grc.clone(repo, owner) match {
+      case Right(repoDir) =>
+        val git = Git.open(repoDir)
 
-    val branchRef = s"refs/heads/$branchName"
-    val remoteBranchExists = git.lsRemote
-      .setHeads(true)
-      .setCredentialsProvider(credentialsProvider)
-      .call
-      .asScala
-      .map(_.getName)
-      .exists(_ == branchRef)
+        val branchRef = s"refs/heads/$branchName"
 
-    val localBranchExists = git.branchList
-      .setListMode(ListMode.ALL)
-      .call
-      .asScala
-      .exists(_.getName == branchRef)
+        val remoteRefs = git.lsRemote.setHeads(true).setCredentialsProvider(credentialsProvider).call
+        val remoteBranchExists = remoteRefs.asScala.map(_.getName).exists(_ == branchRef)
 
-    if (remoteBranchExists && !localBranchExists) {
-      git.fetch.setCredentialsProvider(credentialsProvider).setRefSpecs(new RefSpec(s"$branchRef:$branchRef")).call
-      git.checkout.setName(branchName).call
-    } else
-      git.checkout.setCreateBranch(!localBranchExists).setName(branchName).setForce(true).call
+        val localBranches = git.branchList.setListMode(ListMode.ALL).call
+        val localBranchExists = localBranches.asScala.exists(_.getName == branchRef)
 
-    val deltas = current deltaFrom old
-    val filesToDelete = processDeltas(gitDir, deltas)
-    git.add.addFilepattern(".").setUpdate(true).call
-    git.add.addFilepattern(".").call
-    filesToDelete.foreach(git.rm.addFilepattern(_).call)
+        if (remoteBranchExists && !localBranchExists) {
+          git.fetch.setCredentialsProvider(credentialsProvider).setRefSpecs(new RefSpec(s"$branchRef:$branchRef")).call
+          git.checkout.setName(branchName).call
+        } else
+          git.checkout.setCreateBranch(!localBranchExists).setName(branchName).setForce(true).call
 
-    git.commit.setMessage(message).call
-    git.push.setCredentialsProvider(credentialsProvider).call
+        val deltas = current deltaFrom old
+        val filesToDelete = processDeltas(repoDir, deltas)
+        filesToDelete.foreach(git.rm.addFilepattern(_).call)
+
+        git.add.addFilepattern(".").setUpdate(true).call
+        git.add.addFilepattern(".").call
+
+        git.commit.setMessage(message).call
+        git.push.setCredentialsProvider(credentialsProvider).call
+      case Left(e) => throw new IllegalArgumentException(s"Failed to clone $owner/$repo", e)
+    }
   }
 
-  private def processDeltas(gitDir: File, deltas: Deltas): Seq[String] = {
+  private def processDeltas(repoDir: File, deltas: Deltas): Seq[String] = {
     val filesToUpdate = deltas.deltas.collect {
       case fud: FileUpdateDelta => fud.updatedFile
     }
-    filesToUpdate.foreach(updateFile(gitDir, _))
+    filesToUpdate.foreach(updateFile(repoDir, _))
 
     deltas.deltas.collect {
       case fad: FileAdditionDelta if !filesToUpdate.exists(_.path == fad.path) => fad.newFile
-    }.foreach(createFile(gitDir, _))
+    }.foreach(createFile(repoDir, _))
 
     deltas.deltas.collect {
       case fdd: FileDeletionDelta => fdd.oldFile
     }.map(_.path)
   }
 
-  private def createFile(gitDir: File, fa: FileArtifact): Unit = {
-    val filePath = Paths.get(gitDir.getPath, fa.path)
+  private def createFile(repoDir: File, fa: FileArtifact): Unit = {
+    val filePath = Paths.get(repoDir.getPath, fa.path)
     val perms = fromMode(fa.mode)
     try {
       val fileAttributes = PosixFilePermissions.asFileAttribute(perms)
@@ -92,8 +89,8 @@ case class GitServices(oAuthToken: String, remoteUrl: String = GitHubHome.Url)
     }
   }
 
-  private def updateFile(gitDir: File, fa: FileArtifact): Unit = {
-    val filePath = Paths.get(gitDir.getPath, fa.path)
+  private def updateFile(repoDir: File, fa: FileArtifact): Unit = {
+    val filePath = Paths.get(repoDir.getPath, fa.path)
     FileUtils.copyInputStreamToFile(fa.inputStream(), filePath.toFile)
     val perms = fromMode(fa.mode)
     try {
