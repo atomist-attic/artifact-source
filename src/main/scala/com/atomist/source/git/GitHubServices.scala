@@ -2,9 +2,9 @@ package com.atomist.source.git
 
 import java.io.InputStream
 import java.nio.charset.Charset
-import java.time.OffsetDateTime
 import java.util.{List => JList}
 
+import com.atomist.source.git.github.domain._
 import com.atomist.source.{ArtifactSourceException, ArtifactSourceUpdateException, FileArtifact, _}
 import com.atomist.util.GitHubHome
 import com.atomist.util.JsonUtils.{fromJson, toJson}
@@ -338,13 +338,13 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
       .filter(_.`object`.`type` == "commit")
       .map(c => Commit(c.`object`.sha))
 
-  private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
+  private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): Ref = {
     val content = withCloseable(fa.inputStream())(is => new String(Base64.encode(IOUtils.toByteArray(is))))
     val cbr = CreateBlobRequest(content)
     logger.debug(s"$branch,${fa.path},$cbr")
     Http(s"${getPath(repo, owner)}/git/blobs").postData(toJson(cbr))
       .headers(headers)
-      .execute(fromJson[GitHubRef])
+      .execute(fromJson[Ref])
       .throwError
       .body
   }
@@ -390,83 +390,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
 
 object GitHubServices {
 
-  case class GitHubRef(url: String, sha: String)
 
-  case class FileDeleteResponse(commit: CommitResponse)
 
-  case class CommitResponse(sha: String, url: String, tree: GitHubRef, message: String, parents: Seq[GitHubRef])
-
-  case class CreateTreeResponse(sha: String, url: String, tree: Seq[TreeElement])
-
-  case class TreeElement(path: String, mode: String, `type`: String, size: Int, sha: String, url: String)
-
-  case class PullRequestRequest(title: String, head: String, base: String, body: String)
-
-  case class PullRequestStatus(id: Int,
-                               url: String,
-                               @JsonProperty("html_url") var htmlUrl: String,
-                               number: Int,
-                               title: String,
-                               body: String,
-                               @JsonProperty("created_at") createdAt: OffsetDateTime,
-                               @JsonProperty("updated_at") updatedAt: OffsetDateTime,
-                               @JsonProperty("merged_at") mergedAt: OffsetDateTime,
-                               @JsonProperty("closed_at") closedAt: OffsetDateTime,
-                               head: PullRequestBranch,
-                               base: PullRequestBranch,
-                               state: String,
-                               merged: Boolean,
-                               mergeable: Boolean,
-                               @JsonProperty("mergeable_state") mergeableState: String,
-                               comments: Int,
-                               @JsonProperty("review_comments") reviewComments: Int) {
-
-    import PullRequestStatus._
-
-    def isOpen: Boolean = OpenState == state
-  }
-
-  object PullRequestStatus {
-
-    val OpenState: String = "open"
-    val ClosedState: String = "closed"
-  }
-
-  case class PullRequestBranch(ref: String, sha: String)
-
-  case class PullRequestMerged(sha: String, merged: Boolean, message: String)
-
-  case class ReviewComment(url: String,
-                           id: Int,
-                           @JsonProperty("pull_request_review_id") pullRequestReviewId: Int,
-                           @JsonProperty("diff_hunk") diffHunk: String,
-                           path: String,
-                           position: Int,
-                           @JsonProperty("original_position") originalPosition: Int,
-                           @JsonProperty("commit_id") commitId: String,
-                           @JsonProperty("original_commit_id") originalCommitId: String,
-                           user: User,
-                           body: String,
-                           @JsonProperty("created_at") createdAt: OffsetDateTime,
-                           @JsonProperty("updated_at") updatedAt: OffsetDateTime,
-                           @JsonProperty("html_url") htmlUrl: String,
-                           @JsonProperty("pull_request_url") pullRequestUrl: String,
-                           @JsonProperty("_links") links: Links)
-
-  case class User(login: String,
-                  id: Int,
-                  url: String,
-                  @JsonProperty("html_url") htmlUrl: String,
-                  @JsonProperty("type") `type`: String,
-                  @JsonProperty("site_admin") siteAdmin: String)
-
-  case class Links(self: LinksHref, html: LinksHref, @JsonProperty("pull_request") pullRequest: LinksHref)
-
-  case class LinksHref(href: String)
-
-  case class Commit(sha: String)
-
-  private case class FileWithBlobRef(fa: FileArtifact, ref: GitHubRef)
+  private case class FileWithBlobRef(fa: FileArtifact, ref: Ref)
 
   private case class FileDeleteRequest(message: String, sha: String, branch: String)
 
