@@ -152,8 +152,10 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val owner = newTempRepo.getOwnerName
 
     val start = System.currentTimeMillis()
-    val cloned = grc clone(repo, owner)
-
+    val cloned = grc clone(repo, owner) match {
+      case Left(e) => fail(e)
+      case Right(repoDir) => repoDir
+    }
     val id = NamedFileSystemArtifactSourceIdentifier(repo, cloned)
     val startAs = FileSystemGitArtifactSource(id)
 
@@ -198,7 +200,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     createContent(newTempRepo)
 
     val newBranchName = "add-multi-files-branch"
-    populateAndVerify(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName)
+    populateAndVerify(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName, MasterBranch)
   }
 
   it should "create repo, add, update, delete files, and create a pull request from deltas" in {
@@ -210,7 +212,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.createBranch(newTempRepo, newBranchName, MasterBranch)
     newTempRepo.createContent("alan stewart".getBytes, "new file 3", "alan.txt", newBranchName)
 
-    populateAndVerify(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName)
+    populateAndVerify(newTempRepo.getName, newTempRepo.getOwnerName, newBranchName, newBranchName)
   }
 
   private def createContent(newTempRepo: GHRepository) = {
@@ -230,7 +232,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     fileArtifacts
   }
 
-  private def populateAndVerify(repo: String, ownwer: String, newBranchName: String) = {
+  private def populateAndVerify(repo: String, ownwer: String, newBranchName: String, fromBranch: String) = {
     val cri = SimpleCloudRepoId(repo, ownwer)
     val master = GitHubArtifactSourceLocator(cri, branch = MasterBranch)
     val startAs = ghs sourceFor master
@@ -248,7 +250,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val multiFileCommitMessage = s"multi file commit at ${System.currentTimeMillis}"
 
     val start = System.currentTimeMillis
-    ghs.createBranchFromChanges(repo, ownwer, newBranchName, newBranchName, startAs, modifiedAs, multiFileCommitMessage)
+    ghs.createBranchFromChanges(repo, ownwer, newBranchName, fromBranch, startAs, modifiedAs, multiFileCommitMessage)
     println(s"Elapsed time to create branch from deltas = ${System.currentTimeMillis() - start} ms")
 
     val prTitle = s"My pull request at ${System.currentTimeMillis}"

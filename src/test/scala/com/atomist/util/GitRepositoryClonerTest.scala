@@ -27,15 +27,20 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
 
   it should "clone remote repo to specified directory, reset directory content, and clone again" in {
     val grc = GitRepositoryCloner()
-    val cloned = grc.clone("rug", "atomist")
-    val repoDir = cloned
-    val size = FileUtils.sizeOf(repoDir)
+    val cloned = grc.clone("rug", "atomist") match {
+      case Left(e) => fail(e)
+      case Right(repoDir) => repoDir
+    }
+    val size = FileUtils.sizeOf(cloned)
     size should be > 0L
-    grc.resetDirectoryContent(repoDir)
-    FileUtils.sizeOf(repoDir) shouldEqual 0L
-    val recloned = grc.clone("rug", "atomist", None, None, Some(cloned))
+    grc.resetDirectoryContent(cloned)
+    FileUtils.sizeOf(cloned) shouldEqual 0L
+    val recloned = grc.clone("rug", "atomist", None, None, Some(cloned)) match {
+      case Left(e) => fail(e)
+      case Right(repoDir) => repoDir
+    }
     FileUtils.sizeOf(recloned) shouldEqual size
-    grc.cleanUp(repoDir)
+    grc.cleanUp(cloned)
   }
 
   it should "clone remote repo with branch specified" in {
@@ -46,7 +51,10 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     val repoDir = createRepoDir
     val grc = GitRepositoryCloner()
     // val start = System.currentTimeMillis
-    val cloned = grc.clone("artifact-source", "atomist", None, Some("4983a4822e885ee3e1d917d9b1d980bedef349c1"), Some(repoDir))
+    val cloned = grc.clone("artifact-source", "atomist", None, Some("4983a4822e885ee3e1d917d9b1d980bedef349c1"), Some(repoDir)) match {
+      case Left(e) => fail(e)
+      case Right(dir) => dir
+    }
     FileUtils.sizeOf(cloned) should be > 0L
     // println(s"Cloning: ${System.currentTimeMillis - start} ms")
   }
@@ -68,16 +76,21 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     val repoDir = createRepoDir
     val grc = GitRepositoryCloner(Token)
     // val start = System.currentTimeMillis
-    val cloned = grc.clone(repo, owner, None, Some(sha), Some(repoDir), 1)
+    val cloned = grc.clone(repo, owner, None, Some(sha), Some(repoDir), 1) match {
+      case Left(e) => fail(e)
+      case Right(repoDir) => repoDir
+    }
     FileUtils.sizeOf(cloned) should be > 0L
     // println(s"Cloning: ${System.currentTimeMillis - start} ms")
   }
 
   it should "clone remote repo and verify file contents" in {
     val grc = GitRepositoryCloner()
-    val cloned = grc.clone("artifact-source", "atomist")
-    val repoDir = cloned
-    val f = Paths.get(repoDir.getPath, "src", "test", "resources", "springboot1.zip").toFile
+    val cloned = grc.clone("artifact-source", "atomist") match {
+      case Left(e) => fail(e)
+      case Right(repoDir) => repoDir
+    }
+    val f = Paths.get(cloned.getPath, "src", "test", "resources", "springboot1.zip").toFile
     val content = FileUtils.readFileToByteArray(f)
     BinaryDecider.isBinaryContent(content) shouldBe true
   }
@@ -96,7 +109,10 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
   private def cloneAndVerify(branch: Option[String] = None, sha: Option[String] = None, dir: Option[File] = None): Unit = {
     val grc = GitRepositoryCloner()
     val start = System.currentTimeMillis
-    val cloned = grc.clone("rug", "atomist", branch, sha, dir)
+    val cloned = grc.clone("rug", "atomist", branch, sha, dir) match {
+      case Left(e) => fail(e)
+      case Right(repoDir) => repoDir
+    }
     val size = FileUtils.sizeOf(cloned)
     size should be > 0L
     println(s"Cloning: ${System.currentTimeMillis - start} ms")
