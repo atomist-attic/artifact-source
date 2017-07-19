@@ -1,4 +1,4 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
 import java.io.InputStream
 import java.nio.charset.Charset
@@ -6,9 +6,9 @@ import java.nio.charset.Charset
 import com.atomist.source._
 import com.atomist.source.filter.ArtifactFilter
 import com.atomist.util.Octal
-import com.atomist.util.Utils._
 import org.apache.commons.io.IOUtils
 import org.kohsuke.github.{GHRepository, GHTree, GHTreeEntry}
+import resource._
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
@@ -40,7 +40,8 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
 
     override val mode: Int = Octal.octalToInt(te.getMode)
 
-    override lazy val content: String = withCloseable(inputStream())(IOUtils.toString(_, Charset.defaultCharset()))
+    override lazy val content: String =
+      managed(inputStream()).acquireAndGet(IOUtils.toString(_, Charset.defaultCharset()))
 
     override def inputStream(): InputStream = repository.readBlob(te.getSha)
   }

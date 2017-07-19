@@ -1,7 +1,7 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
 import com.atomist.source._
-import com.atomist.util.GitHubHome
+import com.atomist.source.git.TestConstants
 import com.typesafe.scalalogging.LazyLogging
 import org.kohsuke.github.GHRepository
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FlatSpec, Matchers}
@@ -12,7 +12,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * Superclass for tests that mutate GitHub.
   */
-abstract class GitHubMutatorTest(val oAuthToken: String, val apiUrl: String = GitHubHome.Url)
+abstract class GitHubMutatorTest(val oAuthToken: String)
   extends FlatSpec
     with Matchers
     with BeforeAndAfter
@@ -23,7 +23,7 @@ abstract class GitHubMutatorTest(val oAuthToken: String, val apiUrl: String = Gi
 
   protected def placeholderFilename(testName: String) = s"${testName}_${System.currentTimeMillis}.txt"
 
-  protected val ghs = GitHubServices(oAuthToken, apiUrl)
+  protected val ghs = GitHubServices(oAuthToken)
   protected val testFileContents = "The quick brown fox jumped over the lazy dog"
   protected val testFiles: Seq[FileArtifact] = Seq(
     StringFileArtifact("somethingOrOther.txt", testFileContents),

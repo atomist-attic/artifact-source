@@ -6,16 +6,16 @@ import java.nio.file.attribute.{PosixFilePermission, PosixFilePermissions}
 
 import com.atomist.source._
 import com.atomist.util.FilePermissions.fromMode
-import com.atomist.util.{GitHubHome, GitRepositoryCloner}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand.ListMode
 import org.eclipse.jgit.transport.{RefSpec, UsernamePasswordCredentialsProvider}
+import resource._
 
 import scala.collection.JavaConverters._
 
-case class GitServices(oAuthToken: String, remoteUrl: String = GitHubHome.Url)
+case class GitServices(oAuthToken: String, remoteUrl: Option[String] = None)
   extends LazyLogging {
 
   private val credentialsProvider = new UsernamePasswordCredentialsProvider(oAuthToken, "")
@@ -27,37 +27,38 @@ case class GitServices(oAuthToken: String, remoteUrl: String = GitHubHome.Url)
                               old: ArtifactSource,
                               current: ArtifactSource,
                               message: String): File = {
-    grc.clone(repo, owner) match {
-      case Right(repoDir) =>
-        val git = Git.open(repoDir)
-
-        val branchRef = s"refs/heads/$branchName"
-
-        val remoteRefs = git.lsRemote.setHeads(true).setCredentialsProvider(credentialsProvider).call
-        val remoteBranchExists = remoteRefs.asScala.map(_.getName).exists(_ == branchRef)
-
-        val localBranches = git.branchList.setListMode(ListMode.ALL).call
-        val localBranchExists = localBranches.asScala.exists(_.getName == branchRef)
-
-        if (remoteBranchExists && !localBranchExists) {
-          git.fetch.setCredentialsProvider(credentialsProvider).setRefSpecs(new RefSpec(s"$branchRef:$branchRef")).call
-          git.checkout.setName(branchName).call
-        } else
-          git.checkout.setCreateBranch(!localBranchExists).setName(branchName).setForce(true).call
-
-        val deltas = current deltaFrom old
-        val filesToDelete = processDeltas(repoDir, deltas)
-        filesToDelete.foreach(git.rm.addFilepattern(_).call)
-
-        git.add.addFilepattern(".").setUpdate(true).call
-        git.add.addFilepattern(".").call
-
-        git.commit.setMessage(message).call
-        git.push.setCredentialsProvider(credentialsProvider).call
-
-        repoDir
-      case Left(e) => throw new IllegalArgumentException(s"Failed to clone $owner/$repo", e)
+    val repoDir = grc.clone(repo, owner) match {
+      case Left(t) => throw new IllegalArgumentException(s"Failed to clone $owner/$repo", t)
+      case Right(dir) => dir
     }
+
+    for (git <- managed(Git.open(repoDir))) {
+      val branchRef = s"refs/heads/$branchName"
+
+      val remoteRefs = git.lsRemote.setHeads(true).setCredentialsProvider(credentialsProvider).call
+      val remoteBranchExists = remoteRefs.asScala.map(_.getName).exists(_ == branchRef)
+
+      val localBranches = git.branchList.setListMode(ListMode.ALL).call
+      val localBranchExists = localBranches.asScala.exists(_.getName == branchRef)
+
+      if (remoteBranchExists && !localBranchExists) {
+        git.fetch.setCredentialsProvider(credentialsProvider).setRefSpecs(new RefSpec(s"$branchRef:$branchRef")).call
+        git.checkout.setName(branchName).call
+      } else
+        git.checkout.setCreateBranch(!localBranchExists).setName(branchName).setForce(true).call
+
+      val deltas = current deltaFrom old
+      val filesToDelete = processDeltas(repoDir, deltas)
+      filesToDelete.foreach(git.rm.addFilepattern(_).call)
+
+      git.add.addFilepattern(".").setUpdate(true).call
+      git.add.addFilepattern(".").call
+
+      git.commit.setMessage(message).call
+      git.push.setCredentialsProvider(credentialsProvider).call
+    }
+
+    repoDir
   }
 
   private def processDeltas(repoDir: File, deltas: Deltas): Seq[String] = {

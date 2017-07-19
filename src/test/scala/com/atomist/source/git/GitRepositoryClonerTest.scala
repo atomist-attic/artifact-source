@@ -1,11 +1,12 @@
-package com.atomist.util
+package com.atomist.source.git
 
 import java.io.File
 import java.nio.file.Paths
 
 import com.atomist.source.git.TestConstants.Token
-import com.atomist.source.git.{GitHubArtifactSourceLocator, GitHubMutatorTest, GitHubSourceUpdateInfo}
+import com.atomist.source.git.github.{GitHubArtifactSourceLocator, GitHubMutatorTest, GitHubSourceUpdateInfo}
 import com.atomist.source.{SimpleCloudRepoId, StringFileArtifact}
+import com.atomist.util.BinaryDecider
 import org.apache.commons.io.FileUtils
 
 class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
@@ -33,14 +34,14 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     }
     val size = FileUtils.sizeOf(cloned)
     size should be > 0L
-    grc.resetDirectoryContent(cloned)
+    grc.cleanRepoDirectory(cloned)
     FileUtils.sizeOf(cloned) shouldEqual 0L
     val recloned = grc.clone("rug", "atomist", None, None, Some(cloned)) match {
       case Left(e) => fail(e)
       case Right(repoDir) => repoDir
     }
     FileUtils.sizeOf(recloned) shouldEqual size
-    grc.cleanUp(cloned)
+    grc.deleteRepoDirectory(cloned)
   }
 
   it should "clone remote repo with branch specified" in {
@@ -72,7 +73,7 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     fileCommit.isEmpty shouldBe false
 
     val commits = ghs getCommits(repo, owner)
-    val sha = commits.last.sha
+    val sha = commits.last
     val repoDir = createRepoDir
     val grc = GitRepositoryCloner(Token)
     // val start = System.currentTimeMillis
@@ -96,7 +97,7 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
   }
 
   it should "fail to clone repo due to malformed git url" in {
-    val grc = GitRepositoryCloner("", "foo://github.com")
+    val grc = GitRepositoryCloner("", Some("foo://github.com"))
     val repoDir = grc.clone("rug", "atomist")
   }
 
@@ -116,6 +117,6 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     val size = FileUtils.sizeOf(cloned)
     size should be > 0L
     println(s"Cloning: ${System.currentTimeMillis - start} ms")
-    grc.cleanUp(cloned)
+    grc.deleteRepoDirectory(cloned)
   }
 }

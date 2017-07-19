@@ -1,11 +1,11 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
 import java.io.FileInputStream
 
 import com.atomist.source._
 import com.atomist.source.file.{ClassPathArtifactSource, ZipFileArtifactSourceReader, ZipFileInput}
 import com.atomist.source.filter.ArtifactFilter
-import com.atomist.source.git.GitHubArtifactSourceLocator.MasterBranch
+import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants.Token
 
 class TreeGitHubArtifactSourceTest extends GitHubMutatorTest(Token) {

@@ -1,4 +1,4 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
 case class DefaultGitHubArtifactSourceIdentifier(repo: String,
                                                  owner: String,

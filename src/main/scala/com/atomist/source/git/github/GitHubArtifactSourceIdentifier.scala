@@ -1,4 +1,4 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
 /**
   * Identifies a source read from a GitHubArtifactSourceLocator.

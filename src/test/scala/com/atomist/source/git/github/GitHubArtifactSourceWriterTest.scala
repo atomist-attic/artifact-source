@@ -1,14 +1,15 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
 import java.io.FileInputStream
 import java.nio.file.Paths
 
 import com.atomist.source.file._
 import com.atomist.source.git.TestConstants.Token
+import com.atomist.source.git.{FileSystemGitArtifactSource, GitRepositoryCloner}
 import com.atomist.source.{ArtifactSourceTest, SimpleCloudRepoId}
-import com.atomist.util.Utils.withCloseable
-import com.atomist.util.{BinaryDecider, GitRepositoryCloner}
+import com.atomist.util.BinaryDecider
 import org.apache.commons.io.IOUtils
+import resource._
 
 class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
 
@@ -72,7 +73,7 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
     val jar = clonedAs.findFile(".mvn/wrapper/maven-wrapper.jar")
     jar shouldBe defined
     val jarFile = jar.get
-    val content = withCloseable(jarFile.inputStream())(IOUtils.toByteArray)
+    val content = managed(jarFile.inputStream()).acquireAndGet(IOUtils.toByteArray)
     BinaryDecider.isBinaryContent(content) shouldBe true
     val jid = ZipFileInput(Paths.get(clonedAs.id.rootFile.getPath, jarFile.path).toFile)
     val jarSource = ZipFileArtifactSourceReader.fromZipSource(jid)

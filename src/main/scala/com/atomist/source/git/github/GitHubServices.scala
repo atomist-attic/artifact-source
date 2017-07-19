@@ -1,4 +1,4 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
 import java.io.InputStream
 import java.nio.charset.Charset
@@ -6,30 +6,28 @@ import java.util.{List => JList}
 
 import com.atomist.source.git.github.domain._
 import com.atomist.source.{ArtifactSourceException, ArtifactSourceUpdateException, FileArtifact, _}
-import com.atomist.util.GitHubHome
 import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.util.Octal.intToOctal
-import com.atomist.util.Utils._
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.IOUtils
 import org.apache.commons.lang3.StringUtils
 import org.kohsuke.github.{GHRef, GHRepository, GitHub, _}
+import resource._
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 import scalaj.http.{Base64, Http}
 
-case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
+case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   extends GitHubSourceReader
     with LazyLogging {
 
   import GitHubServices._
 
-  lazy val gitHub: GitHub = apiUrl match {
-    case url if Option(url).exists(_.trim.nonEmpty) && url != GitHubHome.Url => GitHub.connectToEnterprise(url, oAuthToken)
-    case _ => GitHub.connectUsingOAuth(oAuthToken)
-  }
+  lazy val gitHub: GitHub = apiUrl.collect {
+    case url if url != GitHubConstants.ApiUrl => GitHub.connectToEnterprise(url, oAuthToken)
+  }.getOrElse(GitHub.connectUsingOAuth(oAuthToken))
 
   private val headers: Map[String, String] =
     Map("Authorization" -> ("token " + oAuthToken), "Accept" -> "application/vnd.github.v3+json")
@@ -296,7 +294,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
     val repo = repository.getName
     val owner = repository.getOwnerName
     Try {
-      val content = withCloseable(fa.inputStream())(IOUtils.toByteArray)
+      val content = managed(fa.inputStream()).acquireAndGet(IOUtils.toByteArray)
       val response = repository.createContent(content, message, fa.path, branch)
       Some(fa.withUniqueId(response.getContent.getSha))
     } match {
@@ -329,17 +327,17 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
     }
   }
 
-  def getCommits(repo: String, owner: String): Seq[Commit] =
+  def getCommits(repo: String, owner: String): Seq[String] =
     Http(s"${getPath(repo, owner)}/git/refs")
       .headers(headers)
       .execute(fromJson[Seq[RefCommit]])
       .throwError
       .body
       .filter(_.`object`.`type` == "commit")
-      .map(c => Commit(c.`object`.sha))
+      .map(_.`object`.sha)
 
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): Ref = {
-    val content = withCloseable(fa.inputStream())(is => new String(Base64.encode(IOUtils.toByteArray(is))))
+    val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
     val cbr = CreateBlobRequest(content)
     logger.debug(s"$branch,${fa.path},$cbr")
     Http(s"${getPath(repo, owner)}/git/blobs").postData(toJson(cbr))
@@ -389,8 +387,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: String = GitHubHome.Url)
 }
 
 object GitHubServices {
-
-
 
   private case class FileWithBlobRef(fa: FileArtifact, ref: Ref)
 

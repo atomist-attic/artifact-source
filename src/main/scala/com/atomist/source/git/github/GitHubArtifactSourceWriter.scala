@@ -1,10 +1,9 @@
-package com.atomist.source.git
+package com.atomist.source.git.github
 
 import com.atomist.source._
-import com.atomist.util.GitHubHome
 import com.typesafe.scalalogging.LazyLogging
 
-case class GitHubArtifactSourceWriter(oAuthToken: String, apiUrl: String = GitHubHome.Url) extends LazyLogging {
+case class GitHubArtifactSourceWriter(oAuthToken: String, apiUrl: Option[String] = None) extends LazyLogging {
 
   import GitHubArtifactSourceWriter._
 
