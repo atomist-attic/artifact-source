@@ -21,10 +21,10 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
   }
 
   "GitHubArtifactSourceWriter" should "create repository and copy contents in root directory only" in {
-    val tempRepo = newTemporaryRepo()
+    val newTempRepo = newTemporaryRepo()
 
     val helloWorldProject = ClassPathArtifactSource.toArtifactSource("java-source/HelloWorldService.java")
-    val cri = SimpleCloudRepoId(tempRepo.getName, tempRepo.getOwnerName)
+    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     val ghid = GitHubArtifactSourceLocator(cri)
     val fa = gitHubWriter.write(helloWorldProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
     fa.size shouldEqual 1
@@ -39,7 +39,7 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
     val newTempRepo = newPopulatedTemporaryRepo()
 
     val springBootProject = ZipFileArtifactSourceReader fromZipSource springBootZipFileId
-    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
+    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     val ghid = GitHubArtifactSourceLocator(cri)
     val artifacts = gitHubWriter.write(springBootProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
     artifacts.size should be > 1
@@ -58,7 +58,7 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
     val as = FileSystemGitArtifactSource(id)
 
     val newTempRepo = newPopulatedTemporaryRepo()
-    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
+    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     gitHubWriter.write(as, GitHubSourceUpdateInfo(GitHubArtifactSourceLocator(cri), "new project from seed"))
 
     val clonedSeed = grc.clone(cri.repo, cri.owner) match {

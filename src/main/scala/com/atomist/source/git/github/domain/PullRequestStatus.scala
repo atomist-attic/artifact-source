@@ -14,8 +14,8 @@ case class PullRequestStatus(id: Int,
                              @JsonProperty("updated_at") updatedAt: OffsetDateTime,
                              @JsonProperty("merged_at") mergedAt: OffsetDateTime,
                              @JsonProperty("closed_at") closedAt: OffsetDateTime,
-                             head: GitHubRef,
-                             base: GitHubRef,
+                             head: PullRequestObject,
+                             base: PullRequestObject,
                              state: String,
                              merged: Boolean,
                              mergeable: Boolean,
@@ -32,4 +32,5 @@ object PullRequestStatus {
 
   val OpenState: String = "open"
   val ClosedState: String = "closed"
+  val All: String = "all"
 }

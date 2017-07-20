@@ -5,13 +5,12 @@ import java.nio.charset.Charset
 
 import com.atomist.source._
 import com.atomist.source.filter.ArtifactFilter
+import com.atomist.source.git.github.domain.{Repo, Tree, TreeElement}
 import com.atomist.util.Octal
 import org.apache.commons.io.IOUtils
-import org.kohsuke.github.{GHRepository, GHTree, GHTreeEntry}
 import resource._
 
 import scala.annotation.tailrec
-import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -21,53 +20,53 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
   extends ArtifactSource
     with DirectoryInferringArtifactContainer {
 
-  protected lazy val repository: GHRepository =
+  protected lazy val repository: Repo =
     Try(ghs getRepository(id.repo, id.owner)) match {
       case Success(Some(repo)) => repo
       case Success(None) => throw ArtifactSourceAccessException(s"Failed to find repository '${id.repo}' for owner '${id.owner}'")
       case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
     }
 
-  private class LazyGitHubFileArtifact(te: GHTreeEntry) extends FileArtifact {
+  private class LazyGitHubFileArtifact(te: TreeElement) extends FileArtifact {
 
-    override val name: String = te.getPath.split("/").toSeq.last
+    override val name: String = te.path.split("/").toSeq.last
 
-    override def uniqueId = Some(te.getSha)
+    override def uniqueId = Some(te.sha)
 
-    override def contentLength: Long = te.getSize
+    override def contentLength: Long = te.size
 
-    override val pathElements: Seq[String] = te.getPath.split("/").toSeq.dropRight(1)
+    override val pathElements: Seq[String] = te.path.split("/").toSeq.dropRight(1)
 
-    override val mode: Int = Octal.octalToInt(te.getMode)
+    override val mode: Int = Octal.octalToInt(te.mode)
 
     override lazy val content: String =
       managed(inputStream()).acquireAndGet(IOUtils.toString(_, Charset.defaultCharset()))
 
-    override def inputStream(): InputStream = repository.readBlob(te.getSha)
+    override def inputStream(): InputStream = ghs.readBlob(id.repo, id.owner, te.sha)
   }
 
   override val allFiles: Seq[FileArtifact] = {
-    val tree: GHTree = {
-      val root = Try(repository.getTreeRecursive(id.sha, 1)) match {
+    val tree: Tree = {
+      val root = Try(ghs.getTreeRecursive(id.repo, id.owner, id.sha)) match {
         case Success(t) => t
         case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
       }
 
       if (id.path == null || id.path.isEmpty) root
       else {
-        val treeElement = root.getTree.asScala.find(te => te.getSize == 0 && te.getPath == id.path).getOrElse(
+        val treeElement = root.tree.find(te => te.size == 0 && te.path == id.path).getOrElse(
           throw ArtifactSourceAccessException(s"Path not found: ${id.path}")
         )
-        repository.getTreeRecursive(treeElement.getSha, 1)
+        ghs.getTreeRecursive(id.repo, id.owner, treeElement.sha)
       }
     }
-    if (tree == null || tree.getTree == null)
+    if (tree == null || tree.tree == null)
       throw ArtifactSourceAccessException(s"Failed to retrieve tree for $id")
 
-    if (tree.isTruncated)
+    if (tree.truncated)
       throw ArtifactSourceAccessException(s"Tree is truncated for $id")
 
-    val files = tree.getTree.asScala.filter(_.getType == "blob").map(new LazyGitHubFileArtifact(_))
+    val files = tree.tree.filter(_.`type` == "blob").map(new LazyGitHubFileArtifact(_))
     if (artifactFilters.isEmpty) files else filterFiles(files)
   }
 
@@ -85,13 +84,9 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
 object TreeGitHubArtifactSource {
 
   def apply(asl: GitHubArtifactSourceLocator, ghs: GitHubServices, artifactFilters: ArtifactFilter*): TreeGitHubArtifactSource =
-    Try(ghs getRepository(asl.repo, asl.owner)) match {
-      case Success(Some(repository)) =>
-        Try(repository.getBranch(asl.branch)) match {
-          case Success(branch) => new TreeGitHubArtifactSource(GitHubArtifactSourceIdentifier(asl, branch.getSHA1), ghs, artifactFilters: _*)
-          case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
-        }
-      case Success(None) => throw ArtifactSourceAccessException(s"Failed to find repository '${asl.repo}' for owner '${asl.owner}'")
+    Try(ghs.getBranch(asl.repo, asl.owner, asl.branch)) match {
+      case Success(branch) =>
+        new TreeGitHubArtifactSource(GitHubArtifactSourceIdentifier(asl, branch.commit.sha), ghs, artifactFilters: _*)
       case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
     }
 }

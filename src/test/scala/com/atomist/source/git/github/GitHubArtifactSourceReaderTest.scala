@@ -62,7 +62,7 @@ class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
   it should "support addition" in {
     val newTempRepo = newPopulatedTemporaryRepo()
 
-    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
+    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     val startAs = ghs sourceFor GitHubArtifactSourceLocator(cri, branch = MasterBranch)
     startAs.findFile(testFiles(1).path) shouldBe empty
     val withAddedFiles = startAs + testFiles
@@ -78,7 +78,7 @@ class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
   it should "read org code from root in master" in {
     val newTempRepo = newPopulatedTemporaryRepo()
 
-    val read = ghs sourceFor fromStrings(newTempRepo.getName, newTempRepo.getOwnerName)
+    val read = ghs sourceFor fromStrings(newTempRepo.name, newTempRepo.ownerName)
     withClue("known repository must be non-empty: ") {
       read.allFiles.nonEmpty shouldBe true
     }
@@ -91,10 +91,10 @@ class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
     val newTempRepo = newPopulatedTemporaryRepo()
 
     val branch = "test_branch"
-    ghs createBranch(newTempRepo.getName, newTempRepo.getOwnerName, branch, MasterBranch)
-    ghs commitFiles(newTempRepo.getName, newTempRepo.getOwnerName, branch, "new files", testFiles, Seq.empty)
+    ghs createBranch(newTempRepo.name, newTempRepo.ownerName, branch, MasterBranch)
+    ghs commitFiles(newTempRepo.name, newTempRepo.ownerName, branch, "new files", testFiles, Seq.empty)
 
-    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
+    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     val readMaster = ghs sourceFor GitHubArtifactSourceLocator(cri, MasterBranch)
     withClue("known repository master must contain more files") {
       readMaster.allFiles.nonEmpty shouldBe true
@@ -107,7 +107,7 @@ class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
 
   it should "not find non-existent branch" in {
     val newTempRepo = newPopulatedTemporaryRepo()
-    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
+    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     an[ArtifactSourceException] should be thrownBy
       (ghs sourceFor GitHubArtifactSourceLocator(cri, "this-is-complete-nonsense"))
   }
@@ -164,7 +164,7 @@ class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
   it should "not find non-existent sha" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     an[ArtifactSourceException] should be thrownBy
-      (ghs treeFor GitHubShaIdentifier(newTempRepo.getName, newTempRepo.getOwnerName, "strongMenAlsoCry"))
+      (ghs treeFor GitHubShaIdentifier(newTempRepo.name, newTempRepo.ownerName, "strongMenAlsoCry"))
   }
 
   it should "find existing sha" in { // Slow

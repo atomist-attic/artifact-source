@@ -62,8 +62,8 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
 
   it should "clone new repo and reset to specified sha and branch without knowing depth" in {
     val newTempRepo = newPopulatedTemporaryRepo()
-    val repo = newTempRepo.getName
-    val owner = newTempRepo.getOwnerName
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
     val cri = SimpleCloudRepoId(repo, owner)
     val files = testFiles :+ StringFileArtifact("somethingOrOther.txt", testFileContents) // Duplicate
 
@@ -73,7 +73,7 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     fileCommit.isEmpty shouldBe false
 
     val commits = ghs getCommits(repo, owner)
-    val sha = commits.last
+    val sha = commits.last.sha
     val repoDir = createRepoDir
     val grc = GitRepositoryCloner(Token)
     // val start = System.currentTimeMillis

@@ -19,9 +19,9 @@ class TreeGitHubArtifactSourceTest extends GitHubMutatorTest(Token) {
 
   "file retrieval" should "work" in {
     val newTempRepo = newPopulatedTemporaryRepo()
-    ghs commitFiles(newTempRepo.getName, newTempRepo.getOwnerName, MasterBranch, "new files", testFiles, Seq.empty)
+    ghs commitFiles(newTempRepo.name, newTempRepo.ownerName, MasterBranch, "new files", testFiles, Seq.empty)
 
-    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
+    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
     val files = tghas.allFiles
     files.size should be > 1
@@ -30,9 +30,9 @@ class TreeGitHubArtifactSourceTest extends GitHubMutatorTest(Token) {
 
   "file retrieval and filter" should "work" in {
     val newTempRepo = newPopulatedTemporaryRepo()
-    ghs commitFiles(newTempRepo.getName, newTempRepo.getOwnerName, MasterBranch, "new files", testFiles, Seq.empty)
+    ghs commitFiles(newTempRepo.name, newTempRepo.ownerName, MasterBranch, "new files", testFiles, Seq.empty)
 
-    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
+    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs, new MarkdownFilter)
     val files = tghas.allFiles
     files.size should be > 0
@@ -50,7 +50,7 @@ class TreeGitHubArtifactSourceTest extends GitHubMutatorTest(Token) {
     val newTempRepo = newPopulatedTemporaryRepo()
 
     val commitMessage1 = s"file commit 1"
-    val cri = SimpleCloudRepoId(newTempRepo.getName, newTempRepo.getOwnerName)
+    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     val branchSource = GitHubArtifactSourceLocator(cri, "master")
     ghs commitFiles(GitHubSourceUpdateInfo(branchSource, commitMessage1), testFiles, Seq.empty)
 
