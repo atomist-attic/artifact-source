@@ -3,7 +3,7 @@ package com.atomist.source.git.github
 import com.atomist.source._
 import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants
-import com.atomist.source.git.github.domain.Repo
+import com.atomist.source.git.github.domain.Repository
 import com.typesafe.scalalogging.LazyLogging
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -36,14 +36,14 @@ abstract class GitHubMutatorTest(val oAuthToken: String)
   /**
     * Return a temporary repository callers can use.
     */
-  def newTemporaryRepo(autoInit: Boolean = false): Repo =
+  def newTemporaryRepo(autoInit: Boolean = false): Repository =
     ghs createRepository(getRepoName, TestOrg, "temporary test repository", privateFlag = true, autoInit = autoInit)
 
   /**
     * Most callers will want a repository with something in it. Otherwise there isn't even a default branch,
     * so put in a README.md file by setting auto_init to true.
     */
-  def newPopulatedTemporaryRepo(): Repo = newTemporaryRepo(true)
+  def newPopulatedTemporaryRepo(): Repository = newTemporaryRepo(true)
 
   protected def createContent(repo: String, owner: String): Unit = {
     ghs.addFile(repo, owner, MasterBranch, "new file 1", StringFileArtifact("src/test.txt", "some text"))

@@ -36,10 +36,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   override def treeFor(id: GitHubShaIdentifier): ArtifactSource = TreeGitHubArtifactSource(id, this)
 
-  def getOrganization(owner: String): Option[Org] =
+  def getOrganization(owner: String): Option[Organization] =
     Try(Http(s"$ApiUrl/orgs/$owner")
       .headers(headers)
-      .execute(fromJson[Org])
+      .execute(fromJson[Organization])
       .throwError
       .body) match {
       case Success(org) => Some(org)
@@ -48,10 +48,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         None
     }
 
-  def getRepository(repo: String, owner: String): Option[Repo] =
+  def getRepository(repo: String, owner: String): Option[Repository] =
     Try(Http(s"$ApiUrl/repos/$owner/$repo")
       .headers(headers)
-      .execute(fromJson[Repo])
+      .execute(fromJson[Repository])
       .throwError
       .body) match {
       case Success(r) => Some(r)
@@ -60,7 +60,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         val params = Map("per_page" -> "100")
         val resp = Http(s"$ApiUrl/orgs/$owner/repos").headers(headers).params(params).asString
         if (resp.isSuccess) {
-          val firstPage = fromJson[Seq[Repo]](resp.body)
+          val firstPage = fromJson[Seq[Repository]](resp.body)
           getNextUrl(resp).map(paginateResults(_, firstPage, params)).getOrElse(firstPage).find(_.name == repo)
         } else {
           logger.warn(s"Failed to find user or organization repository $owner/$repo: ${resp.body}")
@@ -68,10 +68,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         }
     }
 
-  def searchRepositories(q: String): Seq[Repo] = {
+  def searchRepositories(q: String): Seq[Repository] = {
     val params = Map("q" -> q, "per_page" -> "100")
 
-    def nextPage(url: String, accumulator: Seq[Repo]): Seq[Repo] = {
+    def nextPage(url: String, accumulator: Seq[Repository]): Seq[Repository] = {
       val resp = Http(url).headers(headers).params(params).asString
       if (resp.isSuccess) {
         val pages = accumulator ++ fromJson[SearchRepoResult](resp.body).items
@@ -98,13 +98,13 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                        description: String = "",
                        privateFlag: Boolean = false,
                        issues: Boolean = true,
-                       autoInit: Boolean = false): Repo =
+                       autoInit: Boolean = false): Repository =
     Try {
       val url = getOrganization(owner).map(_ => s"$ApiUrl/orgs/$owner/repos").getOrElse(s"$ApiUrl/user/repos")
       val cr = CreateRepoRequest(repo, owner, description, privateFlag, issues, autoInit)
       Http(url).postData(toJson(cr))
         .headers(headers)
-        .execute(fromJson[Repo])
+        .execute(fromJson[Repository])
         .throwError
         .body
     } match {
