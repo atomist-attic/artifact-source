@@ -138,7 +138,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         if (resp.isSuccess)
           fromJson[Reference](resp.body)
         else
-          throw ArtifactSourceCreationException(s"Failed to create branch $branchName in $owner/$repo: ${resp.body}")
+          throw ArtifactSourceUpdateException(s"Failed to create branch $branchName in $owner/$repo: ${resp.body}")
       case Failure(e) => throw ArtifactSourceUpdateException(e.getMessage, e)
     }
 
@@ -187,18 +187,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                                    prr: PullRequestRequest,
                                    old: ArtifactSource,
                                    current: ArtifactSource,
-                                   message: String): PullRequest =
-    Try {
-      createBranchFromChanges(repo, owner, prr.head, prr.base, old, current, message)
-      Http(s"$ApiUrl/repos/$owner/$repo/pulls").postData(toJson(prr))
-        .headers(headers)
-        .execute(fromJson[PullRequest])
-        .throwError
-        .body
-    } match {
-      case Success(pr) => pr
-      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create pull request for $owner/$repo", e)
-    }
+                                   message: String): PullRequest = {
+    createBranchFromChanges(repo, owner, prr.head, prr.base, old, current, message)
+    createPullRequest(repo, owner, prr, message)
+  }
 
   @throws[ArtifactSourceUpdateException]
   def createPullRequest(repo: String,
