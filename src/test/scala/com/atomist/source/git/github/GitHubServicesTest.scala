@@ -4,7 +4,7 @@ import com.atomist.source._
 import com.atomist.source.file.NamedFileSystemArtifactSourceIdentifier
 import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants._
-import com.atomist.source.git.github.domain.PullRequestRequest
+import com.atomist.source.git.github.domain.{PullRequest, PullRequestRequest}
 import com.atomist.source.git.{FileSystemGitArtifactSource, GitRepositoryCloner}
 
 class GitHubServicesTest extends GitHubMutatorTest(Token) {
@@ -94,8 +94,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
-    ghs.addFile(repo, owner, MasterBranch, "new file 1", StringFileArtifact("src/test.txt", "some text"))
-    ghs.addFile(repo, owner, MasterBranch, "new file 2", StringFileArtifact("src/test2.txt", "some other text"))
+    createContent(repo, owner)
 
     val cri = SimpleCloudRepoId(repo, owner)
     val prTitle = s"My pull request at ${System.currentTimeMillis}"
@@ -213,6 +212,16 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.addFile(repo, owner, newBranchName, "new file 3", StringFileArtifact("alan.txt", "alan stewart"))
 
     populateAndVerify(newTempRepo.name, newTempRepo.ownerName, newBranchName, newBranchName)
+  }
+
+  it should "get all commits in a repository" in {
+    val commits = ghs getCommits("artifact-source", "atomist")
+    commits.size should be > 200
+  }
+
+  it should "get all pull requests in a repository" in {
+    val pullRequests = ghs getPullRequests("rug", "atomist", PullRequest.All)
+    pullRequests.size should be > 300
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {

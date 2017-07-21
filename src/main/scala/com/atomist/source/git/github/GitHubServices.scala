@@ -3,26 +3,28 @@ package com.atomist.source.git.github
 import java.io.InputStream
 import java.nio.charset.Charset
 
-import com.atomist.source.git.github.GitHubConstants.ApiUrl
 import com.atomist.source.git.github.domain._
 import com.atomist.source.{ArtifactSourceUpdateException, FileArtifact, _}
 import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.util.Octal.intToOctal
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.IOUtils
-import org.kohsuke.github.GitHub
 import resource._
 
 import scala.util.{Failure, Success, Try}
-import scalaj.http.{Base64, Http}
+import scalaj.http.{Base64, Http, HttpResponse}
+
+object GitHubServices {
+
+  val Url = "https://github.com"
+  val ApiUrl = "https://api.github.com"
+}
 
 case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   extends GitHubSourceReader
     with LazyLogging {
 
-  lazy val gitHub: GitHub = apiUrl.collect {
-    case url if url != ApiUrl => GitHub.connectToEnterprise(url, oAuthToken)
-  }.getOrElse(GitHub.connectUsingOAuth(oAuthToken))
+  import GitHubServices._
 
   private val headers: Map[String, String] =
     Map(
@@ -55,14 +57,40 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       case Success(r) => Some(r)
       case Failure(e) =>
         logger.warn(s"Failed to find user repository $owner/$repo. Searching for organization repository", e)
-        val resp = Http(s"$ApiUrl/orgs/$owner/repos").headers(headers).asBytes
-        if (resp.isSuccess)
-          fromJson[Seq[Repo]](resp.body).find(_.name == repo)
-        else {
+        val params = Map("per_page" -> "100")
+        val resp = Http(s"$ApiUrl/orgs/$owner/repos").headers(headers).params(params).asString
+        if (resp.isSuccess) {
+          val firstPage = fromJson[Seq[Repo]](resp.body)
+          getNextUrl(resp).map(paginateResults(_, firstPage, params)).getOrElse(firstPage).find(_.name == repo)
+        } else {
           logger.warn(s"Failed to find user or organization repository $owner/$repo: ${resp.body}")
           None
         }
     }
+
+  def searchRepositories(q: String): Seq[Repo] = {
+    val params = Map("q" -> q, "per_page" -> "100")
+
+    def nextPage(url: String, accumulator: Seq[Repo]): Seq[Repo] = {
+      val resp = Http(url).headers(headers).params(params).asString
+      if (resp.isSuccess) {
+        val pages = accumulator ++ fromJson[SearchRepoResult](resp.body).items
+        getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
+      } else {
+        logger.warn(s"Failed to find repositories: ${resp.body}")
+        Seq.empty
+      }
+    }
+
+    val resp = Http(s"$ApiUrl/search/repositories").headers(headers).params(params).asString
+    if (resp.isSuccess) {
+      val firstPage = fromJson[SearchRepoResult](resp.body).items
+      getNextUrl(resp).map(nextPage(_, firstPage)).getOrElse(firstPage)
+    } else {
+      logger.warn(s"Failed to find repositories: ${resp.body}")
+      Seq.empty
+    }
+  }
 
   @throws[ArtifactSourceCreationException]
   def createRepository(repo: String,
@@ -70,21 +98,35 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                        description: String = "",
                        privateFlag: Boolean = false,
                        issues: Boolean = true,
-                       autoInit: Boolean = false): Repo = {
-    val url = getOrganization(owner).map(_ => s"$ApiUrl/orgs/$owner/repos").getOrElse(s"$ApiUrl/user/repos")
-    val cr = CreateRepoRequest(repo, owner, description, privateFlag, issues, autoInit)
-    Try(Http(url).postData(toJson(cr))
-      .headers(headers)
-      .execute(fromJson[Repo])
-      .throwError
-      .body) match {
+                       autoInit: Boolean = false): Repo =
+    Try {
+      val url = getOrganization(owner).map(_ => s"$ApiUrl/orgs/$owner/repos").getOrElse(s"$ApiUrl/user/repos")
+      val cr = CreateRepoRequest(repo, owner, description, privateFlag, issues, autoInit)
+      Http(url).postData(toJson(cr))
+        .headers(headers)
+        .execute(fromJson[Repo])
+        .throwError
+        .body
+    } match {
       case Success(repository) => repository
       case Failure(e) => throw ArtifactSourceCreationException(e.getMessage, e)
     }
-  }
 
-  @throws[ArtifactSourceCreationException]
-  def createBranch(repo: String, owner: String, branchName: String, fromBranch: String): Reference = {
+  @throws[ArtifactSourceUpdateException]
+  def deleteRepository(repo: String, owner: String): Unit =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo")
+      .method("DELETE")
+      .headers(headers)
+      .asString
+      .throwError
+      .body
+    ) match {
+      case Success(_) => logger.debug(s"Successfully deleted repository $owner/$repo")
+      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to delete repository $owner/$repo", e)
+    }
+
+  @throws[ArtifactSourceUpdateException]
+  def createBranch(repo: String, owner: String, branchName: String, fromBranch: String): Reference =
     Try(Http(s"$ApiUrl/repos/$owner/$repo/git/refs/heads/$fromBranch")
       .headers(headers)
       .execute(fromJson[Reference])
@@ -92,16 +134,15 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .body) match {
       case Success(fromRef) =>
         val cr = CreateReferenceRequest(s"refs/heads/$branchName", fromRef.`object`.sha)
-        val resp = Http(s"$ApiUrl/repos/$owner/$repo/git/refs").headers(headers).postData(toJson(cr)).asBytes
+        val resp = Http(s"$ApiUrl/repos/$owner/$repo/git/refs").headers(headers).postData(toJson(cr)).asString
         if (resp.isSuccess)
           fromJson[Reference](resp.body)
         else
           throw ArtifactSourceCreationException(s"Failed to create branch $branchName in $owner/$repo: ${resp.body}")
-      case Failure(e) => throw ArtifactSourceCreationException(e.getMessage, e)
+      case Failure(e) => throw ArtifactSourceUpdateException(e.getMessage, e)
     }
-  }
 
-  @throws[ArtifactSourceCreationException]
+  @throws[ArtifactSourceUpdateException]
   def createBranchFromChanges(repo: String,
                               owner: String,
                               branchName: String,
@@ -137,7 +178,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       commitFiles(sui, files, filesToDelete)
     } match {
       case Success(fileArtifacts) => fileArtifacts
-      case Failure(e) => throw ArtifactSourceCreationException(e.getMessage, e)
+      case Failure(e) => throw ArtifactSourceUpdateException(e.getMessage, e)
     }
 
   @throws[ArtifactSourceUpdateException]
@@ -156,8 +197,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         .body
     } match {
       case Success(pr) => pr
-      case Failure(e) =>
-        throw ArtifactSourceUpdateException(s"Failed to create pull request for $owner/$repo", e)
+      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create pull request for $owner/$repo", e)
     }
 
   @throws[ArtifactSourceUpdateException]
@@ -171,8 +211,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .throwError
       .body) match {
       case Success(pr) => pr
-      case Failure(e) =>
-        throw ArtifactSourceUpdateException(s"Failed to create pull request for $owner/$repo", e)
+      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create pull request for $owner/$repo", e)
     }
 
   def getBranch(repo: String, owner: String, branch: String): Option[Branch] =
@@ -219,6 +258,18 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     commitFiles(repo, owner, sourceId.branch, sui.message, files, filesToDelete)
   }
 
+  /**
+    * Commits files to a branch.
+    *
+    * This process is involved, so here's a summary of what has to be done:
+    * 1. Get a reference to the desired branch's HEAD
+    * 2. Get the commit from the branch. We need the SHA.
+    * 3. Post the new and updated files to the server as blobs, saving their SHAs
+    * 4. Get the tree, recursively, that the commit points to from (2)
+    * 5. Create a new tree containing the new and updated files, as well as omitting files to be deleted
+    * 6. Create a new commit, referring to the tree from (5).
+    * 7. Update our new branch's heads/master reference to point to our new commit from (6).
+    */
   @throws[ArtifactSourceUpdateException]
   def commitFiles(repo: String,
                   owner: String,
@@ -226,27 +277,19 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                   message: String,
                   files: Seq[FileArtifact],
                   filesToDelete: Seq[FileArtifact]): Seq[FileArtifact] = {
-    /*
-      This process is involved, so here's a summary of what we need to do:
-      1. Get a reference to the desired branch's HEAD
-      2. Get the commit from the branch. We need the SHA.
-      3. Post the new and updated files to the server as blobs, saving their SHAs
-      4. Get the tree, recursively, that the commit points to from (2)
-      5. Create a new tree containing the new and updated files, as well as omitting files to be deleted
-      6. Create a new commit, referring to the tree from (5).
-      7. Update our new branch's heads/master reference to point to our new commit from (6).
-     */
+    val baseTreeSha = getBranch(repo, owner, branch) match {
+      case Some(br) => br.commit.sha
+      case None => throw ArtifactSourceUpdateException(s"Failed to get branch $branch in $owner/$repo")
+    }
 
     Try {
-      val branchRef = getBranch(repo, owner, branch)
-      val baseTreeSha = branchRef.map(_.commit.sha).getOrElse("")
-      val fwbrs = files
+      val filesWithBlobRefs = files
         .groupBy(_.path)
         .map(_._2.last)
         .map(fa => FileWithBlobRef(fa, createBlob(repo, owner, message, branch, fa)))
         .toSeq
 
-      val newOrUpdatedTreeEntries = fwbrs.map(fwbr => TreeEntry(fwbr.fa.path, intToOctal(fwbr.fa.mode), "blob", fwbr.ref.sha))
+      val newOrUpdatedTreeEntries = filesWithBlobRefs.map(fwbr => TreeEntry(fwbr.fa.path, intToOctal(fwbr.fa.mode), "blob", fwbr.ref.sha))
       val allExistingTreeEntries = treeFor(GitHubShaIdentifier(repo, owner, baseTreeSha))
         .allFiles
         .map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
@@ -267,9 +310,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       val commit = createCommit(repo, owner, message, tree, Seq(baseTreeSha))
       updateReference(repo, owner, s"heads/$branch", commit.sha)
 
-      fwbrs.map(fwbr => fwbr.fa.withUniqueId(fwbr.ref.sha))
+      filesWithBlobRefs.map(fileWithBlobRef => fileWithBlobRef.fa.withUniqueId(fileWithBlobRef.ref.sha))
     } match {
-      case Success(files) => files
+      case Success(fileArtifacts) => fileArtifacts
       case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to commit files to $owner/$repo", e)
     }
   }
@@ -299,8 +342,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         .body
     } match {
       case Success(cfr) => fa.withUniqueId(cfr.content.sha)
-      case Failure(e) =>
-        throw ArtifactSourceUpdateException(s"Failed to add file to $owner/$repo", e)
+      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to add file to $owner/$repo", e)
     }
 
   @throws[ArtifactSourceUpdateException]
@@ -326,11 +368,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   def getCommits(repo: String, owner: String, sha: Option[String] = None): Seq[Commit] = {
-    val req = Http(s"$ApiUrl/repos/$owner/$repo/commits")
-    val resp = sha.map(req.param("sha", _)).getOrElse(req).headers(headers).asBytes
-    if (resp.isSuccess)
-      fromJson[Seq[Commit]](resp.body)
-    else {
+    val params = sha.map(s => Map("sha" -> s)).getOrElse(Map.empty) + ("per_page" -> "100")
+    val resp = Http(s"$ApiUrl/repos/$owner/$repo/commits").headers(headers).params(params).asString
+    if (resp.isSuccess) {
+      val firstPage = fromJson[Seq[Commit]](resp.body)
+      getNextUrl(resp).map(paginateResults(_, firstPage, params)).getOrElse(firstPage)
+    } else {
       logger.warn(s"Failed to get commits in $owner/$repo: ${resp.body}")
       Seq.empty
     }
@@ -350,18 +393,19 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   def getPullRequests(repo: String,
                       owner: String,
-                      state: Option[String] = Some(PullRequest.Open)): Seq[PullRequest] =
-    Try(Http(s"$ApiUrl/repos/$owner/$repo/pulls")
-      .param("state", state.get)
-      .headers(headers)
-      .execute(fromJson[Seq[PullRequest]])
-      .throwError
-      .body) match {
-      case Success(pr) => pr
-      case Failure(e) =>
-        logger.warn(s"Failed to get pull requests in $owner/$repo", e)
-        Seq.empty
+                      state: String = PullRequest.Open,
+                      sort: String = "created",
+                      direction: String = "asc"): Seq[PullRequest] = {
+    val params = Map("state" -> state, "per_page" -> "100")
+    val resp = Http(s"$ApiUrl/repos/$owner/$repo/pulls").headers(headers).params(params).asString
+    if (resp.isSuccess) {
+      val firstPage = fromJson[Seq[PullRequest]](resp.body)
+      getNextUrl(resp).map(paginateResults(_, firstPage, params)).getOrElse(firstPage)
+    } else {
+      logger.warn(s"Failed to get pull requests in $owner/$repo: ${resp.body}")
+      Seq.empty
     }
+  }
 
   @throws[ArtifactSourceAccessException]
   def getTreeRecursive(repo: String, owner: String, sha: String): Tree =
@@ -372,8 +416,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .throwError
       .body) match {
       case Success(tree) => tree
-      case Failure(e) =>
-        throw ArtifactSourceAccessException(s"Failed to get tree with sha $sha in $owner/$repo", e)
+      case Failure(e) => throw ArtifactSourceAccessException(s"Failed to get tree with sha $sha in $owner/$repo", e)
     }
 
   @throws[ArtifactSourceAccessException]
@@ -435,4 +478,32 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .asBytes
       .throwError
   }
+
+  private def paginateResults[T](url: String,
+                                 firstPage: Seq[T],
+                                 params: Map[String, String] = Map.empty)(implicit m: Manifest[T]): Seq[T] = {
+    def nextPage(url: String, accumulator: Seq[T]): Seq[T] = {
+      val resp = Http(url).headers(headers).params(params).asString
+      if (resp.isSuccess) {
+        val pages = accumulator ++ fromJson[Seq[T]](resp.body)
+        getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
+      } else
+        throw ArtifactSourceAccessException(resp.body)
+    }
+
+    nextPage(url, firstPage)
+  }
+
+  private def getNextUrl(resp: HttpResponse[String]): Option[String] =
+    resp.header("Link").flatMap(parseLinkHeader(_).get("next"))
+
+  private def parseLinkHeader(linkHeader: String): Map[String, String] =
+    if (linkHeader == null || linkHeader.isEmpty) Map.empty
+    else
+      linkHeader.split(',').map { part =>
+        val section = part.split(';')
+        val url = section(0).replace("<", "").replace(">", "").trim
+        val name = section(1).replace(" rel=\"", "").replace("\"", "").trim
+        (name, url)
+      }.toMap
 }

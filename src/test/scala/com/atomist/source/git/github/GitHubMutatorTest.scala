@@ -7,7 +7,6 @@ import com.atomist.source.git.github.domain.Repo
 import com.typesafe.scalalogging.LazyLogging
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FlatSpec, Matchers}
 
-import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -46,7 +45,7 @@ abstract class GitHubMutatorTest(val oAuthToken: String)
     */
   def newPopulatedTemporaryRepo(): Repo = newTemporaryRepo(true)
 
-  protected def createContent(repo: String, owner: String) = {
+  protected def createContent(repo: String, owner: String): Unit = {
     ghs.addFile(repo, owner, MasterBranch, "new file 1", StringFileArtifact("src/test.txt", "some text"))
     ghs.addFile(repo, owner, MasterBranch, "new file 2", StringFileArtifact("src/test2.txt", "some other text"))
   }
@@ -55,8 +54,8 @@ abstract class GitHubMutatorTest(val oAuthToken: String)
     * Clean up after the work of this class.
     */
   private def cleanUp() =
-    Try(ghs.gitHub.searchRepositories().q(s"user:$TestOrg in:name $TemporaryRepoPrefix").list) match {
-      case Success(repos) => repos.asScala.foreach(_.delete)
+    Try(ghs.searchRepositories(s"user:$TestOrg in:name $TemporaryRepoPrefix")) match {
+      case Success(repos) => repos.foreach(repo => ghs.deleteRepository(repo.name, repo.ownerName))
       case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
     }
 

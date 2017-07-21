@@ -4,7 +4,7 @@ import java.io.File
 import java.net.URL
 import java.nio.file.{FileAlreadyExistsException, Files}
 
-import com.atomist.source.git.github.GitHubConstants
+import com.atomist.source.git.github.GitHubServices.Url
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 
@@ -66,7 +66,7 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
   }
 
   private def getUrl = {
-    val url = remoteUrl.map(new URL(_)).getOrElse(new URL(GitHubConstants.Url))
+    val url = remoteUrl.map(new URL(_)).getOrElse(new URL(Url))
     Option(oAuthToken).collect {
       case token if token != "" => s"${url.getProtocol}://$token@${url.getAuthority}"
     }.getOrElse(url.toExternalForm)
