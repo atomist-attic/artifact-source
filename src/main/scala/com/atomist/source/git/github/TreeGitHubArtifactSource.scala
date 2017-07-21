@@ -23,7 +23,7 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
   protected lazy val repository: Repo =
     Try(ghs getRepository(id.repo, id.owner)) match {
       case Success(Some(repo)) => repo
-      case Success(None) => throw ArtifactSourceAccessException(s"Failed to find repository '${id.repo}' for owner '${id.owner}'")
+      case Success(None) => throw ArtifactSourceAccessException(s"Failed to find repository ${id.owner}/${id.repo}")
       case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
     }
 

@@ -25,8 +25,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   }.getOrElse(GitHub.connectUsingOAuth(oAuthToken))
 
   private val headers: Map[String, String] =
-    Map("Authorization" -> ("token " + oAuthToken),
-      "Accept" -> "application/vnd.github.v3+json, application/vnd.github.loki-preview+json")
+    Map(
+      "Authorization" -> ("token " + oAuthToken),
+      "Accept" -> "application/vnd.github.v3+json,application/vnd.github.loki-preview+json"
+    )
 
   override def sourceFor(id: GitHubArtifactSourceLocator): ArtifactSource = TreeGitHubArtifactSource(id, this)
 
@@ -353,8 +355,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   def readBlob(repo: String, owner: String, sha: String): InputStream =
     Http(s"$ApiUrl/repos/$owner/$repo/git/blobs/$sha")
-      .headers(headers)
-      .execute(is => is)
+      .header("Authorization", "token " + oAuthToken)
+      .header("Accept", "application/vnd.github.v3.raw+json")
+      .execute(IOUtils.toBufferedInputStream)
       .throwError
       .body
 
