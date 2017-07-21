@@ -24,7 +24,6 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
     Try(ghs getRepository(id.repo, id.owner)) match {
       case Success(Some(repo)) => repo
       case Success(None) => throw ArtifactSourceAccessException(s"Failed to find repository ${id.owner}/${id.repo}")
-      case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
     }
 
   private class LazyGitHubFileArtifact(te: TreeEntry) extends FileArtifact {
