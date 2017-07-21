@@ -58,10 +58,10 @@ class GitServicesTest extends GitHubMutatorTest(Token) {
     val prTitle = s"My pull request at ${System.currentTimeMillis}"
     val prBody = "This is the body of my pull request"
     val prr = PullRequestRequest(prTitle, newBranchName, MasterBranch, prBody)
-    val prs = ghs createPullRequest(repo, owner, prr, "Added files and deleted files")
+    val pr = ghs createPullRequest(repo, owner, prr, "Added files and deleted files")
 
-    val merged = ghs mergePullRequest(repo, owner, prs.number, prs.title, "Merged PR")
-    merged shouldBe defined
+    val merged = ghs mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
+    merged.merged shouldBe true
 
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
     tghas.findFile("src/test.txt") shouldBe empty

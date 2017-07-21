@@ -5,7 +5,7 @@ import java.nio.charset.Charset
 
 import com.atomist.source._
 import com.atomist.source.filter.ArtifactFilter
-import com.atomist.source.git.github.domain.{Repo, Tree, TreeElement}
+import com.atomist.source.git.github.domain.{Repo, Tree, TreeEntry}
 import com.atomist.util.Octal
 import org.apache.commons.io.IOUtils
 import resource._
@@ -27,7 +27,7 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
       case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
     }
 
-  private class LazyGitHubFileArtifact(te: TreeElement) extends FileArtifact {
+  private class LazyGitHubFileArtifact(te: TreeEntry) extends FileArtifact {
 
     override val name: String = te.path.split("/").toSeq.last
 
@@ -84,9 +84,9 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
 object TreeGitHubArtifactSource {
 
   def apply(asl: GitHubArtifactSourceLocator, ghs: GitHubServices, artifactFilters: ArtifactFilter*): TreeGitHubArtifactSource =
-    Try(ghs.getBranch(asl.repo, asl.owner, asl.branch)) match {
-      case Success(branch) =>
+    ghs.getBranch(asl.repo, asl.owner, asl.branch) match {
+      case Some(branch) =>
         new TreeGitHubArtifactSource(GitHubArtifactSourceIdentifier(asl, branch.commit.sha), ghs, artifactFilters: _*)
-      case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
+      case None => throw ArtifactSourceAccessException(s"Failed to find branch ${asl.branch} in ${asl.owner}/${asl.repo}")
     }
 }

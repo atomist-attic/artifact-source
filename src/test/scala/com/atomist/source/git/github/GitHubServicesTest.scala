@@ -6,9 +6,6 @@ import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants._
 import com.atomist.source.git.github.domain.PullRequestRequest
 import com.atomist.source.git.{FileSystemGitArtifactSource, GitRepositoryCloner}
-import org.kohsuke.github.{GHIssueState, GHRepository}
-
-import scala.collection.JavaConverters._
 
 class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
@@ -35,19 +32,19 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
   }
 
   it should "handle null repository" in {
-    an[IllegalArgumentException] should be thrownBy ghs.getRepository(null, TestOrg)
+    ghs.getRepository(null, TestOrg) shouldBe empty
   }
 
   it should "handle empty repository" in {
-    an[IllegalArgumentException] should be thrownBy ghs.getRepository(" ", TestOrg)
+    ghs.getRepository(" ", TestOrg) shouldBe empty
   }
 
   it should "handle null organization" in {
-    an[IllegalArgumentException] should be thrownBy ghs.getRepository("unknown-repo", null)
+    ghs.getRepository("unknown-repo", null) shouldBe empty
   }
 
   it should "handle empty organization" in {
-    an[IllegalArgumentException] should be thrownBy ghs.getRepository("unknown-repo", "")
+    ghs.getRepository("unknown-repo", "") shouldBe empty
   }
 
   it should "delete files with valid path in multi file commit" in {
@@ -116,36 +113,33 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     (withAddedFiles Δ modifiedAs).deltas.isEmpty shouldBe false
 
     val prr = PullRequestRequest(prTitle, updatedBranch, MasterBranch, prBody)
-    val prs = ghs createPullRequestFromChanges(baseSource.repo, baseSource.owner, prr, startAs, withAddedFiles, "Added files and deleted files including README.md")
-    prs shouldBe defined
-    val pr0 = prs.get
-    pr0.number should be > 0
-    pr0.isOpen shouldBe true
-    pr0.body should equal(prBody)
-    pr0.htmlUrl.length should be > 0
+    val pr = ghs createPullRequestFromChanges(baseSource.repo, baseSource.owner, prr, startAs, withAddedFiles, "Added files and deleted files including README.md")
+    pr.number should be > 0
+    pr.isOpen shouldBe true
+    pr.body should equal(prBody)
+    pr.htmlUrl.length should be > 0
 
-    val rc = ghs createReviewComment(repo, owner, pr0.number, "comment body", pr0.head.sha, "somethingOrOther.txt", 1)
+    val rc = ghs createReviewComment(repo, owner, pr.number, "comment body", pr.head.sha, "somethingOrOther.txt", 1)
     rc.body should equal("comment body")
 
     val openPrs = ghs.getPullRequests(repo, owner)
     openPrs.isEmpty shouldBe false
     openPrs.map(_.title) should contain(prTitle)
 
-    val prs2 = ghs.getPullRequest(repo, owner, pr0.number)
-    prs2 shouldBe defined
-    val pr1 = prs2.get
-    pr1.number should equal(pr0.number)
+    val pr2 = ghs.getPullRequest(repo, owner, pr.number)
+    pr2 shouldBe defined
+    val pr1 = pr2.get
+    pr1.number should equal(pr.number)
     pr1.base.ref should equal(prr.base)
     pr1.head.ref should equal(prr.head)
     pr1.htmlUrl should not be null
 
     val merged = ghs mergePullRequest(repo, owner, pr1.number, pr1.title, "Merged PR")
-    merged shouldBe defined
-    merged.get.merged shouldBe true
+    merged.merged shouldBe true
 
-    val prs3 = ghs.getPullRequest(repo, owner, pr1.number)
-    prs3 shouldBe defined
-    prs3.get.merged shouldBe true
+    val pr3 = ghs.getPullRequest(repo, owner, pr1.number)
+    pr3 shouldBe defined
+    pr3.get.merged shouldBe true
 
     val endAs = ghs sourceFor baseSource
     endAs.allFiles.size shouldBe 4
@@ -185,13 +179,10 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val updatedBranch = s"multi-file-${System.currentTimeMillis}"
 
     val prr = PullRequestRequest(prTitle, updatedBranch, MasterBranch, prBody)
-    val prs = ghs createPullRequestFromChanges(repo, owner, prr, startAs, editedAgain, "Added files")
-    prs shouldBe defined
-    val pr1 = prs.get
+    val pr = ghs createPullRequestFromChanges(repo, owner, prr, startAs, editedAgain, "Added files")
 
-    val merged = ghs mergePullRequest(repo, owner, pr1.number, pr1.title, "Merged PR")
-    merged shouldBe defined
-    merged.get.merged shouldBe true
+    val merged = ghs mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
+    merged.merged shouldBe true
     println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
 
     val newAs = ghs sourceFor GitHubArtifactSourceLocator.rootOfMaster(repo, owner)
@@ -260,10 +251,10 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val prTitle = s"My pull request at ${System.currentTimeMillis}"
     val prBody = "This is the body of my pull request"
     val prr = PullRequestRequest(prTitle, newBranchName, MasterBranch, prBody)
-    val prs = ghs createPullRequest(repo, ownwer, prr, "Added files and deleted files")
+    val pr = ghs createPullRequest(repo, ownwer, prr, "Added files and deleted files")
 
-    val merged = ghs mergePullRequest(repo, ownwer, prs.number, prs.title, "Merged PR")
-    merged shouldBe defined
+    val merged = ghs mergePullRequest(repo, ownwer, pr.number, pr.title, "Merged PR")
+    merged.merged shouldBe true
 
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
     tghas.findFile("src/test.txt") shouldBe empty

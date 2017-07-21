@@ -12,7 +12,7 @@ case class GitHubArtifactSourceWriter(oAuthToken: String, apiUrl: Option[String]
   @throws[ArtifactSourceException]
   def write(as: ArtifactSource, sui: GitHubSourceUpdateInfo): Seq[FileArtifact] =
     if (as.allFiles.size == 1) {
-      ghs.addFile(sui, as.allFiles.head).toSeq
+      Seq(ghs.addFile(sui, as.allFiles.head))
     } else if (as.findFile(ProvenanceFileName).isDefined) {
       ghs commitFiles(sui, as.allFiles, Seq.empty)
     } else {
