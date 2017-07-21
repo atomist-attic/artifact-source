@@ -145,10 +145,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                               current: ArtifactSource,
                               message: String): Seq[FileArtifact] =
     Try {
-      if (branchName != fromBranch) {
-        val ref = createBranch(repo, owner, branchName, fromBranch)
-        logger.debug(ref.toString)
-      }
+      getBranch(repo, owner, branchName).getOrElse(createBranch(repo, owner, branchName, fromBranch))
 
       val deltas = current deltaFrom old
       val sui = GitHubSourceUpdateInfo(GitHubArtifactSourceLocator.fromStrings(repo, owner, branchName), message)
@@ -183,14 +180,13 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                                    current: ArtifactSource,
                                    message: String): PullRequest = {
     createBranchFromChanges(repo, owner, prr.head, prr.base, old, current, message)
-    createPullRequest(repo, owner, prr, message)
+    createPullRequest(repo, owner, prr)
   }
 
   @throws[ArtifactSourceUpdateException]
   def createPullRequest(repo: String,
                         owner: String,
-                        prr: PullRequestRequest,
-                        message: String): PullRequest =
+                        prr: PullRequestRequest): PullRequest =
     Try(Http(s"$ApiUrl/repos/$owner/$repo/pulls").postData(toJson(prr))
       .headers(headers)
       .execute(fromJson[PullRequest])
@@ -208,7 +204,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .body) match {
       case Success(b) => Some(b)
       case Failure(e) =>
-        logger.warn(s"Failed to find branch $branch in $owner/$repo", e)
+        logger.debug(s"Failed to find branch $branch in $owner/$repo", e)
         None
     }
 
@@ -287,9 +283,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
       val tree = createTree(repo, owner, finalTreeEntries) match {
         case Left(msg) => throw new IllegalArgumentException(msg)
-        case Right(ctr) => ctr
+        case Right(t) =>
+          logger.debug(t.toString)
+          t
       }
-      logger.debug(tree.toString)
 
       val commit = createCommit(repo, owner, message, tree, Seq(baseTreeSha))
       updateReference(repo, owner, s"heads/$branch", commit.sha)
@@ -304,9 +301,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   @throws[ArtifactSourceUpdateException]
   def addFile(sui: GitHubSourceUpdateInfo, fa: FileArtifact): FileArtifact = {
     val sourceId = sui.sourceId
-    val repo = sourceId.repo
-    val owner = sourceId.owner
-    addFile(repo, owner, sourceId.branch, sui.message, fa)
+    addFile(sourceId.repo, sourceId.owner, sourceId.branch, sui.message, fa)
   }
 
   @throws[ArtifactSourceUpdateException]

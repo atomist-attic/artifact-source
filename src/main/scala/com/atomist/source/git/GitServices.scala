@@ -5,6 +5,8 @@ import java.nio.file._
 import java.nio.file.attribute.{PosixFilePermission, PosixFilePermissions}
 
 import com.atomist.source._
+import com.atomist.source.git.github.GitHubServices
+import com.atomist.source.git.github.domain.{PullRequest, PullRequestRequest}
 import com.atomist.util.FilePermissions.fromMode
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
@@ -20,15 +22,17 @@ case class GitServices(oAuthToken: String, remoteUrl: Option[String] = None)
 
   private val credentialsProvider = new UsernamePasswordCredentialsProvider(oAuthToken, "")
   private val grc = GitRepositoryCloner(oAuthToken, remoteUrl)
+  private val ghs = GitHubServices(oAuthToken, remoteUrl)
 
+  @throws[ArtifactSourceUpdateException]
   def createBranchFromChanges(repo: String,
                               owner: String,
                               branchName: String,
                               old: ArtifactSource,
                               current: ArtifactSource,
                               message: String): File = {
-    val repoDir = grc.clone(repo, owner) match {
-      case Left(t) => throw new IllegalArgumentException(s"Failed to clone $owner/$repo", t)
+    val repoDir = grc clone(repo, owner) match {
+      case Left(t) => throw ArtifactSourceUpdateException(s"Failed to clone $owner/$repo", t)
       case Right(dir) => dir
     }
 
@@ -59,6 +63,17 @@ case class GitServices(oAuthToken: String, remoteUrl: Option[String] = None)
     }
 
     repoDir
+  }
+
+  @throws[ArtifactSourceUpdateException]
+  def createPullRequestFromChanges(repo: String,
+                                   owner: String,
+                                   prr: PullRequestRequest,
+                                   old: ArtifactSource,
+                                   current: ArtifactSource,
+                                   message: String): PullRequest = {
+    createBranchFromChanges(repo, owner, prr.head, old, current, message)
+    ghs createPullRequest(repo, owner, prr)
   }
 
   private def processDeltas(repoDir: File, deltas: Deltas): Seq[String] = {

@@ -58,8 +58,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     before.allFiles should have size 1
 
     val newBranchName = "add-multi-files-branch"
-    val gHRef = ghs createBranch(repo, owner, newBranchName, MasterBranch)
-    gHRef.`object`.sha should not be empty
+    val ref = ghs createBranch(repo, owner, newBranchName, MasterBranch)
+    ref.`object`.sha should not be empty
     val newBranchSource = GitHubArtifactSourceLocator(cri, newBranchName)
 
     val tempFiles = createTempFiles(newBranchSource)
@@ -97,12 +97,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     createContent(repo, owner)
 
     val cri = SimpleCloudRepoId(repo, owner)
-    val prTitle = s"My pull request at ${System.currentTimeMillis}"
-    val prBody = "This is the body of my pull request"
-    val updatedBranch = s"multi-file-${System.currentTimeMillis}"
-    val baseSource = GitHubArtifactSourceLocator(cri, MasterBranch)
-
-    val startAs = ghs sourceFor baseSource
+    val startAs = ghs sourceFor GitHubArtifactSourceLocator(cri, MasterBranch)
     startAs.empty shouldBe false
     val modifiedAs = startAs delete "README.md" delete "src/test.txt"
 
@@ -111,8 +106,13 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     (withAddedFiles Δ modifiedAs).deltas.isEmpty shouldBe false
 
+    val prTitle = s"My pull request at ${System.currentTimeMillis}"
+    val prBody = "This is the body of my pull request"
+    val updatedBranch = s"multi-file-${System.currentTimeMillis}"
     val prr = PullRequestRequest(prTitle, updatedBranch, MasterBranch, prBody)
-    val pr = ghs createPullRequestFromChanges(baseSource.repo, baseSource.owner, prr, startAs, withAddedFiles, "Added files and deleted files including README.md")
+    val message = "Added files and deleted files including README.md"
+    val pr = ghs createPullRequestFromChanges(GitHubArtifactSourceLocator(cri, MasterBranch).repo,
+      GitHubArtifactSourceLocator(cri, MasterBranch).owner, prr, startAs, withAddedFiles, message)
     pr.number should be > 0
     pr.isOpen shouldBe true
     pr.body should equal(prBody)
@@ -121,11 +121,11 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val rc = ghs createReviewComment(repo, owner, pr.number, "comment body", pr.head.sha, "somethingOrOther.txt", 1)
     rc.body should equal("comment body")
 
-    val openPrs = ghs.getPullRequests(repo, owner)
+    val openPrs = ghs getPullRequests(repo, owner)
     openPrs.isEmpty shouldBe false
     openPrs.map(_.title) should contain(prTitle)
 
-    val pr2 = ghs.getPullRequest(repo, owner, pr.number)
+    val pr2 = ghs getPullRequest(repo, owner, pr.number)
     pr2 shouldBe defined
     val pr1 = pr2.get
     pr1.number should equal(pr.number)
@@ -136,11 +136,11 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val merged = ghs mergePullRequest(repo, owner, pr1.number, pr1.title, "Merged PR")
     merged.merged shouldBe true
 
-    val pr3 = ghs.getPullRequest(repo, owner, pr1.number)
+    val pr3 = ghs getPullRequest(repo, owner, pr1.number)
     pr3 shouldBe defined
     pr3.get.merged shouldBe true
 
-    val endAs = ghs sourceFor baseSource
+    val endAs = ghs sourceFor GitHubArtifactSourceLocator(cri, MasterBranch)
     endAs.allFiles.size shouldBe 4
   }
 
@@ -154,8 +154,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
       case Left(e) => fail(e)
       case Right(repoDir) => repoDir
     }
-    val id = NamedFileSystemArtifactSourceIdentifier(repo, cloned)
-    val startAs = FileSystemGitArtifactSource(id)
+
+    val startAs = FileSystemGitArtifactSource(NamedFileSystemArtifactSourceIdentifier(repo, cloned))
 
     val path1 = "test.json"
     val newFile1 = StringFileArtifact(path1, "test content")
@@ -190,14 +190,14 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     f1.get.content shouldEqual newContent1
   }
 
-  it should "clone repo, update, delete files, and create a pull request from deltas" in {
+  it should "create repo, update, delete files, and create a pull request from deltas" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
     createContent(repo, owner)
 
     val newBranchName = "add-multi-files-branch"
-    populateAndVerify(newTempRepo.name, newTempRepo.ownerName, newBranchName, MasterBranch)
+    populateAndVerify(repo, owner, newBranchName)
   }
 
   it should "create repo, add, update, delete files, and create a pull request from deltas" in {
@@ -208,10 +208,10 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val newBranchName = "add-multi-files-branch"
 
-    ghs.createBranch(repo, owner, newBranchName, MasterBranch)
-    ghs.addFile(repo, owner, newBranchName, "new file 3", StringFileArtifact("alan.txt", "alan stewart"))
+    ghs createBranch(repo, owner, newBranchName, MasterBranch)
+    ghs addFile(repo, owner, newBranchName, "new file 3", StringFileArtifact("alan.txt", "alan stewart"))
 
-    populateAndVerify(newTempRepo.name, newTempRepo.ownerName, newBranchName, newBranchName)
+    populateAndVerify(repo, owner, newBranchName)
   }
 
   it should "get all commits in a repository" in {
@@ -236,8 +236,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     fileArtifacts
   }
 
-  private def populateAndVerify(repo: String, ownwer: String, newBranchName: String, fromBranch: String) = {
-    val cri = SimpleCloudRepoId(repo, ownwer)
+  private def populateAndVerify(repo: String, owner: String, newBranchName: String) = {
+    val cri = SimpleCloudRepoId(repo, owner)
     val master = GitHubArtifactSourceLocator(cri, branch = MasterBranch)
     val startAs = ghs sourceFor master
 
@@ -253,21 +253,20 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val modifiedAs = edited delete "src/test.txt"
     val multiFileCommitMessage = s"multi file commit at ${System.currentTimeMillis}"
 
-    val start = System.currentTimeMillis
-    ghs.createBranchFromChanges(repo, ownwer, newBranchName, fromBranch, startAs, modifiedAs, multiFileCommitMessage)
-    println(s"Elapsed time to create branch from deltas = ${System.currentTimeMillis() - start} ms")
-
     val prTitle = s"My pull request at ${System.currentTimeMillis}"
     val prBody = "This is the body of my pull request"
     val prr = PullRequestRequest(prTitle, newBranchName, MasterBranch, prBody)
-    val pr = ghs createPullRequest(repo, ownwer, prr, "Added files and deleted files")
 
-    val merged = ghs mergePullRequest(repo, ownwer, pr.number, pr.title, "Merged PR")
+    val start = System.currentTimeMillis
+    val pr = ghs createPullRequestFromChanges(repo, owner, prr, startAs, modifiedAs, multiFileCommitMessage)
+    println(s"Elapsed time to create pull request from deltas = ${System.currentTimeMillis() - start} ms")
+
+    val merged = ghs mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
     merged.merged shouldBe true
 
-    val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
-    tghas.findFile("src/test.txt") shouldBe empty
-    tghas.findFile("test.json").map(_.content shouldEqual newContent)
+    val endAs = ghs sourceFor GitHubArtifactSourceLocator(cri)
+    endAs.findFile("src/test.txt") shouldBe empty
+    endAs.findFile("test.json").map(_.content shouldEqual newContent)
       .getOrElse(fail("expected test.json but not found"))
   }
 }

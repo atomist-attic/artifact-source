@@ -40,7 +40,7 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
 
   override val allFiles: Seq[FileArtifact] = {
     val tree: Tree = {
-      val root = Try(ghs.getTreeRecursive(id.repo, id.owner, id.sha)) match {
+      val root = Try(ghs getTreeRecursive(id.repo, id.owner, id.sha)) match {
         case Success(t) => t
         case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
       }
