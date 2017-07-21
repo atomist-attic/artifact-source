@@ -5,7 +5,7 @@ import java.nio.charset.Charset
 
 import com.atomist.source._
 import com.atomist.source.filter.ArtifactFilter
-import com.atomist.source.git.github.domain.{Repository, Tree, TreeEntry}
+import com.atomist.source.git.github.domain.{Tree, TreeEntry}
 import com.atomist.util.Octal
 import org.apache.commons.io.IOUtils
 import resource._
@@ -19,12 +19,6 @@ import scala.util.{Failure, Success, Try}
 case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices, artifactFilters: ArtifactFilter*)
   extends ArtifactSource
     with DirectoryInferringArtifactContainer {
-
-  protected lazy val repository: Repository =
-    Try(ghs getRepository(id.repo, id.owner)) match {
-      case Success(Some(repo)) => repo
-      case Success(None) => throw ArtifactSourceAccessException(s"Failed to find repository ${id.owner}/${id.repo}")
-    }
 
   private class LazyGitHubFileArtifact(te: TreeEntry) extends FileArtifact {
 

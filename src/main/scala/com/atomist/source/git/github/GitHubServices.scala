@@ -14,12 +14,6 @@ import resource._
 import scala.util.{Failure, Success, Try}
 import scalaj.http.{Base64, Http, HttpResponse}
 
-object GitHubServices {
-
-  val Url = "https://github.com"
-  val ApiUrl = "https://api.github.com"
-}
-
 case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   extends GitHubSourceReader
     with LazyLogging {
@@ -244,10 +238,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   def commitFiles(sui: GitHubSourceUpdateInfo,
                   files: Seq[FileArtifact],
                   filesToDelete: Seq[FileArtifact]): Seq[FileArtifact] = {
-    val sourceId = sui.sourceId
-    val repo = sourceId.repo
-    val owner = sourceId.owner
-    commitFiles(repo, owner, sourceId.branch, sui.message, files, filesToDelete)
+    val id = sui.sourceId
+    commitFiles(id.repo, id.owner, id.branch, sui.message, files, filesToDelete)
   }
 
   /**
@@ -388,7 +380,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                       state: String = PullRequest.Open,
                       sort: String = "created",
                       direction: String = "asc"): Seq[PullRequest] = {
-    val params = Map("state" -> state, "per_page" -> "100")
+    val params = Map("state" -> state, "sort" -> sort, "direction" -> direction, "per_page" -> "100")
     val resp = Http(s"$ApiUrl/repos/$owner/$repo/pulls").headers(headers).params(params).asString
     if (resp.isSuccess) {
       val firstPage = fromJson[Seq[PullRequest]](resp.body)
@@ -488,6 +480,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   private def getNextUrl(resp: HttpResponse[String]): Option[String] =
     resp.header("Link").flatMap(parseLinkHeader(_).get("next"))
+}
+
+object GitHubServices {
+
+  val Url = "https://github.com"
+  val ApiUrl = "https://api.github.com"
 
   private def parseLinkHeader(linkHeader: String): Map[String, String] =
     if (linkHeader == null || linkHeader.isEmpty) Map.empty
