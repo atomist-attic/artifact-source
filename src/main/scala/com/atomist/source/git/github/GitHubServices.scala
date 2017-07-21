@@ -269,10 +269,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         .map(fa => FileWithBlobRef(fa, createBlob(repo, owner, message, branch, fa)))
         .toSeq
 
-      val newOrUpdatedTreeEntries = filesWithBlobRefs.map(fwbr => TreeEntry(fwbr.fa.path, intToOctal(fwbr.fa.mode), "blob", fwbr.ref.sha))
+      val newOrUpdatedTreeEntries = filesWithBlobRefs
+        .map(fileWithBlobRef => TreeEntry(fileWithBlobRef.fa.path, intToOctal(fileWithBlobRef.fa.mode), "blob", fileWithBlobRef.ref.sha))
+
       val allExistingTreeEntries = treeFor(GitHubShaIdentifier(repo, owner, baseTreeSha))
-        .allFiles
-        .map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
+        .allFiles.map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
+
       val treeEntriesToDelete = filesToDelete.map(fa => TreeEntry(fa.path, intToOctal(fa.mode), "blob", fa.uniqueId.getOrElse("")))
 
       val finalTreeEntries = (allExistingTreeEntries ++ newOrUpdatedTreeEntries)
@@ -281,12 +283,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         .filterNot(te => treeEntriesToDelete.exists(_.path == te.path))
         .toSeq
 
-      val tree = createTree(repo, owner, finalTreeEntries) match {
-        case Left(msg) => throw new IllegalArgumentException(msg)
-        case Right(t) =>
-          logger.debug(t.toString)
-          t
-      }
+      val tree = createTree(repo, owner, finalTreeEntries)
+      logger.debug(tree.toString)
 
       val commit = createCommit(repo, owner, message, tree, Seq(baseTreeSha))
       updateReference(repo, owner, s"heads/$branch", commit.sha)
@@ -423,14 +421,15 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .body
   }
 
-  private def createTree(repo: String, owner: String, treeEntries: Seq[TreeEntry]): Either[String, Tree] = {
+  private def createTree(repo: String, owner: String, treeEntries: Seq[TreeEntry]): Tree = {
     val ctr = CreateTreeRequest(treeEntries)
     logger.debug(ctr.toString)
     Http(s"$ApiUrl/repos/$owner/$repo/git/trees").postData(toJson(ctr))
       .headers(headers)
       .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
-        case 201 => Right(fromJson[Tree](is))
-        case _ => Left(s"${headers("Status").head}, ${IOUtils.toString(is, Charset.defaultCharset)}")
+        case 201 => fromJson[Tree](is)
+        case _ =>
+          throw new IllegalArgumentException(s"${headers("Status").head}, ${IOUtils.toString(is, Charset.defaultCharset)}")
       }).body
   }
 
