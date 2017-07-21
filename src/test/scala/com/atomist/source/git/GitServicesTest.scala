@@ -4,7 +4,7 @@ import com.atomist.source._
 import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants.Token
 import com.atomist.source.git.github.domain.PullRequestRequest
-import com.atomist.source.git.github.{GitHubArtifactSourceLocator, GitHubMutatorTest, TreeGitHubArtifactSource}
+import com.atomist.source.git.github.{GitHubArtifactSourceLocator, GitHubMutatorTest}
 
 class GitServicesTest extends GitHubMutatorTest(Token) {
 
