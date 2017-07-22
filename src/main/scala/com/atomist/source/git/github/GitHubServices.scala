@@ -414,13 +414,16 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   @throws[ArtifactSourceUpdateException]
   def createWebhook(repo: String, owner: String, wh: Webhook): Webhook =
-    Try(Http(s"$ApiUrl/repos/$owner/$repo/hooks").postData(toJson(wh))
-      .headers(headers)
-      .execute(fromJson[Webhook])
-      .throwError
-      .body) match {
+    Try(createWebhook(s"$ApiUrl/repos/$owner/$repo/hooks", wh)) match {
       case Success(hook) => hook
       case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create webhook in $owner/$repo", e)
+    }
+
+  @throws[ArtifactSourceUpdateException]
+  def createOrganizationWebhook(owner: String, wh: Webhook): Webhook =
+    Try(createWebhook(s"$ApiUrl/orgs/$owner/hooks", wh)) match {
+      case Success(hook) => hook
+      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create webhook in $owner", e)
     }
 
   def testWebhook(repo: String, owner: String, id: Int): Unit =
@@ -488,6 +491,13 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .throwError
   }
 
+  private def createWebhook(url: String, wh: Webhook): Webhook =
+    Http(url).postData(toJson(wh))
+      .headers(headers)
+      .execute(fromJson[Webhook])
+      .throwError
+      .body
+
   private def paginateResults[T](url: String,
                                  firstPage: Seq[T],
                                  params: Map[String, String] = Map.empty)(implicit m: Manifest[T]): Seq[T] = {
@@ -512,7 +522,7 @@ object GitHubServices {
   val Url = "https://github.com"
   val ApiUrl = "https://api.github.com"
 
-  private def parseLinkHeader(linkHeader: String): Map[String, String] =
+  def parseLinkHeader(linkHeader: String): Map[String, String] =
     if (linkHeader == null || linkHeader.isEmpty) Map.empty
     else
       linkHeader.split(',').map { part =>
