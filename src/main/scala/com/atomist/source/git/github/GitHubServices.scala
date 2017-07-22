@@ -423,6 +423,15 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create webhook in $owner/$repo", e)
     }
 
+  def testWebhook(repo: String, owner: String, id: Int): Unit =
+    Try {
+      val resp = Http(s"$ApiUrl/repos/$owner/$repo/hooks/$id/tests").postData("").headers(headers).asString
+      resp.code match {
+        case 204 => logger.info(s"Successfully tested webhook in $owner/$repo")
+        case _ => logger.warn(s"Failed to test webhook in $owner/$repo: ${resp.body}")
+      }
+    }
+
   @throws[ArtifactSourceUpdateException]
   def addCollaborator(repo: String, owner: String, collaborator: String): Unit =
     Try(Http(s"$ApiUrl/repos/$owner/$repo/collaborators/$collaborator")

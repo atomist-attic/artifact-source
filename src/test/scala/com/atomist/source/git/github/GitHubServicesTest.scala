@@ -224,18 +224,20 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     pullRequests.size should be > 300
   }
 
-  it should "create webhook in a repository" in {
+  it should "create and test webhook in a repository" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
-    val wh = Webhook("web", "http://example.com/webhook", "json", Seq("push"))
+    val wh = Webhook("web", "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9", "json", Seq("push"))
     val webhook = ghs createWebhook(repo, owner, wh)
     webhook.name should equal(wh.name)
     webhook.config.url should equal(wh.config.url)
     webhook.id should be > 0
     webhook.active shouldBe true
     webhook.events should contain only "push"
+
+    ghs.testWebhook(repo, owner, webhook.id)
   }
 
   it should "add a collaborator to a repository" in {
