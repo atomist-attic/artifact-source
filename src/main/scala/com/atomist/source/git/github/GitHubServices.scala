@@ -129,12 +129,18 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .throwError
       .body) match {
       case Success(fromRef) =>
-        val cr = CreateReferenceRequest(s"refs/heads/$branchName", fromRef.`object`.sha)
-        val resp = Http(s"$ApiUrl/repos/$owner/$repo/git/refs").headers(headers).postData(toJson(cr)).asString
-        if (resp.isSuccess)
-          fromJson[Reference](resp.body)
-        else
-          throw ArtifactSourceUpdateException(s"Failed to create branch $branchName in $owner/$repo: ${resp.body}")
+        Try {
+          val cr = CreateReferenceRequest(s"refs/heads/$branchName", fromRef.`object`.sha)
+          Http(s"$ApiUrl/repos/$owner/$repo/git/refs").postData(toJson(cr))
+            .headers(headers)
+            .execute(fromJson[Reference])
+            .throwError
+            .body
+        } match {
+          case Success(reference) => reference
+          case Failure(e) =>
+            throw ArtifactSourceUpdateException(s"Failed to create reference in $owner/$repo", e)
+        }
       case Failure(e) => throw ArtifactSourceUpdateException(e.getMessage, e)
     }
 
@@ -155,18 +161,14 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       val filesToUpdate = deltas.deltas.collect {
         case fud: FileUpdateDelta => fud.updatedFile
       }
-      logger.debug(s"Updating files ${filesToUpdate.map(_.path).mkString(",")}")
-
       val filesToAdd = deltas.deltas.collect {
         case fad: FileAdditionDelta if !filesToUpdate.exists(_.path == fad.path) => fad.newFile
       }
-      logger.debug(s"Adding files ${filesToAdd.map(_.path).mkString(",")}")
       val files = filesToUpdate ++ filesToAdd
 
       val filesToDelete = deltas.deltas.collect {
         case fdd: FileDeletionDelta => fdd.oldFile
       }
-      logger.debug(s"Deleting files ${filesToDelete.map(_.path).mkString(",")}")
 
       commitFiles(sui, files, filesToDelete)
     } match {
@@ -220,7 +222,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                           position: Int): ReviewComment =
     Try {
       val crc = CreateReviewCommentRequest(body, commitId, path, position)
-      logger.debug(crc.toString)
       Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/comments").postData(toJson(crc))
         .headers(headers)
         .execute(fromJson[ReviewComment])
@@ -333,7 +334,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                        mergeMethod: String = "squash"): PullRequestMerged =
     Try {
       val prmr = PullRequestMergeRequest(title, message, mergeMethod)
-      logger.debug(prmr.toString)
       Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/merge").postData(toJson(prmr))
         .method("PUT")
         .headers(headers)
@@ -423,10 +423,22 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create webhook in $owner/$repo", e)
     }
 
+  @throws[ArtifactSourceUpdateException]
+  def addCollaborator(repo: String, owner: String, collaborator: String): Unit =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/collaborators/$collaborator")
+      .method("PUT")
+      .param("permission", "push")
+      .headers(headers)
+      .asString
+      .throwError) match {
+      case Success(_) => logger.info(s"Successfully added collaborator $collaborator to $owner/$repo")
+      case Failure(e) =>
+        throw ArtifactSourceUpdateException(s"Failed to add collaborator $collaborator to $owner/$repo", e)
+    }
+
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
     val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
     val cbr = CreateBlobRequest(content)
-    logger.debug(s"$branch,${fa.path},$cbr")
     Http(s"$ApiUrl/repos/$owner/$repo/git/blobs").postData(toJson(cbr))
       .headers(headers)
       .execute(fromJson[GitHubRef])
@@ -436,7 +448,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   private def createTree(repo: String, owner: String, treeEntries: Seq[TreeEntry]): Tree = {
     val ctr = CreateTreeRequest(treeEntries)
-    logger.debug(ctr.toString)
     Http(s"$ApiUrl/repos/$owner/$repo/git/trees").postData(toJson(ctr))
       .headers(headers)
       .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
@@ -452,7 +463,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                            tree: Tree,
                            parents: Seq[String]): CreateCommitResponse = {
     val cr = CreateCommitRequest(message, tree.sha, parents)
-    logger.debug(cr.toString)
     Http(s"$ApiUrl/repos/$owner/$repo/git/commits").postData(toJson(cr))
       .headers(headers)
       .execute(fromJson[CreateCommitResponse])
@@ -462,7 +472,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   private def updateReference(repo: String, owner: String, ref: String, newSha: String): Unit = {
     val urr = UpdateReferenceRequest(newSha, force = true)
-    logger.debug(urr.toString)
     Http(s"$ApiUrl/repos/$owner/$repo/git/refs/$ref").postData(toJson(urr))
       .method("PATCH")
       .headers(headers)

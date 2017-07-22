@@ -224,7 +224,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     pullRequests.size should be > 300
   }
 
-  it should "create webhook in repo" in {
+  it should "create webhook in a repository" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
@@ -236,6 +236,15 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     webhook.id should be > 0
     webhook.active shouldBe true
     webhook.events should contain only "push"
+  }
+
+  it should "add a collaborator to a repository" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    ghs addCollaborator(repo, owner, "alankstewart")
+
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {
