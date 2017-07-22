@@ -4,7 +4,7 @@ import com.atomist.source._
 import com.atomist.source.file.NamedFileSystemArtifactSourceIdentifier
 import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants._
-import com.atomist.source.git.github.domain.{PullRequest, PullRequestRequest}
+import com.atomist.source.git.github.domain.{PullRequest, PullRequestRequest, Webhook}
 import com.atomist.source.git.{FileSystemGitArtifactSource, GitRepositoryCloner}
 
 class GitHubServicesTest extends GitHubMutatorTest(Token) {
@@ -222,6 +222,20 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
   it should "get all pull requests in a repository" in {
     val pullRequests = ghs getPullRequests("rug", "atomist", PullRequest.All)
     pullRequests.size should be > 300
+  }
+
+  it should "create webhook in repo" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    val wh = Webhook("web", "http://example.com/webhook", "json", Seq("push"))
+    val webhook = ghs createWebhook(repo, owner, wh)
+    webhook.name should equal(wh.name)
+    webhook.config.url should equal(wh.config.url)
+    webhook.id should be > 0
+    webhook.active shouldBe true
+    webhook.events should contain only "push"
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {

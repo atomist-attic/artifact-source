@@ -18,6 +18,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   extends GitHubSourceReader
     with LazyLogging {
 
+  def this(oAuthToken: String, apiUrl: String) = this(oAuthToken, Option(apiUrl)) // For Java
+
   import GitHubServices._
 
   private val headers: Map[String, String] =
@@ -408,6 +410,17 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       case Success(is) => is
       case Failure(e) =>
         throw ArtifactSourceAccessException(s"Failed to read blob with sha $sha in $owner/$repo", e)
+    }
+
+  @throws[ArtifactSourceUpdateException]
+  def createWebhook(repo: String, owner: String, wh: Webhook): Webhook =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/hooks").postData(toJson(wh))
+      .headers(headers)
+      .execute(fromJson[Webhook])
+      .throwError
+      .body) match {
+      case Success(hook) => hook
+      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create webhook in $owner/$repo", e)
     }
 
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {

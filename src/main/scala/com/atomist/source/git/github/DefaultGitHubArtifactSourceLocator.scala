@@ -1,5 +1,6 @@
 package com.atomist.source.git.github
 
+import com.atomist.source.CloudRepoId
 import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 
 case class DefaultGitHubArtifactSourceLocator(repo: String,
@@ -7,6 +8,8 @@ case class DefaultGitHubArtifactSourceLocator(repo: String,
                                               path: String = "",
                                               branch: String = MasterBranch)
   extends GitHubArtifactSourceLocator {
+
+  def this(id: CloudRepoId) = this(id.repo, id.owner)
 
   override val name: String = s"$owner/$repo"
 
