@@ -256,7 +256,6 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val owner = newTempRepo.ownerName
 
     ghs addCollaborator(repo, owner, "alankstewart")
-
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {

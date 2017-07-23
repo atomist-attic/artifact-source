@@ -413,11 +413,19 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   @throws[ArtifactSourceUpdateException]
+  def createWebhook(repo: String, owner: String, whi: WebhookInfo): WebhookInfo =
+    WebhookInfo(createWebhook(repo, owner, Webhook(whi)))
+
+  @throws[ArtifactSourceUpdateException]
   def createWebhook(repo: String, owner: String, wh: Webhook): Webhook =
     Try(createWebhook(s"$ApiUrl/repos/$owner/$repo/hooks", wh)) match {
       case Success(hook) => hook
       case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create webhook in $owner/$repo", e)
     }
+
+  @throws[ArtifactSourceUpdateException]
+  def createOrganizationWebhook(owner: String, whi: WebhookInfo): WebhookInfo =
+    WebhookInfo(createOrganizationWebhook(owner, Webhook(whi)))
 
   @throws[ArtifactSourceUpdateException]
   def createOrganizationWebhook(owner: String, wh: Webhook): Webhook =

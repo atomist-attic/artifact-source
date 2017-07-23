@@ -16,7 +16,8 @@ case class WebhookInfo(@JsonProperty(access = Access.WRITE_ONLY) id: Int,
   def this(name: String, url: String, contentType: String, events: JList[String]) =
     this(0, name, url, contentType, events)
 
-  def this(wh: Webhook) = this(wh.id, wh.name, wh.config.url, wh.config.contentType, wh.events.asJava)
+  def this(wh: Webhook) =
+    this(wh.id, wh.name, wh.config.url, wh.config.contentType, wh.events.asJava)
 }
 
 object WebhookInfo {
