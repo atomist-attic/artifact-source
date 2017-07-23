@@ -66,22 +66,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   def searchRepositories(q: String): Seq[Repository] = {
     val params = Map("q" -> q, "per_page" -> "100")
-
-    def nextPage(url: String, accumulator: Seq[Repository]): Seq[Repository] = {
-      val resp = Http(url).headers(headers).params(params).asString
-      if (resp.isSuccess) {
-        val pages = accumulator ++ fromJson[SearchRepoResult](resp.body).items
-        getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
-      } else {
-        logger.warn(s"Failed to find repositories: ${resp.body}")
-        Seq.empty
-      }
-    }
-
     val resp = Http(s"$ApiUrl/search/repositories").headers(headers).params(params).asString
     if (resp.isSuccess) {
-      val firstPage = fromJson[SearchRepoResult](resp.body).items
-      getNextUrl(resp).map(nextPage(_, firstPage)).getOrElse(firstPage)
+      val firstPage = fromJson[SearchResult[Repository]](resp.body).items
+      getNextUrl(resp).map(paginateSearchResults(_, firstPage, params)).getOrElse(firstPage)
     } else {
       logger.warn(s"Failed to find repositories: ${resp.body}")
       Seq.empty
@@ -450,6 +438,29 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         throw ArtifactSourceUpdateException(s"Failed to add collaborator $collaborator to $owner/$repo", e)
     }
 
+  def getIssue(repo: String, owner: String, number: Int): Option[Issue] =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/issues/$number")
+      .headers(headers)
+      .execute(fromJson[Issue])
+      .throwError
+      .body) match {
+      case Success(issue) => Some(issue)
+      case Failure(e) =>
+        logger.warn(s"Failed to get issue $number in $owner/$repo", e)
+        None
+    }
+
+  def listIssues(params: Map[String, String] = Map.empty): Seq[Issue] = {
+    val resp = Http(s"$ApiUrl/issues").headers(headers).params(params).asString
+    if (resp.isSuccess) {
+      val firstPage = fromJson[Seq[Issue]](resp.body)
+      getNextUrl(resp).map(paginateResults(_, firstPage, params)).getOrElse(firstPage)
+    } else {
+      logger.warn(s"Failed to list issues")
+      Seq.empty
+    }
+  }
+
   @throws[ArtifactSourceUpdateException]
   def createIssue(repo: String, owner: String, title: String, body: String, labels: Seq[String]): Issue =
     Try(Http(s"$ApiUrl/repos/$owner/$repo/issues")
@@ -461,6 +472,40 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       case Success(issue) => issue
       case Failure(e) =>
         throw ArtifactSourceUpdateException(s"Failed to create issue in $owner/$repo", e)
+    }
+
+  @throws[ArtifactSourceUpdateException]
+  def editIssue(repo: String,
+                owner: String,
+                number: Int,
+                title: String,
+                body: String,
+                state: String = "open",
+                labels: Seq[String] = Seq.empty,
+                assignees: Seq[String] = Seq.empty): Issue =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/issues/$number")
+      .postData(toJson(Map("title" -> title, "body" -> body, "state" -> state, "labels" -> labels, "assignees" -> assignees)))
+      .method("PATCH")
+      .headers(headers)
+      .execute(fromJson[Issue])
+      .throwError
+      .body) match {
+      case Success(issue) => issue
+      case Failure(e) =>
+        throw ArtifactSourceUpdateException(s"Failed to edit issue $number in $owner/$repo", e)
+    }
+
+  @throws[ArtifactSourceUpdateException]
+  def createIssueComment(repo: String, owner: String, number: Int, body: String): Comment =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/issues/$number/comments")
+      .postData(toJson(Map("body" -> body)))
+      .headers(headers)
+      .execute(fromJson[Comment])
+      .throwError
+      .body) match {
+      case Success(comment) => comment
+      case Failure(e) =>
+        throw ArtifactSourceUpdateException(s"Failed to create comment for issue $number in $owner/$repo", e)
     }
 
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
@@ -529,6 +574,23 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
       } else
         throw ArtifactSourceAccessException(resp.body)
+    }
+
+    nextPage(url, firstPage)
+  }
+
+  private def paginateSearchResults[T](url: String,
+                                 firstPage: Seq[T],
+                                 params: Map[String, String] = Map.empty)(implicit m: Manifest[T]): Seq[T] = {
+    def nextPage(url: String, accumulator: Seq[T]): Seq[T] = {
+      val resp = Http(url).headers(headers).params(params).asString
+      if (resp.isSuccess) {
+        val pages = accumulator ++ fromJson[SearchResult[T]](resp.body).items
+        getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
+      } else {
+        logger.warn(s"Failed to find results: ${resp.body}")
+        Seq.empty
+      }
     }
 
     nextPage(url, firstPage)

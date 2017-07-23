@@ -240,15 +240,15 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.testWebhook(repo, owner, webhook.id)
   }
 
-  ignore should "create webhook in an organization" in {
-    val url = "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9"
-    val webhook = ghs createOrganizationWebhook("atomist", "web", url, "json", active = true, Array("push"))
-    webhook.name should equal("web")
-    webhook.config.url should equal(url)
-    webhook.id should be > 0
-    webhook.active shouldBe true
-    webhook.events should contain only "push"
-  }
+  //  ignore should "create webhook in an organization" in {
+  //    val url = "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9"
+  //    val webhook = ghs createOrganizationWebhook("atomist", "web", url, "json", active = true, Array("push"))
+  //    webhook.name should equal("web")
+  //    webhook.config.url should equal(url)
+  //    webhook.id should be > 0
+  //    webhook.active shouldBe true
+  //    webhook.events should contain only "push"
+  //  }
 
   it should "add a collaborator to a repository" in {
     val newTempRepo = newPopulatedTemporaryRepo()
@@ -258,14 +258,33 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs addCollaborator(repo, owner, "alankstewart")
   }
 
-  it should "create an issue in a repository" in {
+  it should "create, edit issue, and create issue comment in a repository" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
     val issue = ghs createIssue(repo, owner, "issue 1", "issue body", Seq("bug"))
-    issue.id should be > 0
+    issue.number should be > 0
     issue.labels.length should be > 0
+    issue.state shouldBe "open"
+    issue.closedAt shouldBe empty
+
+    val retrievedIssue = ghs getIssue(repo, owner, issue.number)
+    retrievedIssue shouldBe defined
+    val iss = retrievedIssue.get
+
+    val editedIssue = ghs editIssue(repo, owner, iss.number, iss.title, iss.body, state = "closed",
+      labels = Seq("bug", "feature"), assignees = Seq("alankstewart"))
+    editedIssue.state shouldBe "closed"
+    editedIssue.closedAt shouldBe defined
+    editedIssue.assignees shouldBe defined
+    editedIssue.assignees.get should have size 1
+
+    val comment = ghs createIssueComment(repo, owner, editedIssue.number, "issue comment 1")
+    comment.body shouldEqual "issue comment 1"
+
+    val issues = ghs listIssues()
+    issues.size should be > 0
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {

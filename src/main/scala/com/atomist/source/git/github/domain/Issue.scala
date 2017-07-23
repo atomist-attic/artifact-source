@@ -15,13 +15,23 @@ case class Issue(number: Int,
                  milestone: Option[Milestone],
                  state: String,
                  @JsonProperty("pull_request") pullRequest: Option[IssuePullRequest],
-                 repository: Option[User],
+                 repository: Option[IssueRepository],
                  @JsonProperty("created_at") createdAt: OffsetDateTime,
                  @JsonProperty("updated_at") updatedAt: OffsetDateTime,
-                 @JsonProperty("closed_at") closedAt: Option[OffsetDateTime])
+                 @JsonProperty("closed_at") closedAt: Option[OffsetDateTime],
+                 assignees: Option[Seq[User]])
 
 case class IssueLabel(url: String, name: String, color: String)
 
 case class Milestone(url: String, id: Integer, number: Integer)
 
 case class IssuePullRequest(url: String)
+
+case class IssueRepository(@JsonProperty("pushed_at") pushedAt: OffsetDateTime)
+
+case class Comment(id: Int,
+                   @JsonProperty("html_url") url: String,
+                   body: String,
+                   user: User,
+                   @JsonProperty("created_at") createdAt: OffsetDateTime,
+                   @JsonProperty("updated_at") updatedAt: OffsetDateTime)
