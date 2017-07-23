@@ -64,8 +64,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         }
     }
 
-  def searchRepositories(q: String): Seq[Repository] = {
-    val params = Map("q" -> q, "per_page" -> "100")
+  def searchRepositories(params: Map[String, String] = Map("per_page" -> "100")): Seq[Repository] = {
     val resp = Http(s"$ApiUrl/search/repositories").headers(headers).params(params).asString
     if (resp.isSuccess) {
       val firstPage = fromJson[SearchResult[Repository]](resp.body).items
@@ -111,6 +110,18 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to delete repository $owner/$repo", e)
     }
 
+  def getBranch(repo: String, owner: String, branch: String): Option[Branch] =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/branches/$branch")
+      .headers(headers)
+      .execute(fromJson[Branch])
+      .throwError
+      .body) match {
+      case Success(b) => Some(b)
+      case Failure(e) =>
+        logger.debug(s"Failed to find branch $branch in $owner/$repo", e)
+        None
+    }
+
   @throws[ArtifactSourceUpdateException]
   def createBranch(repo: String, owner: String, branchName: String, fromBranch: String): Reference =
     Try(Http(s"$ApiUrl/repos/$owner/$repo/git/refs/heads/$fromBranch")
@@ -130,6 +141,19 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
             throw ArtifactSourceUpdateException(s"Failed to create reference in $owner/$repo", e)
         }
       case Failure(e) => throw ArtifactSourceUpdateException(e.getMessage, e)
+    }
+
+  @throws[ArtifactSourceUpdateException]
+  def deleteBranch(repo: String, owner: String, branchName: String): Unit =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/git/refs/heads/$branchName")
+      .method("DELETE")
+      .headers(headers)
+      .asString
+      .throwError
+      .body) match {
+      case Success(_) => logger.debug(s"Successfully deleted branch $branchName in $owner/$repo")
+      case Failure(e) =>
+        throw ArtifactSourceUpdateException(s"Failed to delete branch $branchName in $owner/$repo", e)
     }
 
   @throws[ArtifactSourceUpdateException]
@@ -187,18 +211,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .body) match {
       case Success(pr) => pr
       case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create pull request for $owner/$repo", e)
-    }
-
-  def getBranch(repo: String, owner: String, branch: String): Option[Branch] =
-    Try(Http(s"$ApiUrl/repos/$owner/$repo/branches/$branch")
-      .headers(headers)
-      .execute(fromJson[Branch])
-      .throwError
-      .body) match {
-      case Success(b) => Some(b)
-      case Failure(e) =>
-        logger.debug(s"Failed to find branch $branch in $owner/$repo", e)
-        None
     }
 
   @throws[ArtifactSourceUpdateException]
@@ -450,13 +462,24 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         None
     }
 
-  def listIssues(params: Map[String, String] = Map.empty): Seq[Issue] = {
+  def listIssues(params: Map[String, String] = Map("per_page" -> "100")): Seq[Issue] = {
     val resp = Http(s"$ApiUrl/issues").headers(headers).params(params).asString
     if (resp.isSuccess) {
       val firstPage = fromJson[Seq[Issue]](resp.body)
       getNextUrl(resp).map(paginateResults(_, firstPage, params)).getOrElse(firstPage)
     } else {
       logger.warn(s"Failed to list issues")
+      Seq.empty
+    }
+  }
+
+  def searchIssues(params: Map[String, String] = Map("per_page" -> "100")): Seq[Issue] = {
+    val resp = Http(s"$ApiUrl/search/issues").headers(headers).params(params).asString
+    if (resp.isSuccess) {
+      val firstPage = fromJson[SearchResult[Issue]](resp.body).items
+      getNextUrl(resp).map(paginateSearchResults(_, firstPage, params)).getOrElse(firstPage)
+    } else {
+      logger.warn(s"Failed to find issues: ${resp.body}")
       Seq.empty
     }
   }
@@ -554,8 +577,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                             contentType: String,
                             active: Boolean,
                             events: Array[String]): Webhook =
-    Try(Http(apiUrl).postData(toJson(Map("name" -> name, "config" -> Map("url" -> url, "content_type" -> contentType),
-      "active" -> active, "events" -> events)))
+    Try(Http(apiUrl).postData(toJson(Map("name" -> name, "config" -> Map("url" -> url, "content_type" -> contentType), "active" -> active, "events" -> events)))
       .headers(headers)
       .execute(fromJson[Webhook])
       .throwError
@@ -580,8 +602,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   }
 
   private def paginateSearchResults[T](url: String,
-                                 firstPage: Seq[T],
-                                 params: Map[String, String] = Map.empty)(implicit m: Manifest[T]): Seq[T] = {
+                                       firstPage: Seq[T],
+                                       params: Map[String, String] = Map.empty)(implicit m: Manifest[T]): Seq[T] = {
     def nextPage(url: String, accumulator: Seq[T]): Seq[T] = {
       val resp = Http(url).headers(headers).params(params).asString
       if (resp.isSuccess) {

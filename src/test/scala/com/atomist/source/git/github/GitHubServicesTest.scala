@@ -47,6 +47,19 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.getRepository("unknown-repo", "") shouldBe empty
   }
 
+  it should "create and delete branch" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    val branchName = "foobar"
+    val ref = ghs createBranch(repo, owner, branchName, MasterBranch)
+    ref.`object`.sha should not be empty
+
+    ghs deleteBranch(repo, owner, branchName)
+    ghs getBranch(repo, owner, branchName) shouldBe empty
+  }
+
   it should "delete files with valid path in multi file commit" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
@@ -285,6 +298,9 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val issues = ghs listIssues()
     issues.size should be > 0
+
+    val searched = ghs.searchIssues(Map("q" -> s"repo:$owner/$repo state:closed", "per_page" -> "100"))
+    searched.size should be > 0
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {

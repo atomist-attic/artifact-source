@@ -54,7 +54,7 @@ abstract class GitHubMutatorTest(val oAuthToken: String)
     * Clean up after the work of this class.
     */
   private def cleanUp() =
-    Try(ghs.searchRepositories(s"user:$TestOrg in:name $TemporaryRepoPrefix")) match {
+    Try(ghs.searchRepositories(Map("q" -> s"user:$TestOrg in:name $TemporaryRepoPrefix", "per_page" -> "100"))) match {
       case Success(repos) => repos.foreach(repo => ghs.deleteRepository(repo.name, repo.ownerName))
       case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
     }
