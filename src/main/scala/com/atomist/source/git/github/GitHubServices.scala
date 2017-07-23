@@ -40,7 +40,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .body) match {
       case Success(org) => Some(org)
       case Failure(e) =>
-        logger.warn(s"Failed to find organization $owner", e)
+        logger.debug(s"Failed to find organization $owner", e)
         None
     }
 
@@ -451,13 +451,14 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   @throws[ArtifactSourceUpdateException]
-  def createIssue(repo: String, owner: String, title: String, body: String, labels: Seq[String]): Unit =
+  def createIssue(repo: String, owner: String, title: String, body: String, labels: Seq[String]): Issue =
     Try(Http(s"$ApiUrl/repos/$owner/$repo/issues")
-      .postData(toJson(Map("title" -> title, "body" -> body)))
+      .postData(toJson(Map("title" -> title, "body" -> body, "labels" -> labels)))
       .headers(headers)
-      .asString
-      .throwError) match {
-      case Success(_) =>
+      .execute(fromJson[Issue])
+      .throwError
+      .body) match {
+      case Success(issue) => issue
       case Failure(e) =>
         throw ArtifactSourceUpdateException(s"Failed to create issue in $owner/$repo", e)
     }

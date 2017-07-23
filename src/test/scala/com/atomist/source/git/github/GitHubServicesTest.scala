@@ -258,6 +258,16 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs addCollaborator(repo, owner, "alankstewart")
   }
 
+  it should "create an issue in a repository" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    val issue = ghs createIssue(repo, owner, "issue 1", "issue body", Seq("bug"))
+    issue.id should be > 0
+    issue.labels.length should be > 0
+  }
+
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {
     val files: Seq[FileArtifact] = Seq(
       StringFileArtifact(placeholderFilename("tempFile1"), testFileContents),
