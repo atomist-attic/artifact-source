@@ -230,7 +230,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val owner = newTempRepo.ownerName
 
     val url = "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9"
-    val webhook = ghs createWebhook(repo, owner, "web", url, "json", active = true, Seq("push"))
+    val webhook = ghs createWebhook(repo, owner, "web", url, "json", active = true, Array("push"))
     webhook.name should equal("web")
     webhook.config.url should equal(url)
     webhook.id should be > 0
@@ -242,7 +242,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
   ignore should "create webhook in an organization" in {
     val url = "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9"
-    val webhook = ghs createOrganizationWebhook("atomist", "web", url, "json", active = true, Seq("push"))
+    val webhook = ghs createOrganizationWebhook("atomist", "web", url, "json", active = true, Array("push"))
     webhook.name should equal("web")
     webhook.config.url should equal(url)
     webhook.id should be > 0

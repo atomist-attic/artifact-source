@@ -416,11 +416,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                     url: String,
                     contentType: String,
                     active: Boolean,
-                    events: Seq[String]): Webhook =
-    Try(createWebhook(s"$ApiUrl/repos/$owner/$repo/hooks", name, url, contentType, active, events)) match {
-      case Success(hook) => hook
-      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create webhook in $owner/$repo", e)
-    }
+                    events: Array[String]): Webhook =
+    createWebhook(s"$ApiUrl/repos/$owner/$repo/hooks", name, url, contentType, active, events)
 
   @throws[ArtifactSourceUpdateException]
   def createOrganizationWebhook(owner: String,
@@ -428,11 +425,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                                 url: String,
                                 contentType: String,
                                 active: Boolean,
-                                events: Seq[String]): Webhook =
-    Try(createWebhook(s"$ApiUrl/orgs/$owner/hooks", name, url, contentType, active, events)) match {
-      case Success(hook) => hook
-      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create webhook in $owner", e)
-    }
+                                events: Array[String]): Webhook =
+    createWebhook(s"$ApiUrl/orgs/$owner/hooks", name, url, contentType, active, events)
 
   def testWebhook(repo: String, owner: String, id: Int): Unit =
     Try {
@@ -513,14 +507,16 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                             url: String,
                             contentType: String,
                             active: Boolean,
-                            events: Seq[String]): Webhook =
-    Http(apiUrl)
-      .postData(toJson(Map("name" -> name, "config" -> Map("url" -> url, "content_type" -> contentType),
-        "active" -> active, "events" -> events)))
+                            events: Array[String]): Webhook =
+    Try(Http(apiUrl).postData(toJson(Map("name" -> name, "config" -> Map("url" -> url, "content_type" -> contentType),
+      "active" -> active, "events" -> events)))
       .headers(headers)
       .execute(fromJson[Webhook])
       .throwError
-      .body
+      .body) match {
+      case Success(hook) => hook
+      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create webhook", e)
+    }
 
   private def paginateResults[T](url: String,
                                  firstPage: Seq[T],
