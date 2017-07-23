@@ -131,14 +131,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .throwError
       .body) match {
       case Success(fromRef) =>
-        Try {
-          val cr = CreateReferenceRequest(s"refs/heads/$branchName", fromRef.`object`.sha)
-          Http(s"$ApiUrl/repos/$owner/$repo/git/refs").postData(toJson(cr))
-            .headers(headers)
-            .execute(fromJson[Reference])
-            .throwError
-            .body
-        } match {
+        Try(Http(s"$ApiUrl/repos/$owner/$repo/git/refs")
+          .postData(toJson(Map("ref" -> s"refs/heads/$branchName", "sha" -> fromRef.`object`.sha)))
+          .headers(headers)
+          .execute(fromJson[Reference])
+          .throwError
+          .body) match {
           case Success(reference) => reference
           case Failure(e) =>
             throw ArtifactSourceUpdateException(s"Failed to create reference in $owner/$repo", e)
@@ -223,15 +221,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                           commitId: String,
                           path: String,
                           position: Int): ReviewComment =
-    Try {
-      val crc = CreateReviewCommentRequest(body, commitId, path, position)
-      Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/comments")
-        .postData(toJson(crc))
-        .headers(headers)
-        .execute(fromJson[ReviewComment])
-        .throwError
-        .body
-    } match {
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/comments")
+      .postData(toJson(Map("body" -> body, "commit_id" -> commitId, "path" -> path, "position" -> position)))
+      .headers(headers)
+      .execute(fromJson[ReviewComment])
+      .throwError
+      .body) match {
       case Success(rc) => rc
       case Failure(e) =>
         throw ArtifactSourceUpdateException(s"Failed to create review comment for pull request $number in $owner/$repo", e)
@@ -293,7 +288,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       val tree = createTree(repo, owner, finalTreeEntries)
       logger.debug(tree.toString)
 
-      val commit = createCommit(repo, owner, message, tree, Seq(baseTreeSha))
+      val commit = createCommit(repo, owner, message, tree.sha, Seq(baseTreeSha))
       updateReference(repo, owner, s"heads/$branch", commit.sha)
 
       filesWithBlobRefs.map(fileWithBlobRef => fileWithBlobRef.fa.withUniqueId(fileWithBlobRef.ref.sha))
@@ -317,9 +312,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
               fa: FileArtifact): FileArtifact =
     Try {
       val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
-      val cf = CreateFileRequest(fa.path, message, content, branch)
       Http(s"$ApiUrl/repos/$owner/$repo/contents/${fa.path}")
-        .postData(toJson(cf))
+        .postData(toJson(Map("path" -> fa.path, "message" -> message, "content" -> content, "branch" -> branch)))
         .method("PUT")
         .headers(headers)
         .execute(fromJson[CreateFileResponse])
@@ -337,16 +331,13 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                        title: String,
                        message: String,
                        mergeMethod: String = "squash"): PullRequestMerged =
-    Try {
-      val prmr = PullRequestMergeRequest(title, message, mergeMethod)
-      Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/merge")
-        .postData(toJson(prmr))
-        .method("PUT")
-        .headers(headers)
-        .execute(fromJson[PullRequestMerged])
-        .throwError
-        .body
-    } match {
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/merge")
+      .postData(toJson(Map("commit_title" -> title, "commit_message" -> message, "merge_method" -> mergeMethod)))
+      .method("PUT")
+      .headers(headers)
+      .execute(fromJson[PullRequestMerged])
+      .throwError
+      .body) match {
       case Success(prm) => prm
       case Failure(e) =>
         throw ArtifactSourceUpdateException(s"Failed to merge pull request $number in $owner/$repo", e)
@@ -419,23 +410,26 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   @throws[ArtifactSourceUpdateException]
-  def createWebhook(repo: String, owner: String, whi: WebhookInfo): WebhookInfo =
-    WebhookInfo(createWebhook(repo, owner, Webhook(whi)))
-
-  @throws[ArtifactSourceUpdateException]
-  def createWebhook(repo: String, owner: String, wh: Webhook): Webhook =
-    Try(createWebhook(s"$ApiUrl/repos/$owner/$repo/hooks", wh)) match {
+  def createWebhook(repo: String,
+                    owner: String,
+                    name: String,
+                    url: String,
+                    contentType: String,
+                    active: Boolean,
+                    events: Seq[String]): Webhook =
+    Try(createWebhook(s"$ApiUrl/repos/$owner/$repo/hooks", name, url, contentType, active, events)) match {
       case Success(hook) => hook
       case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create webhook in $owner/$repo", e)
     }
 
   @throws[ArtifactSourceUpdateException]
-  def createOrganizationWebhook(owner: String, whi: WebhookInfo): WebhookInfo =
-    WebhookInfo(createOrganizationWebhook(owner, Webhook(whi)))
-
-  @throws[ArtifactSourceUpdateException]
-  def createOrganizationWebhook(owner: String, wh: Webhook): Webhook =
-    Try(createWebhook(s"$ApiUrl/orgs/$owner/hooks", wh)) match {
+  def createOrganizationWebhook(owner: String,
+                                name: String,
+                                url: String,
+                                contentType: String,
+                                active: Boolean,
+                                events: Seq[String]): Webhook =
+    Try(createWebhook(s"$ApiUrl/orgs/$owner/hooks", name, url, contentType, active, events)) match {
       case Success(hook) => hook
       case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create webhook in $owner", e)
     }
@@ -469,56 +463,60 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .headers(headers)
       .asString
       .throwError) match {
-      case Success(_) => logger.info(s"Successfully added collaborator $collaborator to $owner/$repo")
+      case Success(_) =>
       case Failure(e) =>
-        throw ArtifactSourceUpdateException(s"Failed to add collaborator $collaborator to $owner/$repo", e)
+        throw ArtifactSourceUpdateException(s"Failed to create issue in $owner/$repo", e)
     }
 
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
     val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
-    val cbr = CreateBlobRequest(content)
-    Http(s"$ApiUrl/repos/$owner/$repo/git/blobs").postData(toJson(cbr))
+    Http(s"$ApiUrl/repos/$owner/$repo/git/blobs")
+      .postData(toJson(Map("content" -> content, "encoding" -> "base64")))
       .headers(headers)
       .execute(fromJson[GitHubRef])
       .throwError
       .body
   }
 
-  private def createTree(repo: String, owner: String, treeEntries: Seq[TreeEntry]): Tree = {
-    val ctr = CreateTreeRequest(treeEntries)
-    Http(s"$ApiUrl/repos/$owner/$repo/git/trees").postData(toJson(ctr))
+  private def createTree(repo: String, owner: String, treeEntries: Seq[TreeEntry]): Tree =
+    Http(s"$ApiUrl/repos/$owner/$repo/git/trees")
+      .postData(toJson(Map("tree" -> treeEntries)))
       .headers(headers)
       .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
         case 201 => fromJson[Tree](is)
         case _ =>
           throw new IllegalArgumentException(s"${headers("Status").head}, ${IOUtils.toString(is, Charset.defaultCharset)}")
       }).body
-  }
 
   private def createCommit(repo: String,
                            owner: String,
                            message: String,
-                           tree: Tree,
-                           parents: Seq[String]): CreateCommitResponse = {
-    val cr = CreateCommitRequest(message, tree.sha, parents)
-    Http(s"$ApiUrl/repos/$owner/$repo/git/commits").postData(toJson(cr))
+                           treeSha: String,
+                           parents: Seq[String]): CreateCommitResponse =
+    Http(s"$ApiUrl/repos/$owner/$repo/git/commits")
+      .postData(toJson(Map("message" -> message, "tree" -> treeSha, "parents" -> parents)))
       .headers(headers)
       .execute(fromJson[CreateCommitResponse])
       .throwError
       .body
-  }
 
-  private def updateReference(repo: String, owner: String, ref: String, newSha: String): Unit = {
-    val urr = UpdateReferenceRequest(newSha, force = true)
-    Http(s"$ApiUrl/repos/$owner/$repo/git/refs/$ref").postData(toJson(urr))
+  private def updateReference(repo: String, owner: String, ref: String, newSha: String): Unit =
+    Http(s"$ApiUrl/repos/$owner/$repo/git/refs/$ref")
+      .postData(toJson(Map("sha" -> newSha, "force" -> true)))
       .method("PATCH")
       .headers(headers)
       .asBytes
       .throwError
-  }
 
-  private def createWebhook(url: String, wh: Webhook): Webhook =
-    Http(url).postData(toJson(wh))
+  private def createWebhook(apiUrl: String,
+                            name: String,
+                            url: String,
+                            contentType: String,
+                            active: Boolean,
+                            events: Seq[String]): Webhook =
+    Http(apiUrl)
+      .postData(toJson(Map("name" -> name, "config" -> Map("url" -> url, "content_type" -> contentType),
+        "active" -> active, "events" -> events)))
       .headers(headers)
       .execute(fromJson[Webhook])
       .throwError

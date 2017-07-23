@@ -4,7 +4,7 @@ import com.atomist.source._
 import com.atomist.source.file.NamedFileSystemArtifactSourceIdentifier
 import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants._
-import com.atomist.source.git.github.domain.{PullRequest, PullRequestRequest, Webhook}
+import com.atomist.source.git.github.domain.{PullRequest, PullRequestRequest}
 import com.atomist.source.git.{FileSystemGitArtifactSource, GitRepositoryCloner}
 
 class GitHubServicesTest extends GitHubMutatorTest(Token) {
@@ -229,10 +229,10 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
-    val wh = Webhook("web", "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9", "json", Seq("push"))
-    val webhook = ghs createWebhook(repo, owner, wh)
-    webhook.name should equal(wh.name)
-    webhook.config.url should equal(wh.config.url)
+    val url = "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9"
+    val webhook = ghs createWebhook(repo, owner, "web", url, "json", active = true, Seq("push"))
+    webhook.name should equal("web")
+    webhook.config.url should equal(url)
     webhook.id should be > 0
     webhook.active shouldBe true
     webhook.events should contain only "push"
@@ -241,10 +241,10 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
   }
 
   ignore should "create webhook in an organization" in {
-    val wh = Webhook("web", "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9", "json", Seq("push"))
-    val webhook = ghs createOrganizationWebhook("atomist", wh)
-    webhook.name should equal(wh.name)
-    webhook.config.url should equal(wh.config.url)
+    val url = "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9"
+    val webhook = ghs createOrganizationWebhook("atomist", "web", url, "json", active = true, Seq("push"))
+    webhook.name should equal("web")
+    webhook.config.url should equal(url)
     webhook.id should be > 0
     webhook.active shouldBe true
     webhook.events should contain only "push"
