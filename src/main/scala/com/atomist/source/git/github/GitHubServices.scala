@@ -97,8 +97,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                        autoInit: Boolean = false): Repository =
     Try {
       val url = getOrganization(owner).map(_ => s"$ApiUrl/orgs/$owner/repos").getOrElse(s"$ApiUrl/user/repos")
-      val cr = CreateRepoRequest(repo, owner, description, privateFlag, issues, autoInit)
-      Http(url).postData(toJson(cr))
+      val map = Map("name" -> repo, "owner" -> owner, "description" -> description,
+        "private" -> privateFlag, "has_issues" -> issues, "auto_init" -> autoInit)
+      Http(url)
+        .postData(toJson(map))
         .headers(headers)
         .execute(fromJson[Repository])
         .throwError
@@ -191,7 +193,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   def createPullRequest(repo: String,
                         owner: String,
                         prr: PullRequestRequest): PullRequest =
-    Try(Http(s"$ApiUrl/repos/$owner/$repo/pulls").postData(toJson(prr))
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/pulls")
+      .postData(toJson(prr))
       .headers(headers)
       .execute(fromJson[PullRequest])
       .throwError
@@ -222,7 +225,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                           position: Int): ReviewComment =
     Try {
       val crc = CreateReviewCommentRequest(body, commitId, path, position)
-      Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/comments").postData(toJson(crc))
+      Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/comments")
+        .postData(toJson(crc))
         .headers(headers)
         .execute(fromJson[ReviewComment])
         .throwError
@@ -314,7 +318,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     Try {
       val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
       val cf = CreateFileRequest(fa.path, message, content, branch)
-      Http(s"$ApiUrl/repos/$owner/$repo/contents/${fa.path}").postData(toJson(cf))
+      Http(s"$ApiUrl/repos/$owner/$repo/contents/${fa.path}")
+        .postData(toJson(cf))
         .method("PUT")
         .headers(headers)
         .execute(fromJson[CreateFileResponse])
@@ -334,7 +339,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                        mergeMethod: String = "squash"): PullRequestMerged =
     Try {
       val prmr = PullRequestMergeRequest(title, message, mergeMethod)
-      Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/merge").postData(toJson(prmr))
+      Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/merge")
+        .postData(toJson(prmr))
         .method("PUT")
         .headers(headers)
         .execute(fromJson[PullRequestMerged])
@@ -448,6 +454,18 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     Try(Http(s"$ApiUrl/repos/$owner/$repo/collaborators/$collaborator")
       .method("PUT")
       .param("permission", "push")
+      .headers(headers)
+      .asString
+      .throwError) match {
+      case Success(_) => logger.info(s"Successfully added collaborator $collaborator to $owner/$repo")
+      case Failure(e) =>
+        throw ArtifactSourceUpdateException(s"Failed to add collaborator $collaborator to $owner/$repo", e)
+    }
+
+  @throws[ArtifactSourceUpdateException]
+  def createIssue(repo: String, owner: String, title: String, body: String, labels: Seq[String]): Unit =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/issues")
+      .postData(toJson(Map("title" -> title, "body" -> body)))
       .headers(headers)
       .asString
       .throwError) match {

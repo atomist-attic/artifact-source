@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty.Access
 
 import scala.collection.JavaConverters._
 
-case class WebhookInfo(@JsonProperty(access = Access.WRITE_ONLY) id: Int,
+case class WebhookInfo(@JsonProperty(access = Access.WRITE_ONLY) id: Int = 0,
                        name: String,
                        url: String,
                        contentType: String,
@@ -22,5 +22,9 @@ case class WebhookInfo(@JsonProperty(access = Access.WRITE_ONLY) id: Int,
 
 object WebhookInfo {
 
-  def apply(wh: Webhook) = new WebhookInfo(wh)
+  def apply(name: String, url: String, contentType: String, events: JList[String]) =
+    new WebhookInfo(name, url, contentType, events)
+
+  def apply(wh: Webhook) =
+    new WebhookInfo(wh)
 }
