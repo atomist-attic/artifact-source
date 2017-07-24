@@ -616,21 +616,36 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   def createCommitCommentReaction(repo: String, owner: String, id: Int, content: ReactionContent): Reaction =
     createReaction(s"$ApiUrl/repos/$owner/$repo/comments/$id/reactions", content)
 
+  def listCommitCommentReactions(repo: String, owner: String, id: Int, content: Option[ReactionContent] = None): Seq[Reaction] =
+    listReactions(s"$ApiUrl/repos/$owner/$repo/comments/$id/reactions", content)
+
   @throws[ArtifactSourceUpdateException]
   def createIssueReaction(repo: String, owner: String, number: Int, content: ReactionContent): Reaction =
     createReaction(s"$ApiUrl/repos/$owner/$repo/issues/$number/reactions", content)
+
+  def listIssueReactions(repo: String, owner: String, number: Int, content: Option[ReactionContent] = None): Seq[Reaction] =
+    listReactions(s"$ApiUrl/repos/$owner/$repo/issues/$number/reactions", content)
 
   @throws[ArtifactSourceUpdateException]
   def createIssueCommentReaction(repo: String, owner: String, id: Int, content: ReactionContent): Reaction =
     createReaction(s"$ApiUrl/repos/$owner/$repo/issues/comments/$id/reactions", content)
 
+  def listIssueCommentReactions(repo: String, owner: String, id: Int, content: Option[ReactionContent] = None): Seq[Reaction] =
+    listReactions(s"$ApiUrl/repos/$owner/$repo/issues/comments/$id/reactions", content)
+
   @throws[ArtifactSourceUpdateException]
   def createPullRequestReaction(repo: String, owner: String, id: Int, content: ReactionContent): Reaction =
     createIssueReaction(repo, owner, id, content)
 
+  def listPullRequestReactions(repo: String, owner: String, id: Int, content: Option[ReactionContent] = None): Seq[Reaction] =
+    listIssueReactions(repo, owner, id, content)
+
   @throws[ArtifactSourceUpdateException]
   def createPullRequestReviewCommentReaction(repo: String, owner: String, id: Int, content: ReactionContent): Reaction =
     createReaction(s"$ApiUrl/repos/$owner/$repo/pulls/comments/$id/reactions", content)
+
+  def listPullRequestReviewCommentReactions(repo: String, owner: String, id: Int, content: Option[ReactionContent] = None): Seq[Reaction] =
+    listReactions(s"$ApiUrl/repos/$owner/$repo/pulls/comments/$id/reactions", content)
 
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
     val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
@@ -678,7 +693,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                             contentType: String,
                             active: Boolean,
                             events: Array[String]): Webhook =
-    Try(Http(apiUrl).postData(toJson(Map("name" -> name, "config" -> Map("url" -> url, "content_type" -> contentType), "active" -> active, "events" -> events)))
+    Try(Http(apiUrl)
+      .postData(toJson(Map("name" -> name, "config" -> Map("url" -> url, "content_type" -> contentType),
+        "active" -> active, "events" -> events)))
       .headers(headers)
       .execute(fromJson[Webhook])
       .throwError
@@ -696,6 +713,19 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .body) match {
       case Success(reaction) => reaction
       case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create reaction", e)
+    }
+
+  private def listReactions(url: String, content: Option[ReactionContent] = None): Seq[Reaction] =
+    Try(Http(url)
+      .params(content.map(rc => Map("content" -> rc.toString)).getOrElse(Map.empty))
+      .headers(headers)
+      .execute(fromJson[Seq[Reaction]])
+      .throwError
+      .body) match {
+      case Success(reactions) => reactions
+      case Failure(e) =>
+        logger.debug(s"Failed to list reactions", e)
+        Seq.empty
     }
 
   private def paginateResults[T](url: String,

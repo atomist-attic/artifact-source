@@ -318,6 +318,10 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val reaction = ghs createCommitCommentReaction(repo, owner, commitComment.id, ReactionContent.PlusOne)
     reaction.content shouldEqual ReactionContent.PlusOne
+
+    val reactions = ghs listCommitCommentReactions(repo, owner, commitComment.id, Some(ReactionContent.PlusOne))
+    reactions.size shouldEqual 1
+    reactions.head.content shouldEqual ReactionContent.PlusOne
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {
