@@ -46,8 +46,8 @@ abstract class GitHubMutatorTest(val oAuthToken: String)
   def newPopulatedTemporaryRepo(): Repository = newTemporaryRepo(true)
 
   protected def createContent(repo: String, owner: String): Unit = {
-    ghs addFile(repo, owner, MasterBranch, "new file 1", StringFileArtifact("src/test.txt", "some text"))
-    ghs addFile(repo, owner, MasterBranch, "new file 2", StringFileArtifact("src/test2.txt", "some other text"))
+    ghs addOrUpdateFile(repo, owner, MasterBranch, "new file 1", StringFileArtifact("src/test.txt", "some text"))
+    ghs addOrUpdateFile(repo, owner, MasterBranch, "new file 2", StringFileArtifact("src/test2.txt", "some other text"))
   }
 
   /**

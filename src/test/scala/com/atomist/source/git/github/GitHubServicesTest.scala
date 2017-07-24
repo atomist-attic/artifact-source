@@ -4,7 +4,8 @@ import com.atomist.source._
 import com.atomist.source.file.NamedFileSystemArtifactSourceIdentifier
 import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants._
-import com.atomist.source.git.github.domain.{PullRequest, PullRequestRequest}
+import com.atomist.source.git.github.domain.ReactionContent._
+import com.atomist.source.git.github.domain.{PullRequest, PullRequestRequest, ReactionContent}
 import com.atomist.source.git.{FileSystemGitArtifactSource, GitRepositoryCloner}
 
 class GitHubServicesTest extends GitHubMutatorTest(Token) {
@@ -131,7 +132,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     pr.body should equal(prBody)
     pr.htmlUrl.length should be > 0
 
-    val rc = ghs createReviewComment(repo, owner, pr.number, "comment body", pr.head.sha, "somethingOrOther.txt", 1)
+    val rc = ghs createPullRequestReviewComment(repo, owner, pr.number, "comment body", pr.head.sha, "somethingOrOther.txt", 1)
     rc.body should equal("comment body")
 
     val openPrs = ghs getPullRequests(repo, owner)
@@ -222,7 +223,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val newBranchName = "add-multi-files-branch"
 
     ghs createBranch(repo, owner, newBranchName, MasterBranch)
-    ghs addFile(repo, owner, newBranchName, "new file 3", StringFileArtifact("alan.txt", "alan stewart"))
+    ghs addOrUpdateFile(repo, owner, newBranchName, "new file 3", StringFileArtifact("alan.txt", "alan stewart"))
 
     populateAndVerify(repo, owner, newBranchName)
   }
@@ -286,21 +287,37 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     retrievedIssue shouldBe defined
     val iss = retrievedIssue.get
 
+    ghs createIssueReaction(repo, owner, iss.number, Heart)
+
+    val comment = ghs createIssueComment(repo, owner, iss.number, "issue comment 1")
+    comment.body shouldEqual "issue comment 1"
+
+    ghs createIssueCommentReaction(repo, owner, comment.id, PlusOne)
+
     val editedIssue = ghs editIssue(repo, owner, iss.number, iss.title, iss.body, state = "closed",
       labels = Seq("bug", "feature"), assignees = Seq("alankstewart"))
     editedIssue.state shouldBe "closed"
     editedIssue.closedAt shouldBe defined
-    editedIssue.assignees shouldBe defined
-    editedIssue.assignees.get should have size 1
-
-    val comment = ghs createIssueComment(repo, owner, editedIssue.number, "issue comment 1")
-    comment.body shouldEqual "issue comment 1"
+    editedIssue.assignees should have size 1
 
     val issues = ghs listIssues()
     issues.size should be > 0
 
     val searched = ghs.searchIssues(Map("q" -> s"repo:$owner/$repo state:closed", "per_page" -> "100"))
     searched.size should be > 0
+  }
+
+  it should "create commit comment and reaction" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    val commit = ghs.getCommits(repo, owner).head
+    val commitComment = ghs createCommitComment(repo, owner, commit.sha, "test comment", "README.md", 1)
+    commitComment.body shouldEqual "test comment"
+
+    val reaction = ghs createCommitCommentReaction(repo, owner, commitComment.id, ReactionContent.PlusOne)
+    reaction.content shouldEqual ReactionContent.PlusOne
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {
@@ -339,6 +356,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val start = System.currentTimeMillis
     val pr = ghs createPullRequestFromChanges(repo, owner, prr, startAs, modifiedAs, multiFileCommitMessage)
     println(s"Elapsed time to create pull request from deltas = ${System.currentTimeMillis() - start} ms")
+
+    ghs createPullRequestReviewComment(repo, owner, pr.number, "comment body", pr.head.sha,"test2.json", 1)
 
     val merged = ghs mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
     merged.merged shouldBe true

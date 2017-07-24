@@ -79,7 +79,7 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     // val start = System.currentTimeMillis
     val cloned = grc.clone(repo, owner, None, Some(sha), Some(repoDir), 1) match {
       case Left(e) => fail(e)
-      case Right(repoDir) => repoDir
+      case Right(dir) => dir
     }
     FileUtils.sizeOf(cloned) should be > 0L
     // println(s"Cloning: ${System.currentTimeMillis - start} ms")
@@ -98,7 +98,7 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
 
   it should "fail to clone repo due to malformed git url" in {
     val grc = GitRepositoryCloner("", Some("foo://github.com"))
-    val repoDir = grc.clone("rug", "atomist")
+    grc.clone("rug", "atomist")
   }
 
   private def createRepoDir = {

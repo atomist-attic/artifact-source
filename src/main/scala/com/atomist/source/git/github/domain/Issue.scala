@@ -19,7 +19,7 @@ case class Issue(number: Int,
                  @JsonProperty("created_at") createdAt: OffsetDateTime,
                  @JsonProperty("updated_at") updatedAt: OffsetDateTime,
                  @JsonProperty("closed_at") closedAt: Option[OffsetDateTime],
-                 assignees: Option[Seq[User]])
+                 assignees: Seq[User])
 
 case class IssueLabel(url: String, name: String, color: String)
 

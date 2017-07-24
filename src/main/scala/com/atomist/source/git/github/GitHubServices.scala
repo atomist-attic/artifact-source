@@ -3,6 +3,7 @@ package com.atomist.source.git.github
 import java.io.InputStream
 import java.nio.charset.Charset
 
+import com.atomist.source.git.github.domain.ReactionContent.ReactionContent
 import com.atomist.source.git.github.domain._
 import com.atomist.source.{ArtifactSourceUpdateException, FileArtifact, _}
 import com.atomist.util.JsonUtils.{fromJson, toJson}
@@ -25,7 +26,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   private val headers: Map[String, String] =
     Map(
       "Authorization" -> ("token " + oAuthToken),
-      "Accept" -> "application/vnd.github.v3+json,application/vnd.github.loki-preview+json"
+      "Accept" -> "application/vnd.github.v3+json,application/vnd.github.loki-preview+json,application/vnd.github.squirrel-girl-preview"
     )
 
   override def sourceFor(id: GitHubArtifactSourceLocator): ArtifactSource = TreeGitHubArtifactSource(id, this)
@@ -129,31 +130,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .execute(fromJson[Reference])
       .throwError
       .body) match {
-      case Success(fromRef) =>
-        Try(Http(s"$ApiUrl/repos/$owner/$repo/git/refs")
-          .postData(toJson(Map("ref" -> s"refs/heads/$branchName", "sha" -> fromRef.`object`.sha)))
-          .headers(headers)
-          .execute(fromJson[Reference])
-          .throwError
-          .body) match {
-          case Success(reference) => reference
-          case Failure(e) =>
-            throw ArtifactSourceUpdateException(s"Failed to create reference in $owner/$repo", e)
-        }
+      case Success(fromRef) => createReference(repo, owner, branchName, fromRef.`object`.sha)
       case Failure(e) => throw ArtifactSourceUpdateException(e.getMessage, e)
-    }
-
-  @throws[ArtifactSourceUpdateException]
-  def deleteBranch(repo: String, owner: String, branchName: String): Unit =
-    Try(Http(s"$ApiUrl/repos/$owner/$repo/git/refs/heads/$branchName")
-      .method("DELETE")
-      .headers(headers)
-      .asString
-      .throwError
-      .body) match {
-      case Success(_) => logger.debug(s"Successfully deleted branch $branchName in $owner/$repo")
-      case Failure(e) =>
-        throw ArtifactSourceUpdateException(s"Failed to delete branch $branchName in $owner/$repo", e)
     }
 
   @throws[ArtifactSourceUpdateException]
@@ -189,6 +167,33 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   @throws[ArtifactSourceUpdateException]
+  def deleteBranch(repo: String, owner: String, branchName: String): Unit =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/git/refs/heads/$branchName")
+      .method("DELETE")
+      .headers(headers)
+      .asString
+      .throwError
+      .body) match {
+      case Success(_) => logger.debug(s"Successfully deleted branch $branchName in $owner/$repo")
+      case Failure(e) =>
+        throw ArtifactSourceUpdateException(s"Failed to delete branch $branchName in $owner/$repo", e)
+    }
+
+  @throws[ArtifactSourceUpdateException]
+  def createReference(repo: String, owner: String, ref: String, sha: String): Reference = {
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/git/refs")
+      .postData(toJson(Map("ref" -> s"refs/heads/$ref", "sha" -> sha)))
+      .headers(headers)
+      .execute(fromJson[Reference])
+      .throwError
+      .body) match {
+      case Success(reference) => reference
+      case Failure(e) =>
+        throw ArtifactSourceUpdateException(s"Failed to create reference in $owner/$repo", e)
+    }
+  }
+
+  @throws[ArtifactSourceUpdateException]
   def createPullRequestFromChanges(repo: String,
                                    owner: String,
                                    prr: PullRequestRequest,
@@ -214,13 +219,60 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   @throws[ArtifactSourceUpdateException]
-  def createReviewComment(repo: String,
-                          owner: String,
-                          number: Int,
-                          body: String,
-                          commitId: String,
-                          path: String,
-                          position: Int): ReviewComment =
+  def mergePullRequest(repo: String,
+                       owner: String,
+                       number: Int,
+                       title: String,
+                       message: String,
+                       mergeMethod: String = "squash"): PullRequestMerged =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/merge")
+      .postData(toJson(Map("commit_title" -> title, "commit_message" -> message, "merge_method" -> mergeMethod)))
+      .method("PUT")
+      .headers(headers)
+      .execute(fromJson[PullRequestMerged])
+      .throwError
+      .body) match {
+      case Success(prm) => prm
+      case Failure(e) =>
+        throw ArtifactSourceUpdateException(s"Failed to merge pull request $number in $owner/$repo", e)
+    }
+
+  def getPullRequest(repo: String, owner: String, number: Int): Option[PullRequest] =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number")
+      .headers(headers)
+      .execute(fromJson[PullRequest])
+      .throwError
+      .body) match {
+      case Success(pr) => Some(pr)
+      case Failure(e) =>
+        logger.warn(s"Failed to get pull request $number in $owner/$repo", e)
+        None
+    }
+
+  def getPullRequests(repo: String,
+                      owner: String,
+                      state: String = PullRequest.Open,
+                      sort: String = "created",
+                      direction: String = "asc"): Seq[PullRequest] = {
+    val params = Map("state" -> state, "sort" -> sort, "direction" -> direction, "per_page" -> "100")
+    val resp = Http(s"$ApiUrl/repos/$owner/$repo/pulls").headers(headers).params(params).asString
+    if (resp.isSuccess) {
+      val firstPage = fromJson[Seq[PullRequest]](resp.body)
+      getNextUrl(resp).map(paginateResults(_, firstPage, params)).getOrElse(firstPage)
+    } else {
+      logger.warn(s"Failed to get pull requests in $owner/$repo: ${resp.body}")
+      Seq.empty
+    }
+  }
+
+  @throws[ArtifactSourceUpdateException]
+  def createPullRequestReviewComment(repo: String,
+                                     owner: String,
+                                     number: Int,
+                                     body: String,
+                                     commitId: String,
+                                     path: String,
+                                     position: Int): ReviewComment =
     Try(Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/comments")
       .postData(toJson(Map("body" -> body, "commit_id" -> commitId, "path" -> path, "position" -> position)))
       .headers(headers)
@@ -299,48 +351,55 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   }
 
   @throws[ArtifactSourceUpdateException]
-  def addFile(sui: GitHubSourceUpdateInfo, fa: FileArtifact): FileArtifact = {
+  def addOrUpdateFile(sui: GitHubSourceUpdateInfo, fa: FileArtifact): FileArtifact = {
     val sourceId = sui.sourceId
-    addFile(sourceId.repo, sourceId.owner, sourceId.branch, sui.message, fa)
+    addOrUpdateFile(sourceId.repo, sourceId.owner, sourceId.branch, sui.message, fa)
   }
 
   @throws[ArtifactSourceUpdateException]
-  def addFile(repo: String,
-              owner: String,
-              branch: String,
-              message: String,
-              fa: FileArtifact): FileArtifact =
+  def addOrUpdateFile(repo: String,
+                      owner: String,
+                      branch: String,
+                      message: String,
+                      fa: FileArtifact): FileArtifact =
     Try {
       val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
+      val data = Map("path" -> fa.path, "message" -> message, "content" -> content, "branch" -> branch)
       Http(s"$ApiUrl/repos/$owner/$repo/contents/${fa.path}")
-        .postData(toJson(Map("path" -> fa.path, "message" -> message, "content" -> content, "branch" -> branch)))
+        .postData(toJson(data ++ fa.uniqueId.map(sha => Seq("sha" -> sha)).getOrElse(Nil)))
         .method("PUT")
         .headers(headers)
-        .execute(fromJson[CreateFileResponse])
+        .execute(fromJson[CreateOrUpdateFileResponse])
         .throwError
         .body
     } match {
       case Success(cfr) => fa.withUniqueId(cfr.content.sha)
-      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to add file to $owner/$repo", e)
+      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to add or update file to $owner/$repo", e)
     }
 
-  @throws[ArtifactSourceUpdateException]
-  def mergePullRequest(repo: String,
-                       owner: String,
-                       number: Int,
-                       title: String,
-                       message: String,
-                       mergeMethod: String = "squash"): PullRequestMerged =
-    Try(Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number/merge")
-      .postData(toJson(Map("commit_title" -> title, "commit_message" -> message, "merge_method" -> mergeMethod)))
-      .method("PUT")
+  def getContents(repo: String, owner: String, path: String): Content =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/contents/$path")
       .headers(headers)
-      .execute(fromJson[PullRequestMerged])
+      .execute(fromJson[Content])
       .throwError
       .body) match {
-      case Success(prm) => prm
+      case Success(contents) => contents
       case Failure(e) =>
-        throw ArtifactSourceUpdateException(s"Failed to merge pull request $number in $owner/$repo", e)
+        logger.debug(s"Failed to get contents for path $path in $owner/$repo", e)
+        //Seq.empty
+        null
+    }
+
+  def getCommit(repo: String, owner: String, sha: String): Option[Commit] =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/git/commits/$sha")
+      .headers(headers)
+      .execute(fromJson[Commit])
+      .throwError
+      .body) match {
+      case Success(commit) => Some(commit)
+      case Failure(e) =>
+        logger.debug(s"Failed to get commit $sha in $owner/$repo", e)
+        None
     }
 
   def getCommits(repo: String, owner: String, sha: Option[String] = None): Seq[Commit] = {
@@ -350,38 +409,29 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       val firstPage = fromJson[Seq[Commit]](resp.body)
       getNextUrl(resp).map(paginateResults(_, firstPage, params)).getOrElse(firstPage)
     } else {
-      logger.warn(s"Failed to get commits in $owner/$repo: ${resp.body}")
+      logger
+        .warn(s"Failed to get commits in $owner/$repo: ${resp.body}")
       Seq.empty
     }
   }
 
-  def getPullRequest(repo: String, owner: String, number: Int): Option[PullRequest] =
-    Try(Http(s"$ApiUrl/repos/$owner/$repo/pulls/$number")
+  @throws[ArtifactSourceUpdateException]
+  def createCommitComment(repo: String,
+                          owner: String,
+                          sha: String,
+                          body: String,
+                          path: String,
+                          position: Int): CommitComment =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/commits/$sha/comments")
+      .postData(toJson(Map("body" -> body, "path" -> path, "position" -> position)))
       .headers(headers)
-      .execute(fromJson[PullRequest])
+      .execute(fromJson[CommitComment])
       .throwError
       .body) match {
-      case Success(pr) => Some(pr)
+      case Success(cc) => cc
       case Failure(e) =>
-        logger.warn(s"Failed to get pull request $number in $owner/$repo", e)
-        None
+        throw ArtifactSourceUpdateException(s"Failed to create commit comment for commit $sha in $owner/$repo", e)
     }
-
-  def getPullRequests(repo: String,
-                      owner: String,
-                      state: String = PullRequest.Open,
-                      sort: String = "created",
-                      direction: String = "asc"): Seq[PullRequest] = {
-    val params = Map("state" -> state, "sort" -> sort, "direction" -> direction, "per_page" -> "100")
-    val resp = Http(s"$ApiUrl/repos/$owner/$repo/pulls").headers(headers).params(params).asString
-    if (resp.isSuccess) {
-      val firstPage = fromJson[Seq[PullRequest]](resp.body)
-      getNextUrl(resp).map(paginateResults(_, firstPage, params)).getOrElse(firstPage)
-    } else {
-      logger.warn(s"Failed to get pull requests in $owner/$repo: ${resp.body}")
-      Seq.empty
-    }
-  }
 
   @throws[ArtifactSourceAccessException]
   def getTreeRecursive(repo: String, owner: String, sha: String): Tree =
@@ -485,9 +535,14 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   }
 
   @throws[ArtifactSourceUpdateException]
-  def createIssue(repo: String, owner: String, title: String, body: String, labels: Seq[String]): Issue =
+  def createIssue(repo: String,
+                  owner: String,
+                  title: String,
+                  body: String,
+                  labels: Seq[String] = Seq.empty,
+                  assignees: Seq[String] = Seq.empty): Issue =
     Try(Http(s"$ApiUrl/repos/$owner/$repo/issues")
-      .postData(toJson(Map("title" -> title, "body" -> body, "labels" -> labels)))
+      .postData(toJson(Map("title" -> title, "body" -> body, "labels" -> labels, "assignees" -> assignees)))
       .headers(headers)
       .execute(fromJson[Issue])
       .throwError
@@ -530,6 +585,52 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       case Failure(e) =>
         throw ArtifactSourceUpdateException(s"Failed to create comment for issue $number in $owner/$repo", e)
     }
+
+  @throws[ArtifactSourceUpdateException]
+  def createTag(repo: String, owner: String, ctr: CreateTagRequest): Tag =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/git/tags")
+      .postData(toJson(ctr))
+      .headers(headers)
+      .execute(fromJson[Tag])
+      .throwError
+      .body) match {
+      case Success(tag) => tag
+      case Failure(e) =>
+        throw ArtifactSourceUpdateException(s"Failed to create tag ${ctr.tag} in $owner/$repo", e)
+    }
+
+  @throws[ArtifactSourceUpdateException]
+  def createRelease(repo: String, owner: String, tag: String, commitish: String, name: String, body: String): Release =
+    Try(Http(s"$ApiUrl/repos/$owner/$repo/releases")
+      .postData(toJson(Map("tag_name" -> tag, "target_commitish" -> commitish, "name" -> name, "body" -> body)))
+      .headers(headers)
+      .execute(fromJson[Release])
+      .throwError
+      .body) match {
+      case Success(release) => release
+      case Failure(e) =>
+        throw ArtifactSourceUpdateException(s"Failed to create release for tag $tag in $owner/$repo", e)
+    }
+
+  @throws[ArtifactSourceUpdateException]
+  def createCommitCommentReaction(repo: String, owner: String, id: Int, content: ReactionContent): Reaction =
+    createReaction(s"$ApiUrl/repos/$owner/$repo/comments/$id/reactions", content)
+
+  @throws[ArtifactSourceUpdateException]
+  def createIssueReaction(repo: String, owner: String, number: Int, content: ReactionContent): Reaction =
+    createReaction(s"$ApiUrl/repos/$owner/$repo/issues/$number/reactions", content)
+
+  @throws[ArtifactSourceUpdateException]
+  def createIssueCommentReaction(repo: String, owner: String, id: Int, content: ReactionContent): Reaction =
+    createReaction(s"$ApiUrl/repos/$owner/$repo/issues/comments/$id/reactions", content)
+
+  @throws[ArtifactSourceUpdateException]
+  def createPullRequestReaction(repo: String, owner: String, id: Int, content: ReactionContent): Reaction =
+    createIssueReaction(repo, owner, id, content)
+
+  @throws[ArtifactSourceUpdateException]
+  def createPullRequestReviewCommentReaction(repo: String, owner: String, id: Int, content: ReactionContent): Reaction =
+    createReaction(s"$ApiUrl/repos/$owner/$repo/pulls/comments/$id/reactions", content)
 
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
     val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
@@ -584,6 +685,17 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .body) match {
       case Success(hook) => hook
       case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create webhook", e)
+    }
+
+  private def createReaction(url: String, content: ReactionContent): Reaction =
+    Try(Http(url)
+      .postData(toJson(Map("content" -> content.toString)))
+      .headers(headers)
+      .execute(fromJson[Reaction])
+      .throwError
+      .body) match {
+      case Success(reaction) => reaction
+      case Failure(e) => throw ArtifactSourceUpdateException(s"Failed to create reaction", e)
     }
 
   private def paginateResults[T](url: String,
