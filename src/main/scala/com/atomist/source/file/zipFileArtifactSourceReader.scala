@@ -8,9 +8,9 @@ import java.util.{Set => JSet}
 
 import com.atomist.source._
 import com.atomist.util.FilePermissions.fromMode
-import com.atomist.util.Utils.withCloseable
 import org.apache.commons.compress.archivers.zip.{AsiExtraField, ZipArchiveEntry, ZipFile}
 import org.apache.commons.io.FileUtils
+import resource._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{Duration, SECONDS}
@@ -45,11 +45,12 @@ object ZipFileArtifactSourceReader {
   def fromZipSource(id: ZipFileInput): ArtifactSource = {
     val zipFile = getZipFile(id)
     val targetFolder = createTargetFolder
-    withCloseable(zipFile)(zf =>
+    for (zf <- managed(zipFile)) {
       Await.ready(Future.sequence(processZipEntries(zf, targetFolder)), Duration(60, SECONDS)).onComplete {
         case Success(_) =>
         case Failure(e) => throw ArtifactSourceCreationException(s"Failed to create artifact source", e)
-      })
+      }
+    }
 
     val fid = NamedFileSystemArtifactSourceIdentifier(substringAfterLast(targetFolder.getName, "/"), targetFolder)
     FileSystemArtifactSource(fid)

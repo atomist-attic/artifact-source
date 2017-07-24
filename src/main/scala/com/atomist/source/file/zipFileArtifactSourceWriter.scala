@@ -3,11 +3,11 @@ package com.atomist.source.file
 import java.io.{ByteArrayInputStream, InputStream, OutputStream}
 
 import com.atomist.source._
-import com.atomist.util.Utils._
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
 import org.apache.commons.compress.archivers.zip.{AsiExtraField, ZipArchiveEntry}
 import org.apache.commons.io.IOUtils
 import org.apache.commons.io.output.ByteArrayOutputStream
+import resource._
 
 /**
   * Streaming output for zip file.
@@ -31,7 +31,7 @@ object ZipFileArtifactSourceWriter {
         entry addExtraField aef
         entry setUnixMode fa.mode
         zip putArchiveEntry entry
-        withCloseable(fa.inputStream())(IOUtils.copy(_, zip))
+        managed(fa.inputStream()).acquireAndGet(IOUtils.copy(_, zip))
         zip.closeArchiveEntry()
       }
 

@@ -1,9 +1,9 @@
 package com.atomist.util
 
-import com.atomist.util.Utils.withCloseable
 import org.apache.commons.io.IOUtils
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{DiagrammedAssertions, FunSpec, OneInstancePerTest}
+import resource.managed
 
 class BinaryDeciderTest
   extends FunSpec
@@ -29,5 +29,5 @@ class BinaryDeciderTest
   }
 
   private def getContent(path: String): Array[Byte] =
-    withCloseable(getClass.getResourceAsStream(path))(IOUtils.toByteArray)
+    managed(getClass.getResourceAsStream(path)).acquireAndGet(IOUtils.toByteArray)
 }

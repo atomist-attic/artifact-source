@@ -120,9 +120,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
     override def inputStream() = new FileInputStream(f)
 
     override def mode =
-      Try {
-        FilePermissions.toMode(Files.readAttributes(f.toPath, classOf[PosixFileAttributes]).permissions())
-      } match {
+      Try(FilePermissions.toMode(Files.readAttributes(f.toPath, classOf[PosixFileAttributes]).permissions())) match {
         case Success(mode) => mode
         case Failure(_: UnsupportedOperationException) =>
           // Windows
