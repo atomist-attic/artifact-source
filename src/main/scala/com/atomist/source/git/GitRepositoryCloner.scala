@@ -13,6 +13,8 @@ import scala.sys.process._
 case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String] = None)
   extends LazyLogging {
 
+  def this(oAuthToken: String, remoteUrl: String) = this(oAuthToken, Option(remoteUrl)) // For Java
+
   import GitRepositoryCloner._
 
   private val outLogger = ProcessLogger(out => logger.info(out), err => logger.warn(err))
@@ -66,7 +68,10 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
   }
 
   private def getUrl = {
-    val url = remoteUrl.map(new URL(_)).getOrElse(new URL(Url))
+    val url = remoteUrl.collect {
+      case u if u != "" => new URL(u)
+    }.getOrElse(new URL(Url))
+
     Option(oAuthToken).collect {
       case token if token != "" => s"${url.getProtocol}://$token@${url.getAuthority}"
     }.getOrElse(url.toExternalForm)
@@ -74,6 +79,9 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
 }
 
 object GitRepositoryCloner {
+
+  def apply(oAuthToken: String, remoteUrl: String): GitRepositoryCloner =
+    new GitRepositoryCloner(oAuthToken, remoteUrl)
 
   private val Depth: Int = 10
 }

@@ -64,7 +64,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .body) match {
       case Success(r) => Some(r)
       case Failure(e) =>
-        logger.warn(s"Failed to find user repository $owner/$repo. Searching for organization repository", e)
+        logger.warn(s"Failed to find user repository $owner/$repo. Searching for organization repository ...", e)
         val params = Map("per_page" -> "100")
         val resp = Http(s"$api/orgs/$owner/repos").headers(headers).params(params).asString
         if (resp.isSuccess) {
