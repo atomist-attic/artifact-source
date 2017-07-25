@@ -19,7 +19,7 @@ class TreeGitHubArtifactSourceTest extends GitHubMutatorTest(Token) {
 
   "file retrieval" should "work" in {
     val newTempRepo = newPopulatedTemporaryRepo()
-    ghs commitFiles(newTempRepo.name, newTempRepo.ownerName, MasterBranch, "new files", testFiles, Seq.empty)
+    ghs.commitFiles(newTempRepo.name, newTempRepo.ownerName, MasterBranch, "new files", testFiles, Seq.empty)
 
     val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
@@ -30,7 +30,7 @@ class TreeGitHubArtifactSourceTest extends GitHubMutatorTest(Token) {
 
   "file retrieval and filter" should "work" in {
     val newTempRepo = newPopulatedTemporaryRepo()
-    ghs commitFiles(newTempRepo.name, newTempRepo.ownerName, MasterBranch, "new files", testFiles, Seq.empty)
+    ghs.commitFiles(newTempRepo.name, newTempRepo.ownerName, MasterBranch, "new files", testFiles, Seq.empty)
 
     val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs, new MarkdownFilter)
@@ -52,11 +52,11 @@ class TreeGitHubArtifactSourceTest extends GitHubMutatorTest(Token) {
     val commitMessage1 = s"file commit 1"
     val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     val branchSource = GitHubArtifactSourceLocator(cri, "master")
-    ghs commitFiles(GitHubSourceUpdateInfo(branchSource, commitMessage1), testFiles, Seq.empty)
+    ghs.commitFiles(GitHubSourceUpdateInfo(branchSource, commitMessage1), testFiles, Seq.empty)
 
     val springBootProject = ZipFileArtifactSourceReader fromZipSource springBootZipFileId
     val ghid = GitHubArtifactSourceLocator(cri)
-    githubWriter write(springBootProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
+    githubWriter.write(springBootProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
     val tghasSize = tghas.allArtifacts.size
 

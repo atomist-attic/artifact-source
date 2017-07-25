@@ -37,7 +37,7 @@ abstract class GitHubMutatorTest(val oAuthToken: String)
     * Return a temporary repository callers can use.
     */
   def newTemporaryRepo(autoInit: Boolean = false): Repository =
-    ghs createRepository(getRepoName, TestOrg, "temporary test repository", privateFlag = true, autoInit = autoInit)
+    ghs.createRepository(getRepoName, TestOrg, "temporary test repository", privateFlag = true, autoInit = autoInit)
 
   /**
     * Most callers will want a repository with something in it. Otherwise there isn't even a default branch,
@@ -46,8 +46,8 @@ abstract class GitHubMutatorTest(val oAuthToken: String)
   def newPopulatedTemporaryRepo(): Repository = newTemporaryRepo(true)
 
   protected def createContent(repo: String, owner: String): Unit = {
-    ghs addOrUpdateFile(repo, owner, MasterBranch, "new file 1", StringFileArtifact("src/test.txt", "some text"))
-    ghs addOrUpdateFile(repo, owner, MasterBranch, "new file 2", StringFileArtifact("src/test2.txt", "some other text"))
+    ghs.addOrUpdateFile(repo, owner, MasterBranch, "new file 1", StringFileArtifact("src/test.txt", "some text"))
+    ghs.addOrUpdateFile(repo, owner, MasterBranch, "new file 2", StringFileArtifact("src/test2.txt", "some other text"))
   }
 
   /**

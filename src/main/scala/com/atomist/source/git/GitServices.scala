@@ -31,7 +31,7 @@ case class GitServices(oAuthToken: String, remoteUrl: Option[String] = None)
                               old: ArtifactSource,
                               current: ArtifactSource,
                               message: String): File = {
-    val repoDir = grc clone(repo, owner) match {
+    val repoDir = grc.clone(repo, owner) match {
       case Left(t) => throw ArtifactSourceUpdateException(s"Failed to clone $owner/$repo", t)
       case Right(dir) => dir
     }
@@ -73,7 +73,7 @@ case class GitServices(oAuthToken: String, remoteUrl: Option[String] = None)
                                    current: ArtifactSource,
                                    message: String): PullRequest = {
     createBranchFromChanges(repo, owner, prr.head, old, current, message)
-    ghs createPullRequest(repo, owner, prr)
+    ghs.createPullRequest(repo, owner, prr)
   }
 
   private def processDeltas(repoDir: File, deltas: Deltas): Seq[String] = {

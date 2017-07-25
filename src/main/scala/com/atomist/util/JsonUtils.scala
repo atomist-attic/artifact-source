@@ -43,6 +43,7 @@ object JsonUtils {
       .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE, DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
       .setSerializationInclusion(Include.NON_NULL)
       .setSerializationInclusion(Include.NON_ABSENT)
+      .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
       .setDateFormat(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX"))
     objectMapper
   }

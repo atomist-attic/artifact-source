@@ -42,7 +42,7 @@ class GitServicesTest extends GitHubMutatorTest(Token) {
     val prr = PullRequestRequest(prTitle, updatedBranch, MasterBranch, prBody)
 
     val pr = gs createPullRequestFromChanges(repo, owner, prr, startAs, editedAgain, "Added files")
-    val merged = ghs mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
+    val merged = ghs.mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
     merged.merged shouldBe true
     println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
 
@@ -69,8 +69,8 @@ class GitServicesTest extends GitHubMutatorTest(Token) {
     createContent(repo, owner)
 
     val newBranchName = "add-multi-files-branch"
-    ghs createBranch(repo, owner, newBranchName, MasterBranch)
-    ghs addOrUpdateFile(repo, owner, newBranchName, "new file 3", StringFileArtifact("alan.txt", "alan stewart"))
+    ghs.createBranch(repo, owner, newBranchName, MasterBranch)
+    ghs.addOrUpdateFile(repo, owner, newBranchName, "new file 3", StringFileArtifact("alan.txt", "alan stewart"))
 
     populateAndVerify(repo, owner, newBranchName)
   }
@@ -100,7 +100,7 @@ class GitServicesTest extends GitHubMutatorTest(Token) {
     val pr = gs createPullRequestFromChanges(repo, owner, prr, startAs, modifiedAs, multiFileCommitMessage)
     println(s"Elapsed time to create pull request from deltas = ${System.currentTimeMillis() - start} ms")
 
-    val merged = ghs mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
+    val merged = ghs.mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
     merged.merged shouldBe true
 
     val endAs = ghs sourceFor GitHubArtifactSourceLocator(cri)

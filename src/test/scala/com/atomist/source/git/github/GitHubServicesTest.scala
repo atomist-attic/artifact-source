@@ -7,29 +7,30 @@ import com.atomist.source.git.TestConstants._
 import com.atomist.source.git.github.domain.ReactionContent._
 import com.atomist.source.git.github.domain.{PullRequest, PullRequestRequest, ReactionContent}
 import com.atomist.source.git.{FileSystemGitArtifactSource, GitRepositoryCloner}
+import org.apache.commons.codec.binary.Base64
 
 class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
   private val grc = GitRepositoryCloner(Token)
 
   "GitHubServices" should "find valid organization" in {
-    ghs getOrganization TestOrg shouldBe defined
+    ghs.getOrganization(TestOrg) shouldBe defined
   }
 
   it should "fail to find unknown organization" in {
-    ghs getOrganization "comfoobar" shouldBe empty
+    ghs.getOrganization("comfoobar") shouldBe empty
   }
 
   it should "find valid user repository" in {
-    ghs getRepository("satin-scala", "alankstewart") shouldBe defined
+    ghs.getRepository("satin-scala", "alankstewart") shouldBe defined
   }
 
   it should "fail to find unknown user repository" in {
-    ghs getRepository("comfoobar", "alankstewart") shouldBe empty
+    ghs.getRepository("comfoobar", "alankstewart") shouldBe empty
   }
 
   it should "fail to find unknown organization repository" in {
-    ghs getRepository("unknown-repo", TestOrg) shouldBe empty
+    ghs.getRepository("unknown-repo", TestOrg) shouldBe empty
   }
 
   it should "handle null repository" in {
@@ -48,17 +49,31 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.getRepository("unknown-repo", "") shouldBe empty
   }
 
+  it should "list all branches" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    val branchName = "foobar"
+    val ref = ghs.createBranch(repo, owner, branchName, MasterBranch)
+    ref.`object`.sha should not be empty
+
+    val branches = ghs.listBranches(repo, owner)
+    branches.size shouldBe 2
+  }
+
   it should "create and delete branch" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
     val branchName = "foobar"
-    val ref = ghs createBranch(repo, owner, branchName, MasterBranch)
+    val ref = ghs.createBranch(repo, owner, branchName, MasterBranch)
     ref.`object`.sha should not be empty
 
-    ghs deleteBranch(repo, owner, branchName)
-    ghs getBranch(repo, owner, branchName) shouldBe empty
+    ghs.deleteBranch(repo, owner, branchName)
+    ghs.getBranch(repo, owner, branchName) shouldBe empty
+    ghs.listBranches(repo, owner) should have size 1 // "master"
   }
 
   it should "delete files with valid path in multi file commit" in {
@@ -72,7 +87,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     before.allFiles should have size 1
 
     val newBranchName = "add-multi-files-branch"
-    val ref = ghs createBranch(repo, owner, newBranchName, MasterBranch)
+    val ref = ghs.createBranch(repo, owner, newBranchName, MasterBranch)
     ref.`object`.sha should not be empty
     val newBranchSource = GitHubArtifactSourceLocator(cri, newBranchName)
 
@@ -81,7 +96,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val files = testFiles :+ StringFileArtifact("somethingOrOther.txt", testFileContents) // Duplicate
     val multiFileCommitMessage = s"multi file commit at ${System.currentTimeMillis}"
-    val fileCommit2 = ghs commitFiles(
+    val fileCommit2 = ghs.commitFiles(
       GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files, filesToDelete)
     fileCommit2.isEmpty shouldBe false
 
@@ -97,7 +112,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
       }
 
     val sha = branchRead.id.asInstanceOf[GitHubArtifactSourceIdentifier].commitSha
-    val commitsAfter = ghs.getCommits(repo, owner, Some(sha))
+    val commitsAfter = ghs.listCommits(repo, owner, Some(sha))
     withClue(s"${files.size} files should have been added in single commit") {
       commitsAfter should have size 3
     }
@@ -125,21 +140,21 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val updatedBranch = s"multi-file-${System.currentTimeMillis}"
     val prr = PullRequestRequest(prTitle, updatedBranch, MasterBranch, prBody)
     val message = "Added files and deleted files including README.md"
-    val pr = ghs createPullRequestFromChanges(GitHubArtifactSourceLocator(cri, MasterBranch).repo,
+    val pr = ghs.createPullRequestFromChanges(GitHubArtifactSourceLocator(cri, MasterBranch).repo,
       GitHubArtifactSourceLocator(cri, MasterBranch).owner, prr, startAs, withAddedFiles, message)
     pr.number should be > 0
     pr.isOpen shouldBe true
     pr.body should equal(prBody)
     pr.htmlUrl.length should be > 0
 
-    val rc = ghs createPullRequestReviewComment(repo, owner, pr.number, "comment body", pr.head.sha, "somethingOrOther.txt", 1)
+    val rc = ghs.createPullRequestReviewComment(repo, owner, pr.number, "comment body", pr.head.sha, "somethingOrOther.txt", 1)
     rc.body should equal("comment body")
 
-    val openPrs = ghs getPullRequests(repo, owner)
+    val openPrs = ghs.listPullRequests(repo, owner)
     openPrs.isEmpty shouldBe false
     openPrs.map(_.title) should contain(prTitle)
 
-    val pr2 = ghs getPullRequest(repo, owner, pr.number)
+    val pr2 = ghs.getPullRequest(repo, owner, pr.number)
     pr2 shouldBe defined
     val pr1 = pr2.get
     pr1.number should equal(pr.number)
@@ -147,10 +162,10 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     pr1.head.ref should equal(prr.head)
     pr1.htmlUrl should not be null
 
-    val merged = ghs mergePullRequest(repo, owner, pr1.number, pr1.title, "Merged PR")
+    val merged = ghs.mergePullRequest(repo, owner, pr1.number, pr1.title, "Merged PR")
     merged.merged shouldBe true
 
-    val pr3 = ghs getPullRequest(repo, owner, pr1.number)
+    val pr3 = ghs.getPullRequest(repo, owner, pr1.number)
     pr3 shouldBe defined
     pr3.get.merged shouldBe true
 
@@ -164,7 +179,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val owner = newTempRepo.ownerName
 
     val start = System.currentTimeMillis()
-    val cloned = grc clone(repo, owner) match {
+    val cloned = grc.clone(repo, owner) match {
       case Left(e) => fail(e)
       case Right(repoDir) => repoDir
     }
@@ -192,9 +207,9 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val updatedBranch = s"multi-file-${System.currentTimeMillis}"
 
     val prr = PullRequestRequest(prTitle, updatedBranch, MasterBranch, prBody)
-    val pr = ghs createPullRequestFromChanges(repo, owner, prr, startAs, editedAgain, "Added files")
+    val pr = ghs.createPullRequestFromChanges(repo, owner, prr, startAs, editedAgain, "Added files")
 
-    val merged = ghs mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
+    val merged = ghs.mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
     merged.merged shouldBe true
     println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
 
@@ -222,19 +237,19 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val newBranchName = "add-multi-files-branch"
 
-    ghs createBranch(repo, owner, newBranchName, MasterBranch)
-    ghs addOrUpdateFile(repo, owner, newBranchName, "new file 3", StringFileArtifact("alan.txt", "alan stewart"))
+    ghs.createBranch(repo, owner, newBranchName, MasterBranch)
+    ghs.addOrUpdateFile(repo, owner, newBranchName, "new file 3", StringFileArtifact("alan.txt", "alan stewart"))
 
     populateAndVerify(repo, owner, newBranchName)
   }
 
   it should "get all commits in a repository" in {
-    val commits = ghs getCommits("artifact-source", "atomist")
+    val commits = ghs.listCommits("artifact-source", "atomist")
     commits.size should be > 200
   }
 
   it should "get all pull requests in a repository" in {
-    val pullRequests = ghs getPullRequests("rug", "atomist", PullRequest.All)
+    val pullRequests = ghs.listPullRequests("rug", "atomist", PullRequest.All)
     pullRequests.size should be > 300
   }
 
@@ -243,8 +258,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
-    val url = "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9"
-    val webhook = ghs createWebhook(repo, owner, "web", url, "json", active = true, Array("push"))
+    val url = "http://webhook.site/9a2e119d-f50e-4867-8b31-f248278874d9"
+    val webhook = ghs.createWebhook(repo, owner, "web", url, "json", active = true, Array("push"))
     webhook.name should equal("web")
     webhook.config.url should equal(url)
     webhook.id should be > 0
@@ -256,7 +271,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
   //  ignore should "create webhook in an organization" in {
   //    val url = "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9"
-  //    val webhook = ghs createOrganizationWebhook("atomist", "web", url, "json", active = true, Array("push"))
+  //    val webhook = ghs.createOrganizationWebhook("atomist", "web", url, "json", active = true, Array("push"))
   //    webhook.name should equal("web")
   //    webhook.config.url should equal(url)
   //    webhook.id should be > 0
@@ -269,7 +284,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
-    ghs addCollaborator(repo, owner, "alankstewart")
+    ghs.addCollaborator(repo, owner, "alankstewart")
   }
 
   it should "create, edit issue, and create issue comment in a repository" in {
@@ -277,30 +292,30 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
-    val issue = ghs createIssue(repo, owner, "issue 1", "issue body", Seq("bug"))
+    val issue = ghs.createIssue(repo, owner, "issue 1", "issue body", Seq("bug"))
     issue.number should be > 0
     issue.labels.length should be > 0
     issue.state shouldBe "open"
     issue.closedAt shouldBe empty
 
-    val retrievedIssue = ghs getIssue(repo, owner, issue.number)
+    val retrievedIssue = ghs.getIssue(repo, owner, issue.number)
     retrievedIssue shouldBe defined
     val iss = retrievedIssue.get
 
-    ghs createIssueReaction(repo, owner, iss.number, Heart)
+    ghs.createIssueReaction(repo, owner, iss.number, Heart)
 
-    val comment = ghs createIssueComment(repo, owner, iss.number, "issue comment 1")
+    val comment = ghs.createIssueComment(repo, owner, iss.number, "issue comment 1")
     comment.body shouldEqual "issue comment 1"
 
-    ghs createIssueCommentReaction(repo, owner, comment.id, PlusOne)
+    ghs.createIssueCommentReaction(repo, owner, comment.id, PlusOne)
 
-    val editedIssue = ghs editIssue(repo, owner, iss.number, iss.title, iss.body, state = "closed",
+    val editedIssue = ghs.editIssue(repo, owner, iss.number, iss.title, iss.body, state = "closed",
       labels = Seq("bug", "feature"), assignees = Seq("alankstewart"))
     editedIssue.state shouldBe "closed"
     editedIssue.closedAt shouldBe defined
     editedIssue.assignees should have size 1
 
-    val issues = ghs listIssues()
+    val issues = ghs.listIssues()
     issues.size should be > 0
 
     val searched = ghs.searchIssues(Map("q" -> s"repo:$owner/$repo state:closed", "per_page" -> "100"))
@@ -312,16 +327,26 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
-    val commit = ghs.getCommits(repo, owner).head
-    val commitComment = ghs createCommitComment(repo, owner, commit.sha, "test comment", "README.md", 1)
+    val commit = ghs.listCommits(repo, owner).head
+    val commitComment = ghs.createCommitComment(repo, owner, commit.sha, "test comment", "README.md", 1)
     commitComment.body shouldEqual "test comment"
 
-    val reaction = ghs createCommitCommentReaction(repo, owner, commitComment.id, ReactionContent.PlusOne)
+    val reaction = ghs.createCommitCommentReaction(repo, owner, commitComment.id, ReactionContent.PlusOne)
     reaction.content shouldEqual ReactionContent.PlusOne
 
-    val reactions = ghs listCommitCommentReactions(repo, owner, commitComment.id, Some(ReactionContent.PlusOne))
+    val reactions = ghs.listCommitCommentReactions(repo, owner, commitComment.id, Some(ReactionContent.PlusOne))
     reactions.size shouldEqual 1
     reactions.head.content shouldEqual ReactionContent.PlusOne
+  }
+
+  it should "get file contents" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    val readme = ghs.getFileContents(repo, owner, "README.md")
+    readme should have size 1
+    new String(Base64.decodeBase64(readme.head.content)) should include("temporary test repository")
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {
@@ -331,7 +356,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
       StringFileArtifact(placeholderFilename("tempFile3"), testFileContents)
     )
     val multiFileCommitMessage = s"multi temp file commit at ${System.currentTimeMillis}"
-    val fileArtifacts = ghs commitFiles(GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files, Seq.empty)
+    val fileArtifacts = ghs.commitFiles(GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files, Seq.empty)
     fileArtifacts.isEmpty shouldBe false
     fileArtifacts
   }
@@ -358,12 +383,12 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val prr = PullRequestRequest(prTitle, newBranchName, MasterBranch, prBody)
 
     val start = System.currentTimeMillis
-    val pr = ghs createPullRequestFromChanges(repo, owner, prr, startAs, modifiedAs, multiFileCommitMessage)
+    val pr = ghs.createPullRequestFromChanges(repo, owner, prr, startAs, modifiedAs, multiFileCommitMessage)
     println(s"Elapsed time to create pull request from deltas = ${System.currentTimeMillis() - start} ms")
 
-    ghs createPullRequestReviewComment(repo, owner, pr.number, "comment body", pr.head.sha,"test2.json", 1)
+    ghs.createPullRequestReviewComment(repo, owner, pr.number, "comment body", pr.head.sha, "test2.json", 1)
 
-    val merged = ghs mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
+    val merged = ghs.mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
     merged.merged shouldBe true
 
     val endAs = ghs sourceFor GitHubArtifactSourceLocator(cri)

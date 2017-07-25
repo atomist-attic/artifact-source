@@ -69,10 +69,10 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
 
     val newBranchSource = GitHubArtifactSourceLocator(cri, "master")
     val multiFileCommitMessage = s"multi file commit at ${System.currentTimeMillis}"
-    val fileCommit = ghs commitFiles(GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files, Seq.empty)
+    val fileCommit = ghs.commitFiles(GitHubSourceUpdateInfo(newBranchSource, multiFileCommitMessage), files, Seq.empty)
     fileCommit.isEmpty shouldBe false
 
-    val commits = ghs getCommits(repo, owner)
+    val commits = ghs.listCommits(repo, owner)
     val sha = commits.last.sha
     val repoDir = createRepoDir
     val grc = GitRepositoryCloner(Token)
