@@ -2,7 +2,7 @@ package com.atomist.source.git.github
 
 import java.io.File
 
-import com.atomist.source.ArtifactSourceAccessException
+import com.atomist.source.ArtifactSourceException
 import org.scalatest.{FlatSpec, Matchers}
 
 class NaiveFileSystemGitHubSourceReaderTest extends FlatSpec with Matchers {
@@ -28,12 +28,12 @@ class NaiveFileSystemGitHubSourceReaderTest extends FlatSpec with Matchers {
   it should "not find uncloned repository" in {
     val asl = GitHubArtifactSourceLocator.fromStrings("somerepo", "someuser")
     val fsr = new NaiveFileSystemGitHubSourceReader(fakeReposForTest())
-    an[ArtifactSourceAccessException] should be thrownBy fsr.sourceFor(asl)
+    an[ArtifactSourceException] should be thrownBy fsr.sourceFor(asl)
   }
 
   it should "throw exception if basedir doesn't exist" in {
     val asl = GitHubArtifactSourceLocator.fromStrings("somerepo", "someuser")
     val fsr = new NaiveFileSystemGitHubSourceReader(new File("what/in/gods/holy/name/are/you/blathering/about"))
-    an[ArtifactSourceAccessException] should be thrownBy fsr.sourceFor(asl)
+    an[ArtifactSourceException] should be thrownBy fsr.sourceFor(asl)
   }
 }

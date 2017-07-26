@@ -1,6 +1,6 @@
 package com.atomist.source.git.github
 
-import com.atomist.source.{ArtifactSource, ArtifactSourceAccessException}
+import com.atomist.source.{ArtifactSource, ArtifactSourceException}
 
 trait GitHubSourceReader {
 
@@ -11,9 +11,9 @@ trait GitHubSourceReader {
     *
     * @param id the GitHubArtifactSourceLocator
     * @return an ArtifactSource
-    * @throws ArtifactSourceAccessException if the ArtifactSource cannot be returned
+    * @throws ArtifactSourceException if the ArtifactSource cannot be returned
     */
-  @throws[ArtifactSourceAccessException]
+  @throws[ArtifactSourceException]
   def sourceFor(id: GitHubArtifactSourceLocator): ArtifactSource
 
   /**
@@ -23,8 +23,8 @@ trait GitHubSourceReader {
     *
     * @param id the GitHubArtifactSourceLocator
     * @return an ArtifactSource
-    * @throws ArtifactSourceAccessException if the tree for given sha cannot be returned
+    * @throws ArtifactSourceException if the tree for given sha cannot be returned
     */
-  @throws[ArtifactSourceAccessException]
+  @throws[ArtifactSourceException]
   def treeFor(id: GitHubShaIdentifier): ArtifactSource
 }

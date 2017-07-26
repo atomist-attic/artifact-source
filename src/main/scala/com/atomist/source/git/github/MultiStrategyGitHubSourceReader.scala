@@ -1,6 +1,6 @@
 package com.atomist.source.git.github
 
-import com.atomist.source.{ArtifactSource, ArtifactSourceAccessException}
+import com.atomist.source.{ArtifactSource, ArtifactSourceException}
 import com.typesafe.scalalogging.LazyLogging
 
 /**
@@ -28,7 +28,7 @@ class MultiStrategyGitHubSourceReader(readers: Seq[GitHubSourceReader])
           logger.warn(s"Reader $r failed with ${t.getMessage}")
       }
     found.getOrElse(
-      throw ArtifactSourceAccessException(s"All ${readers.size} readers failed"))
+      throw ArtifactSourceException(s"All ${readers.size} readers failed"))
   }
 
   override def treeFor(id: GitHubShaIdentifier): ArtifactSource = ???

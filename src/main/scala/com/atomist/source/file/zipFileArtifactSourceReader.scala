@@ -41,14 +41,14 @@ object ZipFileArtifactSourceReader {
 
   private val IsWindows = System.getProperty("os.name").contains("indows")
 
-  @throws[ArtifactSourceCreationException]
+  @throws[ArtifactSourceException]
   def fromZipSource(id: ZipFileInput): ArtifactSource = {
     val zipFile = getZipFile(id)
     val targetFolder = createTargetFolder
     for (zf <- managed(zipFile)) {
       Await.ready(Future.sequence(processZipEntries(zf, targetFolder)), Duration(60, SECONDS)).onComplete {
         case Success(_) =>
-        case Failure(e) => throw ArtifactSourceCreationException(s"Failed to create artifact source", e)
+        case Failure(e) => throw ArtifactSourceException(s"Failed to create artifact source", e)
       }
     }
 
@@ -63,7 +63,7 @@ object ZipFileArtifactSourceReader {
       FileUtils.copyInputStreamToFile(id.is, tmpFile)
       new ZipFile(tmpFile)
     } catch {
-      case e: IOException => throw ArtifactSourceCreationException("Failed to copy zip contents to temp file", e)
+      case e: IOException => throw ArtifactSourceException("Failed to copy zip contents to temp file", e)
     }
 
   private def createTargetFolder =
@@ -72,7 +72,7 @@ object ZipFileArtifactSourceReader {
       targetFolder.deleteOnExit()
       targetFolder
     } catch {
-      case e: IOException => throw ArtifactSourceCreationException("Failed to create folder for artifact source", e)
+      case e: IOException => throw ArtifactSourceException("Failed to create folder for artifact source", e)
     }
 
   private def processZipEntries(zipFile: ZipFile, targetFolder: File) =
