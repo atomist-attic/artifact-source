@@ -418,7 +418,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                 assignees: Seq[String] = Seq.empty): Issue =
     retry("editIssue") {
       val data = Map("title" -> title, "body" -> body, "state" -> state, "labels" -> labels, "assignees" -> assignees)
-      httpRequest[Issue](s"$api/repos/$owner/$repo/issues", Patch, Some(toJson(data)))
+      httpRequest[Issue](s"$api/repos/$owner/$repo/issues/$number", Patch, Some(toJson(data)))
     }
 
   @throws[ArtifactSourceException]
@@ -484,7 +484,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   private def createTree(repo: String, owner: String, treeEntries: Seq[TreeEntry]): Tree =
     retry("createTree") {
-      httpRequest[Tree](s"$api/repos/$owner/$repo/git/trees", Get, Some(toJson(Map("tree" -> treeEntries))))
+      httpRequest[Tree](s"$api/repos/$owner/$repo/git/trees", Post, Some(toJson(Map("tree" -> treeEntries))))
     }
 
   private def createCommit(repo: String,
@@ -497,10 +497,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       httpRequest[CreateCommitResponse](s"$api/repos/$owner/$repo/git/commits", Post, Some(toJson(data)))
     }
 
-  private def updateReference(repo: String, owner: String, ref: String, newSha: String): Unit =
+  private def updateReference(repo: String, owner: String, ref: String, newSha: String): Reference =
     retry("updateReference") {
       val data = Map("sha" -> newSha, "force" -> true)
-      httpRequest[Unit](s"$api/repos/$owner/$repo/git/refs/$ref", Patch, Some(toJson(data)))
+      httpRequest[Reference](s"$api/repos/$owner/$repo/git/refs/$ref", Patch, Some(toJson(data)))
     }
 
   private def createWebhook(url: String,
@@ -541,9 +541,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                              params: Map[String, String] = Map.empty)(implicit m: Manifest[T]): T =
     (method match {
       case Get => Http(url)
-      case Post => data.map(Http(url).postData(_)).getOrElse(Http(url))
-      case Put => data.map(Http(url).put(_)).getOrElse(Http(url))
-      case Patch => Http(url).postData(toJson(data)).method(method.toString)
+      case Post => data.map(Http(url).postData(_)).getOrElse(Http(url).method(method.toString))
+      case Put => data.map(Http(url).put(_)).getOrElse(Http(url).method(method.toString))
+      case Patch => data.map(Http(url).postData(_).method(method.toString)).getOrElse(Http(url).method(method.toString))
       case _ => Http(url).method(method.toString)
     }).headers(headers)
       .params(params)
@@ -561,8 +561,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       if (resp.isSuccess) {
         val pages = accumulator ++ fromJson[Seq[T]](resp.body)
         getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
-      } else
-        throw ArtifactSourceException(resp.body)
+      } else {
+        logger.debug(resp.body)
+        Seq.empty
+      }
     }
 
     nextPage(url, Seq.empty)
@@ -574,7 +576,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       val resp = Http(url).headers(headers).params(params).asString
       if (resp.isSuccess) {
         val pages = accumulator ++ fromJson[SearchResult[T]](resp.body).items
-        getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
+        if (params.keySet.exists(_ == "page"))
+          pages
+        else
+          getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
       } else
         Seq.empty
     }
