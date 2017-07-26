@@ -286,11 +286,11 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                       branch: String,
                       message: String,
                       fa: FileArtifact): FileArtifact = {
-    retry("addOrUpdateFile") {
+  retry("addOrUpdateFile") {
       val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
-      val data = Map("path" -> fa.path, "message" -> message, "content" -> content, "branch" -> branch)
-      Try(httpRequest[CreateOrUpdateFileResponse](s"$api/repos/$owner/$repo/contents/${fa.path}",
-        Put, Some(toJson(data ++ fa.uniqueId.map(sha => Seq("sha" -> sha)).getOrElse(Nil))))) match {
+      val data = Map("path" -> fa.path, "message" -> message, "content" -> content, "branch" -> branch) ++
+        fa.uniqueId.map(sha => Seq("sha" -> sha)).getOrElse(Nil)
+      Try(httpRequest[CreateOrUpdateFileResponse](s"$api/repos/$owner/$repo/contents/${fa.path}", Put, Some(toJson(data)))) match {
         case Success(cfr) => fa.withUniqueId(cfr.content.sha)
         case Failure(e) => throw e
       }
@@ -542,11 +542,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     (method match {
       case Get => Http(url)
       case Post => data.map(Http(url).postData(_)).getOrElse(Http(url))
-      case Put => data.map(Http(url).postData(_)).getOrElse(Http(url))
+      case Put => data.map(Http(url).put(_)).getOrElse(Http(url))
       case Patch => Http(url).postData(toJson(data)).method(method.toString)
       case _ => Http(url).method(method.toString)
-    })
-      .headers(headers)
+    }).headers(headers)
       .params(params)
       .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
         case 200 | 201 => fromJson[T](is)
