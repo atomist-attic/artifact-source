@@ -1,4 +1,4 @@
-package com.atomist.source.git
+package com.atomist.util
 
 import com.typesafe.scalalogging.LazyLogging
 
@@ -34,7 +34,6 @@ object Retry extends LazyLogging {
         logger.warn(s"$opName attempt failed (${e.getMessage}), $n attempts left", e)
         retry(opName, n - 1, wait * 2L + Rnd.nextInt(100))(fn)
       case Failure(e) =>
-        logger.warn(e.getMessage)
         throw e
     }
   }

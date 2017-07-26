@@ -4,13 +4,13 @@ import java.io.InputStream
 import java.nio.charset.Charset
 import java.util.{List => JList}
 
-import com.atomist.source.git.DoNotRetryException
-import com.atomist.source.git.Retry.retry
 import com.atomist.source.git.github.domain.ReactionContent.ReactionContent
 import com.atomist.source.git.github.domain._
 import com.atomist.source.{ArtifactSourceException, FileArtifact, _}
+import com.atomist.util.DoNotRetryException
 import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.util.Octal.intToOctal
+import com.atomist.util.Retry.retry
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.IOUtils
 import resource._
@@ -286,7 +286,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                       branch: String,
                       message: String,
                       fa: FileArtifact): FileArtifact = {
-  retry("addOrUpdateFile") {
+    retry("addOrUpdateFile") {
       val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
       val data = Map("path" -> fa.path, "message" -> message, "content" -> content, "branch" -> branch) ++
         fa.uniqueId.map(sha => Seq("sha" -> sha)).getOrElse(Nil)
@@ -576,7 +576,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       val resp = Http(url).headers(headers).params(params).asString
       if (resp.isSuccess) {
         val pages = accumulator ++ fromJson[SearchResult[T]](resp.body).items
-        if (params.keySet.exists(_ == "page"))
+        if (params.keySet.contains("page"))
           pages
         else
           getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
