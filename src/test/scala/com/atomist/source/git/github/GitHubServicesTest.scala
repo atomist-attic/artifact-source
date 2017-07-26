@@ -180,8 +180,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val start = System.currentTimeMillis()
     val cloned = grc.clone(repo, owner) match {
-      case Left(e) => fail(e)
-      case Right(repoDir) => repoDir
+      case Some(file) => file
+      case None => fail
     }
 
     val startAs = FileSystemGitArtifactSource(NamedFileSystemArtifactSourceIdentifier(repo, cloned))
@@ -318,7 +318,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val issues = ghs.listIssues()
     issues.size should be > 0
 
-    val searched = ghs.searchIssues(Map("q" -> s"repo:$owner/$repo state:closed", "per_page" -> "100"))
+    val searched = ghs.searchIssues(Map("q" -> s"repo:$owner/$repo state:closed", "per_page" -> "100", "page" -> "1"))
     searched.size should be > 0
   }
 

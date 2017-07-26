@@ -80,7 +80,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     val resp = Http(s"$api/search/repositories").headers(headers).params(params).asString
     if (resp.isSuccess) {
       val firstPage = fromJson[SearchResult[Repository]](resp.body).items
-      getNextUrl(resp).map(paginateSearchResults(_, firstPage, params)).getOrElse(firstPage)
+      if (params.keySet.exists(_ == "page"))
+        firstPage
+      else
+        getNextUrl(resp).map(paginateSearchResults(_, firstPage, params)).getOrElse(firstPage)
     } else {
       logger.warn(s"Failed to find repositories: ${resp.body}")
       Seq.empty
@@ -553,7 +556,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     val resp = Http(s"$api/search/issues").headers(headers).params(params).asString
     if (resp.isSuccess) {
       val firstPage = fromJson[SearchResult[Issue]](resp.body).items
-      getNextUrl(resp).map(paginateSearchResults(_, firstPage, params)).getOrElse(firstPage)
+      if (params.keySet.exists(_ == "page"))
+        firstPage
+      else
+        getNextUrl(resp).map(paginateSearchResults(_, firstPage, params)).getOrElse(firstPage)
     } else {
       logger.warn(s"Failed to find issues: ${resp.body}")
       Seq.empty

@@ -32,8 +32,8 @@ case class GitServices(oAuthToken: String, remoteUrl: Option[String] = None)
                               current: ArtifactSource,
                               message: String): File = {
     val repoDir = grc.clone(repo, owner) match {
-      case Left(t) => throw ArtifactSourceUpdateException(s"Failed to clone $owner/$repo", t)
-      case Right(dir) => dir
+      case Some(file) => file
+      case None => throw ArtifactSourceUpdateException(s"Failed to clone $owner/$repo")
     }
 
     for (git <- managed(Git.open(repoDir))) {

@@ -24,7 +24,7 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
             branch: Option[String] = None,
             sha: Option[String] = None,
             dir: Option[File] = None,
-            depth: Int = Depth): Either[Throwable, File] =
+            depth: Int = Depth): Option[File] =
     try {
       val repoDir = createRepoDirectory(repo, owner, dir)
       val br = branch.collect {
@@ -33,9 +33,11 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
 
       s"git clone$br --depth $depth --single-branch $getUrl/$owner/$repo.git ${repoDir.getPath}" !! outLogger
       sha.map(resetToSha(_, repoDir))
-      Right(repoDir)
+      Some(repoDir)
     } catch {
-      case e: Exception => Left(e)
+      case e: Exception =>
+        logger.warn(s"Failed to clone repository $owner/$repo", e)
+        None
     }
 
   def deleteRepoDirectory(dir: File): Unit = FileUtils.deleteQuietly(dir)
