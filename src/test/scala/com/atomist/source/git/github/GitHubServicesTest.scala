@@ -327,7 +327,9 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
-    val commit = ghs.listCommits(repo, owner).head
+    val commits = ghs.listCommits(repo, owner)
+    commits.size should be > 0
+    val commit = commits.head
     val commitComment = ghs.createCommitComment(repo, owner, commit.sha, "test comment", "README.md", 1)
     commitComment.body shouldEqual "test comment"
 

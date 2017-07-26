@@ -42,22 +42,22 @@ case class TreeGitHubArtifactSource(id: GitHubShaIdentifier, ghs: GitHubServices
     val tree: Tree = {
       val root = Try(ghs.getTreeRecursive(id.repo, id.owner, id.sha)) match {
         case Success(t) => t
-        case Failure(e) => throw ArtifactSourceAccessException(e.getMessage, e)
+        case Failure(e) => throw ArtifactSourceException(e.getMessage, e)
       }
 
       if (id.path == null || id.path.isEmpty) root
       else {
         val treeElement = root.tree.find(te => te.size == 0 && te.path == id.path).getOrElse(
-          throw ArtifactSourceAccessException(s"Path not found: ${id.path}")
+          throw ArtifactSourceException(s"Path not found: ${id.path}")
         )
         ghs.getTreeRecursive(id.repo, id.owner, treeElement.sha)
       }
     }
     if (tree == null || tree.tree == null)
-      throw ArtifactSourceAccessException(s"Failed to retrieve tree for $id")
+      throw ArtifactSourceException(s"Failed to retrieve tree for $id")
 
     if (tree.truncated)
-      throw ArtifactSourceAccessException(s"Tree is truncated for $id")
+      throw ArtifactSourceException(s"Tree is truncated for $id")
 
     val files = tree.tree.filter(_.`type` == "blob").map(new LazyGitHubFileArtifact(_))
     if (artifactFilters.isEmpty) files else filterFiles(files)
@@ -80,6 +80,6 @@ object TreeGitHubArtifactSource {
     ghs.getBranch(asl.repo, asl.owner, asl.branch) match {
       case Some(branch) =>
         new TreeGitHubArtifactSource(GitHubArtifactSourceIdentifier(asl, branch.commit.sha), ghs, artifactFilters: _*)
-      case None => throw ArtifactSourceAccessException(s"Failed to find branch ${asl.branch} in ${asl.owner}/${asl.repo}")
+      case None => throw ArtifactSourceException(s"Failed to find branch ${asl.branch} in ${asl.owner}/${asl.repo}")
     }
 }

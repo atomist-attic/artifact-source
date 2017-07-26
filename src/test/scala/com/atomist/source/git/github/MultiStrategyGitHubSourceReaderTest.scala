@@ -1,6 +1,6 @@
 package com.atomist.source.git.github
 
-import com.atomist.source.{ArtifactSource, ArtifactSourceAccessException, EmptyArtifactSource}
+import com.atomist.source.{ArtifactSource, ArtifactSourceException, EmptyArtifactSource}
 import org.scalatest.{FlatSpec, Matchers}
 
 class MultiStrategyGitHubSourceReaderTest extends FlatSpec with Matchers {
@@ -9,12 +9,12 @@ class MultiStrategyGitHubSourceReaderTest extends FlatSpec with Matchers {
 
   "MultiStrategyGitHubSourceReader" should "always fail with no readers" in {
     val msg = new MultiStrategyGitHubSourceReader(Seq.empty)
-    an[ArtifactSourceAccessException] should be thrownBy msg.sourceFor(gitHubLocatorThatWontBeFoundOnGitHub)
+    an[ArtifactSourceException] should be thrownBy msg.sourceFor(gitHubLocatorThatWontBeFoundOnGitHub)
   }
 
   it should "fail with one failing reader" in {
     val msg = new MultiStrategyGitHubSourceReader(Seq(AlwaysFailsReader))
-    an[ArtifactSourceAccessException] should be thrownBy msg.sourceFor(gitHubLocatorThatWontBeFoundOnGitHub)
+    an[ArtifactSourceException] should be thrownBy msg.sourceFor(gitHubLocatorThatWontBeFoundOnGitHub)
   }
 
   it should "succeed with at least one successful reader" in {

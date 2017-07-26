@@ -54,7 +54,7 @@ class FileSystemArtifactSource(val id: FileSystemArtifactSourceIdentifier,
     this(id, Seq.empty: _*)
 
   if (!id.rootFile.exists)
-    throw ArtifactSourceAccessException(s"File '${id.rootFile}' does not exist")
+    throw ArtifactSourceException(s"File '${id.rootFile}' does not exist")
 
   override lazy val artifacts: Seq[Artifact] = {
     (id.rootFile match {
@@ -158,7 +158,7 @@ object ClassPathArtifactSource {
   def classPathResourceToFile(resource: String): File = {
     val r = getClass.getClassLoader.getResource(resource)
     if (r == null)
-      throw ArtifactSourceAccessException(s"No classpath resource at '$resource'")
+      throw ArtifactSourceException(s"No classpath resource at '$resource'")
 
     new File(r.toURI)
   }
