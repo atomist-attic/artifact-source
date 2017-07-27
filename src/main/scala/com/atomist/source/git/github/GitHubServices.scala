@@ -508,10 +508,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
   }
 
-  private def createReaction(opName: String, url: String, content: ReactionContent): Reaction =
+  private def createReaction(opName: String, url: String, content: ReactionContent): Reaction = {
+    val data = toJson(Map("content" -> content.toString))
     retry(opName) {
-      httpRequest[Reaction](url, Post, Some(toJson(Map("content" -> content.toString))))
+      httpRequest[Reaction](url, Post, Some(data))
     }
+  }
 
   private def listReactions(url: String, content: Option[ReactionContent] = None): Seq[Reaction] = {
     val params = content.map(rc => Map("content" -> rc.toString)).getOrElse(Map.empty) + ("per_page" -> "100")
@@ -560,7 +562,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       val resp = Http(url).headers(headers).params(params).asString
       if (resp.isSuccess) {
         val pages = accumulator ++ fromJson[Seq[T]](resp.body)
-        getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
+        if (params.keySet.contains("page")) pages
+        else getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
       } else {
         logger.warn(resp.body)
         Seq.empty
@@ -585,8 +588,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       }
     }
 
-    val np = nextPage(url, Seq.empty)
-    np
+    nextPage(url, Seq.empty)
   }
 
   private def getNextUrl(resp: HttpResponse[String]): Option[String] =

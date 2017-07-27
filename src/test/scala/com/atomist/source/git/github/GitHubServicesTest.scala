@@ -286,6 +286,16 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     results.size should be > 0
   }
 
+  it should "list issues with search criteria" in {
+    val results = ghs.listIssues(Map("per_page" -> "30", "sort" -> "updated", "direction" -> "asc", "state" -> "closed"))
+    results.size should be > 10
+  }
+
+  it should "list issues with specified page number" in {
+    val results = ghs.listIssues(Map("per_page" -> "10", "sort" -> "updated", "direction" -> "asc", "page" -> "1"))
+    results.size shouldEqual 10
+  }
+
   it should "search issues with search criteria" in {
     val results = ghs.searchIssues(Map("q" -> s"repo:atomist/artifact-source", "per_page" -> "10"))
     results.size shouldEqual results.groupBy(_.number).map(_._2.head).size
@@ -293,7 +303,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
   it should "search issues with specified page number" in {
     val results = ghs.searchIssues(Map("q" -> s"repo:atomist/artifact-source", "per_page" -> "10", "page" -> "2"))
-    results.size shouldEqual results.groupBy(_.number).map(_._2.head).size
+    results.size shouldEqual 10
   }
 
   it should "create commit comment and reaction" in {
