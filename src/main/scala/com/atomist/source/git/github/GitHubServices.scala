@@ -124,10 +124,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   @throws[ArtifactSourceException]
-  def createReference(repo: String, owner: String, ref: String, sha: String): Reference =
+  def createReference(repo: String, owner: String, ref: String, sha: String): Reference = {
+    val data = toJson(Map("ref" -> s"refs/heads/$ref", "sha" -> sha))
     retry("createReference") {
-      httpRequest[Reference](s"$api/repos/$owner/$repo/git/refs", Post, Some(toJson(Map("ref" -> s"refs/heads/$ref", "sha" -> sha))))
+      httpRequest[Reference](s"$api/repos/$owner/$repo/git/refs", Post, Some(data))
     }
+  }
 
   @throws[ArtifactSourceException]
   def createPullRequestFromChanges(repo: String,
