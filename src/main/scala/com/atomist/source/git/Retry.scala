@@ -1,4 +1,4 @@
-package com.atomist.util
+package com.atomist.source.git
 
 import com.typesafe.scalalogging.LazyLogging
 
