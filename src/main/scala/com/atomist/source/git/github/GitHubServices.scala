@@ -555,7 +555,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         case success if 202 until 206 contains success =>
           logger.debug(s"${headers("Status").head}")
           ().asInstanceOf[T]
-        case 401 | 403 => throw DoNotRetryException(s"${headers("Status").head}")
+        case 401 | 403 | 422 => throw DoNotRetryException(s"${headers("Status").head}")
         case serverError if serverError >= 500 => throw DoNotRetryException(s"${headers("Status").head}")
         case _ => throw ArtifactSourceException(s"${headers("Status").head}, ${IOUtils.toString(is, Charset.defaultCharset)}")
       }).body
