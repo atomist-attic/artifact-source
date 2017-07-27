@@ -47,6 +47,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   override def treeFor(id: GitHubShaIdentifier): ArtifactSource = TreeGitHubArtifactSource(id, this)
 
+  def hasRepository(repo: String, owner: String): Boolean =
+    searchRepositories(Map("q" -> s"repo:$owner/$repo")).size == 1
+
   def searchRepositories(params: Map[String, String] = Map("per_page" -> "100")): Seq[Repository] =
     paginateSearchResults[Repository](s"$api/search/repositories", params)
 
@@ -580,7 +583,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     def nextPage(url: String, accumulator: Seq[T]): Seq[T] = {
       val resp = Http(url).headers(headers).params(params).asString
       if (resp.isSuccess) {
-        logger.info(s"Searching with url $url")
         val pages = accumulator ++ fromJson[SearchResult[T]](resp.body).items
         if (params.keySet.contains("page")) pages
         else getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)

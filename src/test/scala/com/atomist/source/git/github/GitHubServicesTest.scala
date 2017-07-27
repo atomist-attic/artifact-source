@@ -13,7 +13,12 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
   private val grc = GitRepositoryCloner(Token)
 
-  "GitHubServices" should "list all branches" in {
+  "GitHubServices" should "search repositories by repo owner and name" in {
+    val repos = ghs.searchRepositories(Map("q" -> s"repo:atomist/artifact-source"))
+    repos.size shouldEqual 1
+  }
+
+  it should "list all branches" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
