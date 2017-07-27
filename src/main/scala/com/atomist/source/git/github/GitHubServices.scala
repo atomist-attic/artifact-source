@@ -4,13 +4,13 @@ import java.io.InputStream
 import java.nio.charset.Charset
 import java.util.{List => JList}
 
+import com.atomist.source.git.DoNotRetryException
 import com.atomist.source.git.github.domain.ReactionContent.ReactionContent
 import com.atomist.source.git.github.domain._
 import com.atomist.source.{ArtifactSourceException, FileArtifact, _}
-import com.atomist.util.DoNotRetryException
 import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.util.Octal.intToOctal
-import com.atomist.util.Retry.retry
+import com.atomist.source.git.Retry.retry
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.IOUtils
 import resource._
@@ -370,13 +370,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   def testWebhook(repo: String, owner: String, id: Int): Unit =
-    Try {
-      val resp = Http(s"$api/repos/$owner/$repo/hooks/$id/tests").postData("").headers(headers).asString
-      resp.code match {
-        case 204 => logger.info(s"Successfully tested webhook in $owner/$repo")
-        case _ => logger.warn(s"Failed to test webhook in $owner/$repo: ${resp.body}")
-      }
-    }
+    httpRequestOption[Unit](s"$api/repos/$owner/$repo/hooks/$id/tests", Post, Some("".getBytes))
 
   @throws[ArtifactSourceException]
   def addCollaborator(repo: String, owner: String, collaborator: String): Unit =
@@ -555,7 +549,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       }).body
 
   private def paginateResults[T](url: String,
-                                 params: Map[String, String] = Map.empty)(implicit m: Manifest[T]): Seq[T] = {
+                                 params: Map[String, String] = Map("per_page" -> "100"))(implicit m: Manifest[T]): Seq[T] = {
     def nextPage(url: String, accumulator: Seq[T]): Seq[T] = {
       val resp = Http(url).headers(headers).params(params).asString
       if (resp.isSuccess) {
@@ -571,7 +565,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   }
 
   private def paginateSearchResults[T](url: String,
-                                       params: Map[String, String] = Map.empty)(implicit m: Manifest[T]): Seq[T] = {
+                                       params: Map[String, String] = Map("per_page" -> "100"))(implicit m: Manifest[T]): Seq[T] = {
     def nextPage(url: String, accumulator: Seq[T]): Seq[T] = {
       val resp = Http(url).headers(headers).params(params).asString
       if (resp.isSuccess) {
