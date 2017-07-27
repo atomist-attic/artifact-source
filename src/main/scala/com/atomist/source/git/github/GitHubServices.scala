@@ -569,7 +569,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         if (params.keySet.contains("page")) pages
         else getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
       } else {
-        logger.warn(resp.body)
+        logger.warn(s"${resp.code} ${resp.body}")
         Seq.empty
       }
     }
@@ -586,7 +586,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         if (params.keySet.contains("page")) pages
         else getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
       } else {
-        logger.warn(resp.body)
+        logger.warn(s"${resp.code} ${resp.body}")
         Seq.empty
       }
     }
