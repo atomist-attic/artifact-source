@@ -25,7 +25,7 @@ object Retry extends LazyLogging {
     * @return return value from successful call of fn
     */
   @tailrec
-  private[git] final def retry[T](opName: String, n: Int = 4, wait: Long = 0L)(fn: => T): T = {
+  private[git] final def retry[T](opName: String, n: Int = 9, wait: Long = 0L)(fn: => T): T = {
     Thread.sleep(wait)
     Try(fn) match {
       case Success(x) => x
