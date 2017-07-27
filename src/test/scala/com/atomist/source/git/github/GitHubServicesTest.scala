@@ -13,40 +13,9 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
   private val grc = GitRepositoryCloner(Token)
 
-  "GitHubServices" should "find valid organization" in {
-    ghs.getOrganization(TestOrg) shouldBe defined
-  }
-
-  it should "fail to find unknown organization" in {
-    ghs.getOrganization("comfoobar") shouldBe empty
-  }
-
-  it should "find valid user repository" in {
-    ghs.getRepository("satin-scala", "alankstewart") shouldBe defined
-  }
-
-  it should "fail to find unknown user repository" in {
-    ghs.getRepository("comfoobar", "alankstewart") shouldBe empty
-  }
-
-  it should "fail to find unknown organization repository" in {
-    ghs.getRepository("unknown-repo", TestOrg) shouldBe empty
-  }
-
-  it should "handle null repository" in {
-    ghs.getRepository(null, TestOrg) shouldBe empty
-  }
-
-  it should "handle empty repository" in {
-    ghs.getRepository(" ", TestOrg) shouldBe empty
-  }
-
-  it should "handle null organization" in {
-    ghs.getRepository("unknown-repo", null) shouldBe empty
-  }
-
-  it should "handle empty organization" in {
-    ghs.getRepository("unknown-repo", "") shouldBe empty
+  "GitHubServices" should "search repositories by repo owner and name" in {
+    val repos = ghs.searchRepositories(Map("q" -> s"repo:atomist/artifact-source"))
+    repos.size shouldEqual 1
   }
 
   it should "list all branches" in {
@@ -318,8 +287,28 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val issues = ghs.listIssues()
     issues.size should be > 0
 
-    val searched = ghs.searchIssues(Map("q" -> s"repo:$owner/$repo state:closed", "per_page" -> "100", "page" -> "1"))
-    searched.size should be > 0
+    val results = ghs.searchIssues(Map("q" -> s"repo:$owner/$repo state:closed", "per_page" -> "100", "page" -> "1"))
+    results.size should be > 0
+  }
+
+  it should "list issues with search criteria" in {
+    val results = ghs.listIssues(Map("per_page" -> "30", "sort" -> "updated", "direction" -> "asc", "state" -> "closed"))
+    results.size should be > 10
+  }
+
+  it should "list issues with specified page number" in {
+    val results = ghs.listIssues(Map("per_page" -> "10", "sort" -> "updated", "direction" -> "asc", "page" -> "1"))
+    results.size shouldEqual 10
+  }
+
+  it should "search issues with search criteria" in {
+    val results = ghs.searchIssues(Map("q" -> s"repo:atomist/artifact-source", "per_page" -> "10"))
+    results.size shouldEqual results.groupBy(_.number).map(_._2.head).size
+  }
+
+  it should "search issues with specified page number" in {
+    val results = ghs.searchIssues(Map("q" -> s"repo:atomist/artifact-source", "per_page" -> "10", "page" -> "2"))
+    results.size shouldEqual 10
   }
 
   it should "create commit comment and reaction" in {
@@ -327,7 +316,9 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
-    val commit = ghs.listCommits(repo, owner).head
+    val commits = ghs.listCommits(repo, owner)
+    commits.size should be > 0
+    val commit = commits.head
     val commitComment = ghs.createCommitComment(repo, owner, commit.sha, "test comment", "README.md", 1)
     commitComment.body shouldEqual "test comment"
 

@@ -24,7 +24,7 @@ case class GitServices(oAuthToken: String, remoteUrl: Option[String] = None)
   private val grc = GitRepositoryCloner(oAuthToken, remoteUrl)
   private val ghs = GitHubServices(oAuthToken, remoteUrl)
 
-  @throws[ArtifactSourceUpdateException]
+  @throws[ArtifactSourceException]
   def createBranchFromChanges(repo: String,
                               owner: String,
                               branchName: String,
@@ -32,8 +32,8 @@ case class GitServices(oAuthToken: String, remoteUrl: Option[String] = None)
                               current: ArtifactSource,
                               message: String): File = {
     val repoDir = grc.clone(repo, owner) match {
-      case Some(file) => file
-      case None => throw ArtifactSourceUpdateException(s"Failed to clone $owner/$repo")
+      case Some(dir) => dir
+      case None => throw ArtifactSourceException(s"Failed to clone $owner/$repo")
     }
 
     for (git <- managed(Git.open(repoDir))) {
@@ -65,7 +65,7 @@ case class GitServices(oAuthToken: String, remoteUrl: Option[String] = None)
     repoDir
   }
 
-  @throws[ArtifactSourceUpdateException]
+  @throws[ArtifactSourceException]
   def createPullRequestFromChanges(repo: String,
                                    owner: String,
                                    prr: PullRequestRequest,

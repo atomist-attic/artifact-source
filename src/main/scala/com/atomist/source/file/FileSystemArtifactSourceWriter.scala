@@ -15,12 +15,12 @@ class FileSystemArtifactSourceWriter {
 
   def write(as: ArtifactSource, id: FileSystemArtifactSourceIdentifier, sui: SourceUpdateInfo): File = {
     if (id == as.id)
-      throw ArtifactSourceCreationException(s"Cannot write to same $id")
+      throw ArtifactSourceException(s"Cannot write to same $id")
     // Try to create the directory if it doesn't exist
     if (!id.rootFile.canWrite)
       id.rootFile.mkdir()
     if (!id.rootFile.canWrite)
-      throw ArtifactSourceCreationException(s"Cannot write to file $id")
+      throw ArtifactSourceException(s"Cannot write to file $id")
     try {
       for (f <- as.allFiles)
         write(f, id.rootFile)
@@ -30,7 +30,7 @@ class FileSystemArtifactSourceWriter {
       id.rootFile
     } catch {
       case e: IOException =>
-        throw ArtifactSourceCreationException(s"Couldn't create artifact with id $id", e)
+        throw ArtifactSourceException(s"Couldn't create artifact with id $id", e)
     }
   }
 

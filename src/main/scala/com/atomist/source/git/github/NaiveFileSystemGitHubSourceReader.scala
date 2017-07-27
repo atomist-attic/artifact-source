@@ -3,7 +3,7 @@ package com.atomist.source.git.github
 import java.io.File
 
 import com.atomist.source.file.{FileSystemArtifactSource, FileSystemArtifactSourceIdentifier}
-import com.atomist.source.{Artifact, ArtifactSource, ArtifactSourceAccessException, DirectoryBasedArtifactContainer}
+import com.atomist.source.{Artifact, ArtifactSource, ArtifactSourceException, DirectoryBasedArtifactContainer}
 
 /**
   * Implementation of [[GitHubSourceReader]] that looks for local
@@ -16,13 +16,13 @@ class NaiveFileSystemGitHubSourceReader(directoryFullOfRepos: File) extends GitH
 
   override def sourceFor(loc: GitHubArtifactSourceLocator): ArtifactSource = {
     if (!directoryFullOfRepos.isDirectory)
-      throw ArtifactSourceAccessException(s"$directoryFullOfRepos must be a directory containing cloned repos")
+      throw ArtifactSourceException(s"$directoryFullOfRepos must be a directory containing cloned repos")
 
     val matchingDirectoryO = directoryFullOfRepos.listFiles.toIndexedSeq.find(dir => loc.repo.equals(dir.getName))
 
     matchingDirectoryO match {
       case None =>
-        throw ArtifactSourceAccessException(s"Directory with name ${loc.repo} was not found in base dir $directoryFullOfRepos")
+        throw ArtifactSourceException(s"Directory with name ${loc.repo} was not found in base dir $directoryFullOfRepos")
       case Some(dir) =>
         val fakeId = GitHubArtifactSourceIdentifier(loc, "bogusCommitSha")
         val as = new FileSystemArtifactSource(FileSystemArtifactSourceIdentifier(dir))

@@ -64,7 +64,9 @@ class TreeGitHubArtifactSourceTest extends GitHubMutatorTest(Token) {
     val javaEditor = SimpleFileEditor(_.name.endsWith(".java"), f => StringFileArtifact(f.path, newContent))
     val edited = tghas ✎ javaEditor
     edited.allArtifacts should have size tghasSize
-    edited.findFile("src/main/java/com/example/DemoApplication.java").get.content should equal(newContent)
+    val f = edited.findFile("src/main/java/com/example/DemoApplication.java")
+    f shouldBe defined
+    f.get.content should equal(newContent)
   }
 }
 
