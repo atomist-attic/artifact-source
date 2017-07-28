@@ -57,8 +57,8 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
 
   private def resetToSha(sha: String, repoDir: File) =
     Process(s"git reset --hard $sha", repoDir) #||
-      Process("git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*", repoDir) ###
-      Process("git fetch --unshallow", repoDir) #||
+      Process("git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*", repoDir) #&&
+      Process("git fetch --unshallow", repoDir) ###
       Process("git fetch", repoDir) #&&
       Process(s"git reset --hard $sha", repoDir) !! outLogger
 
