@@ -5,7 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.0-m.14] - 2017-07-28
+
+[1.0.0-m.14]: https://github.com/atomist/artifact-source/compare/1.0.0-m.13...1.0.0-m.14
+
+### Added
+    
+-   Retry of all GitHub API calls
+
+### Fixed
+
+-   Fixed issue where git cloning was not working when a commit sha was specified
+
+### Changed
+
+-   **BREAKING** Removed `ArtifactSourceAccessException`, `ArtifactSourceUpdateException`, and `ArtifactSourceCreationException`
+    in favour of just `ArtifactSourceException`, which is now a concrete class
+
 ## [1.0.0-m.13] - 2017-07-18
+
+[1.0.0-m.13]: https://github.com/atomist/artifact-source/compare/1.0.0-m.12...1.0.0-m.13
 
 ### Fixed
 
