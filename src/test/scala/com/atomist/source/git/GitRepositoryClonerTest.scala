@@ -1,6 +1,6 @@
 package com.atomist.source.git
 
-import java.io.File
+import java.io.{File, StringWriter}
 import java.nio.file.Paths
 
 import com.atomist.source.git.TestConstants.Token
@@ -8,6 +8,8 @@ import com.atomist.source.git.github.{GitHubArtifactSourceLocator, GitHubMutator
 import com.atomist.source.{SimpleCloudRepoId, StringFileArtifact}
 import com.atomist.util.BinaryDecider
 import org.apache.commons.io.FileUtils
+
+import scala.sys.process._
 
 class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
 
@@ -83,6 +85,11 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     }
     FileUtils.sizeOf(cloned) should be > 0L
     // println(s"Cloning: ${System.currentTimeMillis - start} ms")
+
+    val sw = new StringWriter
+    val outLogger = ProcessLogger(sw.write(_), sw.write(_))
+    Process("git rev-parse HEAD", cloned) ! outLogger
+    sw.toString shouldEqual sha
   }
 
   it should "clone remote repo and verify file contents" in {
@@ -94,6 +101,19 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     val f = Paths.get(cloned.getPath, "src", "test", "resources", "springboot1.zip").toFile
     val content = FileUtils.readFileToByteArray(f)
     BinaryDecider.isBinaryContent(content) shouldBe true
+  }
+
+  it should "clone remote repo rest to sha" in {
+    val grc = GitRepositoryCloner(Token)
+    val sha = "a88065bbdc566cd0d3e59a1f792011c95c1197c2"
+    val cloned = grc.clone("atomist-k8-specs", "atomisthq", sha = Some(sha)) match {
+      case Some(file) => file
+      case None => fail
+    }
+    val sw = new StringWriter
+    val outLogger = ProcessLogger(sw.write(_), sw.write(_))
+    Process("git rev-parse HEAD", cloned) ! outLogger
+    sw.toString shouldEqual sha
   }
 
   it should "fail to clone repo due to malformed git url" in {
@@ -109,14 +129,14 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
 
   private def cloneAndVerify(branch: Option[String] = None, sha: Option[String] = None, dir: Option[File] = None): Unit = {
     val grc = GitRepositoryCloner()
-    val start = System.currentTimeMillis
+    // val start = System.currentTimeMillis
     val cloned = grc.clone("rug", "atomist", branch, sha, dir) match {
       case Some(file) => file
       case None => fail
     }
     val size = FileUtils.sizeOf(cloned)
     size should be > 0L
-    println(s"Cloning: ${System.currentTimeMillis - start} ms")
+    // println(s"Cloning: ${System.currentTimeMillis - start} ms")
     grc.deleteRepoDirectory(cloned)
   }
 }

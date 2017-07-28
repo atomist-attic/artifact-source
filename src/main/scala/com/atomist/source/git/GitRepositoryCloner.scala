@@ -55,19 +55,12 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
           file
       }).getOrElse(Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile)
 
-  private def resetToSha(sha: String, repoDir: File) = {
-    val resetProcess = Process(s"git reset --hard $sha", repoDir)
-    val rc = resetProcess ! outLogger
-    if (rc != 0) {
-      logger.warn(s"Failed to reset HEAD to specified sha $sha. Attempting to fetch entire repo")
-      Process("git remote set-branches origin '*'", repoDir) #&& Process("git fetch --unshallow", repoDir) !! outLogger
-      val rc2 = resetProcess ! outLogger
-      if (rc2 != 0) {
-        logger.warn(s"Failed to reset HEAD to specified sha $sha. Attempting to fetch repo without --unshallow")
-        Process("git fetch", repoDir) #&& resetProcess !! outLogger
-      }
-    }
-  }
+  private def resetToSha(sha: String, repoDir: File) =
+    Process(s"git reset --hard $sha", repoDir) #||
+      Process("git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*", repoDir) ###
+      Process("git fetch --unshallow", repoDir) #||
+      Process("git fetch", repoDir) #&&
+      Process(s"git reset --hard $sha", repoDir) !! outLogger
 
   private def getUrl = {
     val url = remoteUrl.collect {
