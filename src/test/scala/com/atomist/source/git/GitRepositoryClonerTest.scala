@@ -103,10 +103,36 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     BinaryDecider.isBinaryContent(content) shouldBe true
   }
 
-  it should "clone remote repo rest to sha" in {
+  it should "clone remote repo reset to sha" in {
     val grc = GitRepositoryCloner(Token)
     val sha = "a88065bbdc566cd0d3e59a1f792011c95c1197c2"
     val cloned = grc.clone("atomist-k8-specs", "atomisthq", sha = Some(sha)) match {
+      case Some(file) => file
+      case None => fail
+    }
+    val sw = new StringWriter
+    val outLogger = ProcessLogger(sw.write(_), sw.write(_))
+    Process("git rev-parse HEAD", cloned) ! outLogger
+    sw.toString shouldEqual sha
+  }
+
+  it should "clone self and reset to recent sha" in {
+    val grc = GitRepositoryCloner()
+    val sha = "bab65e390e25e682cb057a39cdb744bf9e97e092"
+    val cloned = grc.clone("artifact-source", "atomist", sha = Some(sha)) match {
+      case Some(file) => file
+      case None => fail
+    }
+    val sw = new StringWriter
+    val outLogger = ProcessLogger(sw.write(_), sw.write(_))
+    Process("git rev-parse HEAD", cloned) ! outLogger
+    sw.toString shouldEqual sha
+  }
+
+  it should "clone self and reset to sha" in {
+    val grc = GitRepositoryCloner()
+    val sha = "50ad4b6c1295e0fec9d56bfe06c705900e0db6b5"
+    val cloned = grc.clone("artifact-source", "atomist", sha = Some(sha)) match {
       case Some(file) => file
       case None => fail
     }
