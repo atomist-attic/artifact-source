@@ -55,19 +55,15 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
           file
       }).getOrElse(Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile)
 
-  private def resetToSha(sha: String, repoDir: File) = {
-    val rc = Process(s"git reset --hard $sha", repoDir) ! outLogger
-    if (rc != 0) {
+  private def resetToSha(sha: String, repoDir: File) =
+    if (Process(s"git reset --hard $sha", repoDir) ! outLogger != 0) {
       Process("git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*", repoDir) ! outLogger
-      val rc1 = Process("git fetch --unshallow", repoDir) ! outLogger
-      if (rc1 != 0)
+      if (Process("git fetch --unshallow", repoDir) ! outLogger != 0)
         Process("git fetch", repoDir) ! outLogger
 
-      val rc3 = Process(s"git reset --hard $sha", repoDir) ! outLogger
-      if (rc3 != 0)
+      if (Process(s"git reset --hard $sha", repoDir) ! outLogger != 0)
         throw new IllegalArgumentException(s"Failed to reset HEAD to sha $sha")
     }
-  }
 
   private def getUrl = {
     val url = remoteUrl.collect {
