@@ -55,7 +55,7 @@ abstract class GitHubMutatorTest(val oAuthToken: String)
     */
   private def cleanUp() =
     Try(ghs.searchRepositories(Map("q" -> s"org:$TestOrg in:name $TemporaryRepoPrefix", "per_page" -> "100"))) match {
-      case Success(repos) => repos.foreach(repo => {
+      case Success(repos) => repos.items.foreach(repo => {
         ghs.deleteRepository(repo.name, repo.ownerName)
         logger.debug(s"Deleted repository ${repo.ownerName}/${repo.name}")
       })
