@@ -89,7 +89,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                        privateFlag: Boolean = false,
                        issues: Boolean = true,
                        autoInit: Boolean = false): Repository = {
-    val data = toJson(Map("name" -> repo, "description" -> description, "private" -> privateFlag, "has_issues" -> issues, "auto_init" -> autoInit))
+    val data = toJson(Map("name" -> repo, "description" -> description, "private" -> privateFlag,
+      "has_issues" -> issues, "auto_init" -> autoInit))
     retry("createRepository") {
       httpRequestOption[Repository](s"$api/orgs/$owner/repos", Post, Some(data))
         .getOrElse(httpRequest[Repository](s"$api/user/repos", Post, Some(data)))
@@ -397,10 +398,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     httpRequestOption[Unit](s"$api/repos/$owner/$repo/hooks/$id/tests", Post, Some("".getBytes))
 
   @throws[ArtifactSourceException]
-  def addCollaborator(repo: String, owner: String, collaborator: String): Unit =
+  def addCollaborator(repo: String, owner: String, collaborator: String): Unit = {
+    val params = Map("permission" -> "push")
     retry("addCollaborator") {
-      httpRequestOption[Unit](s"$api/repos/$owner/$repo/collaborators/$collaborator", Put, params = Map("permission" -> "push"))
+      httpRequestOption[Unit](s"$api/repos/$owner/$repo/collaborators/$collaborator", Put, params = params)
     }
+  }
 
   def getIssue(repo: String, owner: String, number: Int): Option[Issue] =
     retry("getIssue") {
@@ -497,7 +500,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   def createPullRequestReviewCommentReaction(repo: String, owner: String, id: Int, content: ReactionContent): Reaction =
     createReaction("createPullRequestReviewCommentReaction", s"$api/repos/$owner/$repo/pulls/comments/$id/reactions", content)
 
-  def listPullRequestReviewCommentReactions(repo: String, owner: String, id: Int, content: Option[ReactionContent] = None): Seq[Reaction] =
+  def listPullRequestReviewCommentReactions(repo: String,
+                                            owner: String,
+                                            id: Int,
+                                            content: Option[ReactionContent] = None): Seq[Reaction] =
     listReactions(s"$api/repos/$owner/$repo/pulls/comments/$id/reactions", content)
 
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
@@ -539,7 +545,10 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                             contentType: String,
                             active: Boolean,
                             events: Array[String]): Webhook = {
-    val data = toJson(Map("name" -> name, "config" -> Map("url" -> webhookUrl, "content_type" -> contentType), "active" -> active, "events" -> events))
+    val data = toJson(Map("name" -> name,
+      "config" -> Map("url" -> webhookUrl, "content_type" -> contentType),
+      "active" -> active,
+      "events" -> events))
     retry("createWebhook") {
       httpRequest[Webhook](url, Post, Some(data))
     }
@@ -569,7 +578,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   private def paginateResults[T](url: String,
-                                 params: Map[String, String] = Map("per_page" -> "100"))(implicit m: Manifest[T]): Seq[T] = {
+                                 params: Map[String, String] = Map("per_page" -> "100"))
+                                (implicit m: Manifest[T]): Seq[T] = {
     def nextPage(url: String, accumulator: Seq[T]): Seq[T] = {
       val resp = Http(url).headers(headers).params(params).asString
       if (resp.isSuccess) {
@@ -586,7 +596,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   }
 
   private def paginateSearchResults[T](url: String,
-                                       params: Map[String, String] = Map("per_page" -> "100"))(implicit m: Manifest[T]): SearchResult[T] = {
+                                       params: Map[String, String] = Map("per_page" -> "100"))
+                                      (implicit m: Manifest[T]): SearchResult[T] = {
     def nextPage(url: String, accumulator: Seq[T]): SearchResult[T] = {
       val resp = Http(url).headers(headers).params(params).asString
       if (resp.isSuccess) {
