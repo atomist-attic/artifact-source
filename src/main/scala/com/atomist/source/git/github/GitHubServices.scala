@@ -4,15 +4,17 @@ import java.io.InputStream
 import java.nio.charset.Charset
 import java.util.{List => JList}
 
-import com.atomist.source.git.DoNotRetryException
-import com.atomist.source.git.Retry.retry
 import com.atomist.source.git.github.domain.ReactionContent.ReactionContent
 import com.atomist.source.git.github.domain._
 import com.atomist.source.{ArtifactSourceException, FileArtifact, _}
+import com.atomist.util.HttpMethod._
 import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.util.Octal.intToOctal
+import com.atomist.util.Retry.retry
+import com.atomist.util.{DoNotRetryException, RestGateway}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.IOUtils
+import org.apache.http.client.utils.URLEncodedUtils
 import resource._
 
 import scala.collection.JavaConverters._
@@ -20,13 +22,13 @@ import scala.util.{Failure, Success, Try}
 import scalaj.http.{Base64, Http, HttpResponse}
 
 case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
-  extends GitHubSourceReader
+  extends RestGateway
+    with GitHubSourceReader
     with LazyLogging {
 
   def this(oAuthToken: String, apiUrl: String) = this(oAuthToken, Option(apiUrl)) // For Java
 
   import GitHubServices._
-  import HttpMethod._
 
   private val api: String = apiUrl match {
     case Some(url) => url match {
@@ -40,17 +42,44 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   private val headers: Map[String, String] =
     Map(
       "Authorization" -> ("token " + oAuthToken),
-      "Accept" -> "application/vnd.github.v3+json,application/vnd.github.loki-preview+json,application/vnd.github.squirrel-girl-preview"
+      "Accept" -> Seq(
+        "application/vnd.github.v3+json",
+        "application/vnd.github.loki-preview",
+        "application/vnd.github.squirrel-girl-preview",
+        "application/vnd.github.cloak-preview"
+      ).mkString(",")
     )
+
+  override def httpRequest[T](url: String,
+                              method: HttpMethod = Get,
+                              body: Option[Array[Byte]] = None,
+                              params: Map[String, String] = Map.empty,
+                              headers: Map[String, String] = headers)(implicit m: Manifest[T]): T =
+    (body match {
+      case Some(data) => method match {
+        case Post => Http(url).postData(data)
+        case Put => Http(url).put(data)
+        case Patch => Http(url).postData(data).method(method.toString)
+        case _ => Http(url).postData(data)
+      }
+      case None => Http(url).method(method.toString)
+    }).headers(headers)
+      .params(params)
+      .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
+        case 200 | 201 => fromJson[T](is)
+        case success if 202 until 206 contains success => ().asInstanceOf[T]
+        case 401 | 403 | 415 | 422 => throw DoNotRetryException(s"${headers("Status").head}")
+        case _ => throw ArtifactSourceException(s"${headers("Status").head}, ${IOUtils.toString(is, Charset.defaultCharset)}")
+      }).body
 
   override def sourceFor(id: GitHubArtifactSourceLocator): ArtifactSource = TreeGitHubArtifactSource(id, this)
 
   override def treeFor(id: GitHubShaIdentifier): ArtifactSource = TreeGitHubArtifactSource(id, this)
 
   def hasRepository(repo: String, owner: String): Boolean =
-    searchRepositories(Map("q" -> s"repo:$owner/$repo")).size == 1
+    searchRepositories(Map("q" -> s"repo:$owner/$repo")).items.size == 1
 
-  def searchRepositories(params: Map[String, String] = Map("per_page" -> "100")): Seq[Repository] =
+  def searchRepositories(params: Map[String, String] = Map("per_page" -> "100")): SearchResult[Repository] =
     paginateSearchResults[Repository](s"$api/search/repositories", params)
 
   @throws[ArtifactSourceException]
@@ -308,6 +337,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
   }
 
+  def searchCommits(params: Map[String, String] = Map("per_page" -> "100")): SearchResult[Commit] =
+    paginateSearchResults[Commit](s"$api/search/commits", params)
+
   @throws[ArtifactSourceException]
   def createCommitComment(repo: String,
                           owner: String,
@@ -378,7 +410,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   def listIssues(params: Map[String, String] = Map("per_page" -> "100")): Seq[Issue] =
     paginateResults[Issue](s"$api/issues", params)
 
-  def searchIssues(params: Map[String, String] = Map("per_page" -> "100")): Seq[Issue] =
+  def searchIssues(params: Map[String, String] = Map("per_page" -> "100")): SearchResult[Issue] =
     paginateSearchResults[Issue](s"$api/search/issues", params)
 
   @throws[ArtifactSourceException]
@@ -536,29 +568,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         None
     }
 
-  private def httpRequest[T](url: String,
-                             method: HttpMethod = Get,
-                             body: Option[Array[Byte]] = None,
-                             params: Map[String, String] = Map.empty)(implicit m: Manifest[T]): T =
-    (body match {
-      case Some(data) => method match {
-        case Post => Http(url).postData(data)
-        case Put => Http(url).put(data)
-        case Patch => Http(url).postData(data).method(method.toString)
-        case _ => Http(url).postData(data)
-      }
-      case None => Http(url).method(method.toString)
-    }).headers(headers)
-      .params(params)
-      .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
-        case 200 | 201 => fromJson[T](is)
-        case success if 202 until 206 contains success =>
-          logger.debug(s"${headers("Status").head}")
-          ().asInstanceOf[T]
-        case 401 | 403 | 422 => throw DoNotRetryException(s"${headers("Status").head}")
-        case _ => throw ArtifactSourceException(s"${headers("Status").head}, ${IOUtils.toString(is, Charset.defaultCharset)}")
-      }).body
-
   private def paginateResults[T](url: String,
                                  params: Map[String, String] = Map("per_page" -> "100"))(implicit m: Manifest[T]): Seq[T] = {
     def nextPage(url: String, accumulator: Seq[T]): Seq[T] = {
@@ -577,16 +586,24 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   }
 
   private def paginateSearchResults[T](url: String,
-                                       params: Map[String, String] = Map("per_page" -> "100"))(implicit m: Manifest[T]): Seq[T] = {
-    def nextPage(url: String, accumulator: Seq[T]): Seq[T] = {
+                                       params: Map[String, String] = Map("per_page" -> "100"))(implicit m: Manifest[T]): SearchResult[T] = {
+    def nextPage(url: String, accumulator: Seq[T]): SearchResult[T] = {
       val resp = Http(url).headers(headers).params(params).asString
       if (resp.isSuccess) {
-        val pages = accumulator ++ fromJson[SearchResult[T]](resp.body).items
-        if (params.keySet.contains("page")) pages
-        else getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
+        val result = fromJson[SearchResult[T]](resp.body)
+        val pages = accumulator ++ result.items
+        val nextUrl = getNextUrl(resp)
+        val nextPageNumber = nextUrl.map(getPage).getOrElse(0)
+        val lastPageNumber = getLastUrl(resp).map(getPage).getOrElse(0)
+
+        if (params.keySet.contains("page"))
+          SearchResult(result.totalCount, result.incompleteResults, nextPageNumber, lastPageNumber, pages)
+        else
+          nextUrl.map(nextPage(_, pages))
+            .getOrElse(SearchResult(result.totalCount, result.incompleteResults, nextPageNumber, lastPageNumber, pages))
       } else {
         logger.warn(s"${resp.code} ${resp.body}")
-        Seq.empty
+        SearchResult(0, incompleteResults = true, 0, 0, Seq.empty)
       }
     }
 
@@ -595,6 +612,16 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   private def getNextUrl(resp: HttpResponse[String]): Option[String] =
     resp.header("Link").flatMap(parseLinkHeader(_).get("next"))
+
+  private def getLastUrl(resp: HttpResponse[String]): Option[String] =
+    resp.header("Link").flatMap(parseLinkHeader(_).get("last"))
+
+  private def getPage(url: String): Int =
+    URLEncodedUtils.parse(url, Charset.defaultCharset()).asScala
+      .find(_.getName == "page")
+      .map(_.getValue)
+      .getOrElse("0")
+      .toInt
 }
 
 object GitHubServices {
@@ -607,23 +634,13 @@ object GitHubServices {
 
   def parseLinkHeader(linkHeader: String): Map[String, String] =
     if (linkHeader == null || linkHeader.isEmpty) Map.empty
-    else
-      linkHeader.split(',').map { part =>
+    else {
+      val map = linkHeader.split(',').map { part =>
         val section = part.split(';')
         val url = section(0).replace("<", "").replace(">", "").trim
         val name = section(1).replace(" rel=\"", "").replace("\"", "").trim
         (name, url)
       }.toMap
-}
-
-object HttpMethod extends Enumeration {
-
-  type HttpMethod = Value
-
-  val Head = Value("HEAD")
-  val Get = Value("GET")
-  val Post = Value("POST")
-  val Patch = Value("PATCH")
-  val Put = Value("PUT")
-  val Delete = Value("DELETE")
+      map
+    }
 }

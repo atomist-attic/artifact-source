@@ -15,7 +15,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
   "GitHubServices" should "search repositories by repo owner and name" in {
     val repos = ghs.searchRepositories(Map("q" -> s"repo:atomist/artifact-source"))
-    repos.size shouldEqual 1
+    repos.items.size shouldEqual 1
   }
 
   it should "list all branches" in {
@@ -212,9 +212,19 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     populateAndVerify(repo, owner, newBranchName)
   }
 
-  it should "get all commits in a repository" in {
+  it should "list all commits in a repository" in {
     val commits = ghs.listCommits("artifact-source", "atomist")
     commits.size should be > 200
+  }
+
+  it should "search commits with search criteria" in {
+    val results = ghs.searchCommits(Map("q" -> s"repo:atomist/artifact-source logging", "per_page" -> "10"))
+    results.items.size shouldEqual results.items.groupBy(_.sha).map(_._2.head).size
+  }
+
+  it should "search commits with specified page number" in {
+    val results = ghs.searchCommits(Map("q" -> s"repo:atomist/artifact-source logging", "per_page" -> "10", "page" -> "1"))
+    results.items.size shouldEqual 10
   }
 
   it should "get all pull requests in a repository" in {
@@ -288,7 +298,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     issues.size should be > 0
 
     val results = ghs.searchIssues(Map("q" -> s"repo:$owner/$repo state:closed", "per_page" -> "100", "page" -> "1"))
-    results.size should be > 0
+    results.items.size should be > 0
   }
 
   it should "list issues with search criteria" in {
@@ -303,12 +313,12 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
   it should "search issues with search criteria" in {
     val results = ghs.searchIssues(Map("q" -> s"repo:atomist/artifact-source", "per_page" -> "10"))
-    results.size shouldEqual results.groupBy(_.number).map(_._2.head).size
+    results.items.size shouldEqual results.items.groupBy(_.number).map(_._2.head).size
   }
 
   it should "search issues with specified page number" in {
     val results = ghs.searchIssues(Map("q" -> s"repo:atomist/artifact-source", "per_page" -> "10", "page" -> "2"))
-    results.size shouldEqual 10
+    results.items.size shouldEqual 10
   }
 
   it should "create commit comment and reaction" in {

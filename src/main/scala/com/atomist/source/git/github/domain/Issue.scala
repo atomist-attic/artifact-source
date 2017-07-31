@@ -25,12 +25,16 @@ case class IssueLabel(url: String, name: String, color: String)
 
 case class Milestone(url: String, id: Integer, number: Integer)
 
-case class IssuePullRequest(url: String)
+case class IssuePullRequest(url: String,
+                            @JsonProperty("html_url") htmlUrl: String,
+                            @JsonProperty("diff_url") diffUrl: String,
+                            @JsonProperty("patch_url") patchUrl: String)
 
 case class IssueRepository(@JsonProperty("pushed_at") pushedAt: OffsetDateTime)
 
 case class Comment(id: Int,
-                   @JsonProperty("html_url") url: String,
+                   url: String,
+                   @JsonProperty("html_url") htmlUrl: String,
                    body: String,
                    user: User,
                    @JsonProperty("created_at") createdAt: OffsetDateTime,

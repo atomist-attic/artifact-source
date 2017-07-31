@@ -1,4 +1,4 @@
-package com.atomist.source.git
+package com.atomist.util
 
 import com.typesafe.scalalogging.LazyLogging
 
@@ -25,7 +25,7 @@ object Retry extends LazyLogging {
     * @return return value from successful call of fn
     */
   @tailrec
-  private[git] final def retry[T](opName: String, n: Int = 9, wait: Long = 0L)(fn: => T): T = {
+  final def retry[T](opName: String, n: Int = 9, wait: Long = 0L)(fn: => T): T = {
     Thread.sleep(wait)
     Try(fn) match {
       case Success(x) => x
@@ -38,4 +38,10 @@ object Retry extends LazyLogging {
   }
 }
 
-case class DoNotRetryException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)
+case class DoNotRetryException(msg: String, cause: Throwable) extends RuntimeException(msg, cause)
+
+object DoNotRetryException {
+
+  def apply(msg: String): DoNotRetryException =
+    DoNotRetryException(msg, null)
+}
