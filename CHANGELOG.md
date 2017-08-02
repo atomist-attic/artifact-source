@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.0-m.16] - 2017-08-02
+
+[1.0.0-m.16]: https://github.com/atomist/artifact-source/compare/1.0.0-m.15...1.0.0-m.16
+
+### Changed
+
+-   Simplified git package structure by removing `github` package and just using `git` package
+    to contain all Git and GitHub artifacts
+
+## [1.0.0-m.15] - 2017-07-31
+
+[1.0.0-m.15]: https://github.com/atomist/artifact-source/compare/1.0.0-m.14...1.0.0-m.15
+
+### Changed
+
+-   Enhanced `searchRepositories` and `searchIssues` methods
+
 ## [1.0.0-m.14] - 2017-07-28
 
 [1.0.0-m.14]: https://github.com/atomist/artifact-source/compare/1.0.0-m.13...1.0.0-m.14
