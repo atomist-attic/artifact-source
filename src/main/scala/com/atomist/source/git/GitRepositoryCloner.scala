@@ -4,7 +4,7 @@ import java.io.File
 import java.net.URL
 import java.nio.file.{FileAlreadyExistsException, Files}
 
-import com.atomist.source.git.github.GitHubServices.Url
+import com.atomist.source.git.GitHubServices.Url
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 
@@ -32,7 +32,7 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
       }.getOrElse("")
 
       s"git clone$br --depth $depth --single-branch $getUrl/$owner/$repo.git ${repoDir.getPath}" !! outLogger
-      sha.map(resetToSha(_, repoDir))
+      sha.foreach(resetToSha(_, repoDir))
       Some(repoDir)
     } catch {
       case e: Exception =>

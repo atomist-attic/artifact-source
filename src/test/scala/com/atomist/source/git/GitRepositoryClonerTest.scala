@@ -4,7 +4,6 @@ import java.io.{File, StringWriter}
 import java.nio.file.Paths
 
 import com.atomist.source.git.TestConstants.Token
-import com.atomist.source.git.github.{GitHubArtifactSourceLocator, GitHubMutatorTest, GitHubSourceUpdateInfo}
 import com.atomist.source.{SimpleCloudRepoId, StringFileArtifact}
 import com.atomist.util.BinaryDecider
 import org.apache.commons.io.FileUtils
