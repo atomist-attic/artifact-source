@@ -189,9 +189,22 @@ class FileSystemArtifactSourceTest extends FlatSpec with Matchers {
     // val start = System.currentTimeMillis()
     val as = FileSystemArtifactSource(fid,
       GitignoreFileFilter(rootPath),
-      AtomistIgnoreFileFilter(rootPath),
       GitDirFilter(rootPath))
     as.findDirectory("src") shouldBe defined
+    as.findDirectory(".git") shouldBe empty
+    as.findDirectory("target") shouldBe empty
+    // println(s"elapsed time = ${System.currentTimeMillis() - start} ms")
+  }
+
+  it should "handle filtering of root-level directories prefixed with /" in {
+    val rootPath = System.getProperty("user.dir")
+    val fid = FileSystemArtifactSourceIdentifier(Paths.get(rootPath).toFile)
+    // val start = System.currentTimeMillis()
+    val as = FileSystemArtifactSource(fid,
+      GitignoreFileFilter(rootPath),
+      AtomistIgnoreFileFilter(rootPath),
+      GitDirFilter(rootPath))
+    as.findDirectory("src") shouldBe empty
     as.findDirectory(".git") shouldBe empty
     as.findDirectory("target") shouldBe empty
     // println(s"elapsed time = ${System.currentTimeMillis() - start} ms")

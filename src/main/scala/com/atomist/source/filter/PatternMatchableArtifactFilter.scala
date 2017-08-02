@@ -23,6 +23,7 @@ abstract class PatternMatchableArtifactFilter(val rootPath: String) extends Arti
       val patterns = FileUtils.readLines(file, Charset.defaultCharset()).asScala
         .filterNot(l => l.isEmpty || l.startsWith("#"))
         .map(l => if (l.endsWith("/") || l.endsWith("\\")) l.dropRight(1) else l)
+        .map(l => if (l.startsWith("/") || l.startsWith("\\")) l.drop(1) else l)
         .distinct
         .toList
 
