@@ -1,7 +1,6 @@
 # Atomist 'artifact-source'
 
 [![Build Status](https://travis-ci.org/atomist/artifact-source.svg?branch=master)](https://travis-ci.org/atomist/artifact-source)
-[![Slack Status](https://join.atomist.com/badge.svg)](https://join.atomist.com/)
 
 Defines an ArtifactSource abstraction for source code.
 
