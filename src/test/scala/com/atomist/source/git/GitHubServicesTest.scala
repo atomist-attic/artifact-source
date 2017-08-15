@@ -6,6 +6,7 @@ import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants._
 import com.atomist.source.git.domain.ReactionContent._
 import com.atomist.source.git.domain.{PullRequest, PullRequestRequest, ReactionContent}
+import com.atomist.util.DoNotRetryException
 import org.apache.commons.codec.binary.Base64
 
 class GitHubServicesTest extends GitHubMutatorTest(Token) {
@@ -261,6 +262,14 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     webhook.id should be > 0
     webhook.active shouldBe true
     webhook.events should contain only "*"
+    ghs.deleteOrganizationWebhook(org, webhook.id)
+  }
+
+  it should "fail to create duplicate webhook in an organization" in {
+    val url = "http://example.com/webhook"
+    val org = "atomisthqtest"
+    val webhook = ghs.createOrganizationWebhook(org, "web", url, "json", active = true, Array("*"))
+    an[DoNotRetryException] should be thrownBy ghs.createOrganizationWebhook(org, "web", url, "json", active = true, Array("*"))
     ghs.deleteOrganizationWebhook(org, webhook.id)
   }
 
