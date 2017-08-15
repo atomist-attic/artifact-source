@@ -44,6 +44,14 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.listBranches(repo, owner) should have size 1 // "master"
   }
 
+  it should "fail to find unknown branch" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    ghs.getBranch(repo, owner, "foobar") shouldBe empty
+  }
+
   it should "delete files with valid path in multi file commit" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
@@ -147,11 +155,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val owner = newTempRepo.ownerName
 
     val start = System.currentTimeMillis()
-    val cloned = grc.clone(repo, owner) match {
-      case Some(file) => file
-      case None => fail
-    }
-
+    val cloned = grc.clone(repo, owner)
     val startAs = FileSystemGitArtifactSource(NamedFileSystemArtifactSourceIdentifier(repo, cloned))
 
     val path1 = "test.json"

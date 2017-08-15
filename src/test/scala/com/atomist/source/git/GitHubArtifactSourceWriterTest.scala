@@ -48,10 +48,7 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
 
   it should "clone a remote repository, push contents to a new repository, and verify contents" in {
     val grc = GitRepositoryCloner(Token)
-    val cloned = grc.clone("spring-rest-seed", "atomist-seeds") match {
-      case Some(file) => file
-      case None => fail
-    }
+    val cloned = grc.clone("spring-rest-seed", "atomist-seeds")
     val repo = "atomist-seeds/spring-rest-seed"
     val id = NamedFileSystemArtifactSourceIdentifier(repo, cloned)
     val as = FileSystemGitArtifactSource(id)
@@ -60,10 +57,7 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
     val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
     gitHubWriter.write(as, GitHubSourceUpdateInfo(GitHubArtifactSourceLocator(cri), "new project from seed"))
 
-    val clonedSeed = grc.clone(cri.repo, cri.owner) match {
-      case Some(file) => file
-      case None => fail
-    }
+    val clonedSeed = grc.clone(cri.repo, cri.owner)
     val clonedAs = FileSystemGitArtifactSource(NamedFileSystemArtifactSourceIdentifier(repo, clonedSeed))
     val cmdFile = clonedAs.findFile("mvnw.cmd")
     cmdFile shouldBe defined

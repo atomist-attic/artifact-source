@@ -28,11 +28,7 @@ case class JGitServices(oAuthToken: String, remoteUrl: Option[String] = None)
                               old: ArtifactSource,
                               current: ArtifactSource,
                               message: String): File = {
-    val repoDir = grc.clone(repo, owner) match {
-      case Some(dir) => dir
-      case None => throw ArtifactSourceException(s"Failed to clone $owner/$repo")
-    }
-
+    val repoDir = grc.clone(repo, owner)
     for (git <- managed(Git.open(repoDir))) {
       val branchRef = s"refs/heads/$branchName"
 

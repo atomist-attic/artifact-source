@@ -29,18 +29,12 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
 
   it should "clone remote repo to specified directory, reset directory content, and clone again" in {
     val grc = GitRepositoryCloner()
-    val cloned = grc.clone("rug", "atomist") match {
-      case Some(file) => file
-      case None => fail
-    }
+    val cloned = grc.clone("rug", "atomist")
     val size = FileUtils.sizeOf(cloned)
     size should be > 0L
     grc.cleanRepoDirectory(cloned)
     FileUtils.sizeOf(cloned) shouldEqual 0L
-    val recloned = grc.clone("rug", "atomist", None, None, Some(cloned)) match {
-      case Some(file) => file
-      case None => fail
-    }
+    val recloned = grc.clone("rug", "atomist", None, None, Some(cloned))
     FileUtils.sizeOf(recloned) shouldEqual size
     grc.deleteRepoDirectory(cloned)
   }
@@ -53,10 +47,7 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     val repoDir = createRepoDir
     val grc = GitRepositoryCloner()
     // val start = System.currentTimeMillis
-    val cloned = grc.clone("artifact-source", "atomist", None, Some("4983a4822e885ee3e1d917d9b1d980bedef349c1"), Some(repoDir)) match {
-      case Some(file) => file
-      case None => fail
-    }
+    val cloned = grc.clone("artifact-source", "atomist", None, Some("4983a4822e885ee3e1d917d9b1d980bedef349c1"), Some(repoDir))
     FileUtils.sizeOf(cloned) should be > 0L
     // println(s"Cloning: ${System.currentTimeMillis - start} ms")
   }
@@ -78,25 +69,19 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     val repoDir = createRepoDir
     val grc = GitRepositoryCloner(Token)
     // val start = System.currentTimeMillis
-    val cloned = grc.clone(repo, owner, None, Some(sha), Some(repoDir), 1) match {
-      case Some(file) => file
-      case None => fail
-    }
+    val cloned = grc.clone(repo, owner, None, Some(sha), Some(repoDir), 1)
     FileUtils.sizeOf(cloned) should be > 0L
     // println(s"Cloning: ${System.currentTimeMillis - start} ms")
 
     val sw = new StringWriter
-    val outLogger = ProcessLogger(sw.write(_), sw.write(_))
+    val outLogger = ProcessLogger(sw.write, sw.write)
     Process("git rev-parse HEAD", cloned) ! outLogger
     sw.toString shouldEqual sha
   }
 
   it should "clone remote repo and verify file contents" in {
     val grc = GitRepositoryCloner()
-    val cloned = grc.clone("artifact-source", "atomist") match {
-      case Some(file) => file
-      case None => fail
-    }
+    val cloned = grc.clone("artifact-source", "atomist")
     val f = Paths.get(cloned.getPath, "src", "test", "resources", "springboot1.zip").toFile
     val content = FileUtils.readFileToByteArray(f)
     BinaryDecider.isBinaryContent(content) shouldBe true
@@ -105,12 +90,9 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
   it should "clone remote repo reset to sha" in {
     val grc = GitRepositoryCloner(Token)
     val sha = "a88065bbdc566cd0d3e59a1f792011c95c1197c2"
-    val cloned = grc.clone("atomist-k8-specs", "atomisthq", sha = Some(sha)) match {
-      case Some(file) => file
-      case None => fail
-    }
+    val cloned = grc.clone("atomist-k8-specs", "atomisthq", sha = Some(sha))
     val sw = new StringWriter
-    val outLogger = ProcessLogger(sw.write(_), sw.write(_))
+    val outLogger = ProcessLogger(sw.write, sw.write)
     Process("git rev-parse HEAD", cloned) ! outLogger
     sw.toString shouldEqual sha
   }
@@ -118,12 +100,9 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
   it should "clone self and reset to recent sha" in {
     val grc = GitRepositoryCloner()
     val sha = "bab65e390e25e682cb057a39cdb744bf9e97e092"
-    val cloned = grc.clone("artifact-source", "atomist", sha = Some(sha)) match {
-      case Some(file) => file
-      case None => fail
-    }
+    val cloned = grc.clone("artifact-source", "atomist", sha = Some(sha))
     val sw = new StringWriter
-    val outLogger = ProcessLogger(sw.write(_), sw.write(_))
+    val outLogger = ProcessLogger(sw.write, sw.write)
     Process("git rev-parse HEAD", cloned) ! outLogger
     sw.toString shouldEqual sha
   }
@@ -131,12 +110,9 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
   it should "clone self and reset to sha" in {
     val grc = GitRepositoryCloner()
     val sha = "50ad4b6c1295e0fec9d56bfe06c705900e0db6b5"
-    val cloned = grc.clone("artifact-source", "atomist", sha = Some(sha)) match {
-      case Some(file) => file
-      case None => fail
-    }
+    val cloned = grc.clone("artifact-source", "atomist", sha = Some(sha))
     val sw = new StringWriter
-    val outLogger = ProcessLogger(sw.write(_), sw.write(_))
+    val outLogger = ProcessLogger(sw.write, sw.write)
     Process("git rev-parse HEAD", cloned) ! outLogger
     sw.toString shouldEqual sha
   }
@@ -155,10 +131,7 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
   private def cloneAndVerify(branch: Option[String] = None, sha: Option[String] = None, dir: Option[File] = None): Unit = {
     val grc = GitRepositoryCloner()
     // val start = System.currentTimeMillis
-    val cloned = grc.clone("rug", "atomist", branch, sha, dir) match {
-      case Some(file) => file
-      case None => fail
-    }
+    val cloned = grc.clone("rug", "atomist", branch, sha, dir)
     val size = FileUtils.sizeOf(cloned)
     size should be > 0L
     // println(s"Cloning: ${System.currentTimeMillis - start} ms")
