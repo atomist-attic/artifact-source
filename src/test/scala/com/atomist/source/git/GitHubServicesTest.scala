@@ -236,26 +236,29 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
-    val url = "http://webhook.site/9a2e119d-f50e-4867-8b31-f248278874d9"
-    val webhook = ghs.createWebhook(repo, owner, "web", url, "json", active = true, Array("push"))
+    val url = "http://example.com/webhook"
+    val webhook = ghs.createWebhook(repo, owner, "web", url, "json", active = true, Array("push", "pull_request"))
     webhook.name should equal("web")
     webhook.config.url should equal(url)
     webhook.id should be > 0
     webhook.active shouldBe true
-    webhook.events should contain only "push"
+    webhook.events should contain allOf("push", "pull_request")
 
     ghs.testWebhook(repo, owner, webhook.id)
+    ghs.deleteWebhook(repo, owner, webhook.id)
   }
 
-    it should "create webhook in an organization" in {
-      val url = "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9"
-      val webhook = ghs.createOrganizationWebhook("atomist", "web", url, "json", active = true, Array("push"))
-      webhook.name should equal("web")
-      webhook.config.url should equal(url)
-      webhook.id should be > 0
-      webhook.active shouldBe true
-      webhook.events should contain only "push"
-    }
+  it should "create webhook in an organization" in {
+    val url = "http://example.com/webhook"
+    val org = "atomisthqtest"
+    val webhook = ghs.createOrganizationWebhook(org, "web", url, "json", active = true, Array("*"))
+    webhook.name should equal("web")
+    webhook.config.url should equal(url)
+    webhook.id should be > 0
+    webhook.active shouldBe true
+    webhook.events should contain only "*"
+    ghs.deleteOrganizationWebhook(org, webhook.id)
+  }
 
   it should "add a collaborator to a repository" in {
     val newTempRepo = newPopulatedTemporaryRepo()

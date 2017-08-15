@@ -398,6 +398,18 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     httpRequestOption[Unit](s"$api/repos/$owner/$repo/hooks/$id/tests", Post, Some("".getBytes))
 
   @throws[ArtifactSourceException]
+  def deleteWebhook(repo: String, owner: String, id: Int): Unit =
+    retry("deleteWebhook") {
+      httpRequestOption[Unit](s"$api/repos/$owner/$repo/hooks/$id", Delete)
+    }
+
+  @throws[ArtifactSourceException]
+  def deleteOrganizationWebhook(owner: String, id: Int): Unit =
+    retry("deleteOrganizationWebhook") {
+      httpRequestOption[Unit](s"$api/orgs/$owner/hooks/$id", Delete)
+    }
+
+  @throws[ArtifactSourceException]
   def addCollaborator(repo: String, owner: String, collaborator: String): Unit = {
     val params = Map("permission" -> "push")
     retry("addCollaborator") {
