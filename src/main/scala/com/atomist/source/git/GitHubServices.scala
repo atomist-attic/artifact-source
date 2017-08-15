@@ -89,8 +89,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                        privateFlag: Boolean = false,
                        issues: Boolean = true,
                        autoInit: Boolean = false): Repository = {
-    val data = toJson(Map("name" -> repo, "description" -> description, "private" -> privateFlag,
-      "has_issues" -> issues, "auto_init" -> autoInit))
+    val data = toJson(Map("name" -> repo,
+      "description" -> description,
+      "private" -> privateFlag,
+      "has_issues" -> issues,
+      "auto_init" -> autoInit))
+
     Try(retry("createOrganizationRepository") {
       httpRequest[Repository](s"$api/orgs/$owner/repos", Post, Some(data))
     }) match {
