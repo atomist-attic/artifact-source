@@ -4,7 +4,7 @@ import java.io.{File, StringWriter}
 import java.nio.file.Paths
 
 import com.atomist.source.git.TestConstants.Token
-import com.atomist.source.{SimpleCloudRepoId, StringFileArtifact}
+import com.atomist.source.{ArtifactSourceException, SimpleCloudRepoId, StringFileArtifact}
 import com.atomist.util.BinaryDecider
 import org.apache.commons.io.FileUtils
 
@@ -19,6 +19,11 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
   it should "clone remote repo to specified directory" in {
     val repoDir = createRepoDir
     cloneAndVerify(None, None, Some(repoDir))
+  }
+
+  it should "fail to clone unknown repo" in {
+    val grc = GitRepositoryCloner()
+    an[ArtifactSourceException] should be thrownBy grc.clone("foobar", "atomist")
   }
 
   it should "clone remote repo to specified directory and clone again to same directory" in {
