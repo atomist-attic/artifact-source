@@ -1,7 +1,7 @@
 package com.atomist.source.git
 
 import java.io.InputStream
-import java.nio.charset.Charset
+import java.nio.charset.Charset.defaultCharset
 import java.util.{List => JList}
 
 import com.atomist.source.git.domain.ReactionContent.ReactionContent
@@ -68,8 +68,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
         case 200 | 201 => fromJson[T](is)
         case success if 202 until 206 contains success => ().asInstanceOf[T]
-        case 401 | 403 | 415 | 422 => throw DoNotRetryException(s"${headers("Status").head}")
-        case _ => throw ArtifactSourceException(s"${headers("Status").head}, ${IOUtils.toString(is, Charset.defaultCharset)}")
+        case 401 | 403 | 415 | 422 => throw DoNotRetryException(s"${headers("Status").head}, ${IOUtils.toString(is, defaultCharset)}")
+        case _ => throw ArtifactSourceException(s"${headers("Status").head}, ${IOUtils.toString(is, defaultCharset)}")
       }).body
 
   override def sourceFor(id: GitHubArtifactSourceLocator): ArtifactSource = TreeGitHubArtifactSource(id, this)
@@ -670,7 +670,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     resp.header("Link").flatMap(parseLinkHeader(_).get("last"))
 
   private def getPage(url: String): Int =
-    URLEncodedUtils.parse(url, Charset.defaultCharset()).asScala
+    URLEncodedUtils.parse(url, defaultCharset()).asScala
       .find(_.getName == "page")
       .map(_.getValue)
       .getOrElse("0")
