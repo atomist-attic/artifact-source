@@ -247,15 +247,15 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.testWebhook(repo, owner, webhook.id)
   }
 
-  //  ignore should "create webhook in an organization" in {
-  //    val url = "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9"
-  //    val webhook = ghs.createOrganizationWebhook("atomist", "web", url, "json", active = true, Array("push"))
-  //    webhook.name should equal("web")
-  //    webhook.config.url should equal(url)
-  //    webhook.id should be > 0
-  //    webhook.active shouldBe true
-  //    webhook.events should contain only "push"
-  //  }
+    it should "create webhook in an organization" in {
+      val url = "http://webhook.site/10ceed7a-7128-4b11-bc8c-364198f065c9"
+      val webhook = ghs.createOrganizationWebhook("atomist", "web", url, "json", active = true, Array("push"))
+      webhook.name should equal("web")
+      webhook.config.url should equal(url)
+      webhook.id should be > 0
+      webhook.active shouldBe true
+      webhook.events should contain only "push"
+    }
 
   it should "add a collaborator to a repository" in {
     val newTempRepo = newPopulatedTemporaryRepo()
