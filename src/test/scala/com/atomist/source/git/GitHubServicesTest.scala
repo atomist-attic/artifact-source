@@ -6,6 +6,7 @@ import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants._
 import com.atomist.source.git.domain.ReactionContent._
 import com.atomist.source.git.domain.{PullRequest, PullRequestRequest, ReactionContent}
+import com.atomist.util.DoNotRetryException
 import org.apache.commons.codec.binary.Base64
 
 class GitHubServicesTest extends GitHubMutatorTest(Token) {
@@ -42,6 +43,14 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.deleteBranch(repo, owner, branchName)
     ghs.getBranch(repo, owner, branchName) shouldBe empty
     ghs.listBranches(repo, owner) should have size 1 // "master"
+  }
+
+  it should "fail to find unknown branch" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    ghs.getBranch(repo, owner, "foobar") shouldBe empty
   }
 
   it should "delete files with valid path in multi file commit" in {
@@ -147,11 +156,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val owner = newTempRepo.ownerName
 
     val start = System.currentTimeMillis()
-    val cloned = grc.clone(repo, owner) match {
-      case Some(file) => file
-      case None => fail
-    }
-
+    val cloned = grc.clone(repo, owner)
     val startAs = FileSystemGitArtifactSource(NamedFileSystemArtifactSourceIdentifier(repo, cloned))
 
     val path1 = "test.json"
@@ -257,6 +262,14 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     webhook.id should be > 0
     webhook.active shouldBe true
     webhook.events should contain only "*"
+    ghs.deleteOrganizationWebhook(org, webhook.id)
+  }
+
+  it should "fail to create duplicate webhook in an organization" in {
+    val url = "http://example.com/webhook"
+    val org = "atomisthqtest"
+    val webhook = ghs.createOrganizationWebhook(org, "web", url, "json", active = true, Array("*"))
+    an[DoNotRetryException] should be thrownBy ghs.createOrganizationWebhook(org, "web", url, "json", active = true, Array("*"))
     ghs.deleteOrganizationWebhook(org, webhook.id)
   }
 

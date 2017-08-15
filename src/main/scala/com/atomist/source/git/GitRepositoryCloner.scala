@@ -4,6 +4,7 @@ import java.io.File
 import java.net.URL
 import java.nio.file.{FileAlreadyExistsException, Files}
 
+import com.atomist.source.ArtifactSourceException
 import com.atomist.source.git.GitHubServices.Url
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
@@ -19,12 +20,13 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
 
   private val outLogger = ProcessLogger(out => logger.info(out), err => logger.warn(err))
 
+  @throws[ArtifactSourceException]
   def clone(repo: String,
             owner: String,
             branch: Option[String] = None,
             sha: Option[String] = None,
             dir: Option[File] = None,
-            depth: Int = Depth): Option[File] =
+            depth: Int = Depth): File =
     try {
       val repoDir = createRepoDirectory(repo, owner, dir)
       val br = branch.collect {
@@ -33,11 +35,9 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
 
       s"git clone$br --depth $depth --single-branch $getUrl/$owner/$repo.git ${repoDir.getPath}" !! outLogger
       sha.foreach(resetToSha(_, repoDir))
-      Some(repoDir)
+      repoDir
     } catch {
-      case e: Exception =>
-        logger.warn(s"Failed to clone repository $owner/$repo", e)
-        None
+      case e: Exception => throw ArtifactSourceException(s"Failed to clone repository $owner/$repo", e)
     }
 
   def deleteRepoDirectory(dir: File): Unit = FileUtils.deleteQuietly(dir)

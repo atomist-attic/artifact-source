@@ -14,7 +14,7 @@ object Retry extends LazyLogging {
 
   /**
     * Implement retry with exponential backoff and jiggle.  Each subsequent invocation
-    * will wait double + jiggle of the previous.  Defaults for retries and wait result
+    * will wait double + jitter of the previous.  Defaults for retries and wait result
     * in a mean retry period of about 50 seconds.
     *
     * @param opName name of operation, used for logging
@@ -25,7 +25,7 @@ object Retry extends LazyLogging {
     * @return return value from successful call of fn
     */
   @tailrec
-  final def retry[T](opName: String, n: Int = 9, wait: Long = 0L)(fn: => T): T = {
+  final def retry[T](opName: String, n: Int = 4, wait: Long = 0L)(fn: => T): T = {
     Thread.sleep(wait)
     Try(fn) match {
       case Success(x) => x

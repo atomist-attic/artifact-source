@@ -1,7 +1,7 @@
 package com.atomist.source.git
 
 import java.io.InputStream
-import java.nio.charset.Charset
+import java.nio.charset.Charset.defaultCharset
 import java.util.{List => JList}
 
 import com.atomist.source.git.domain.ReactionContent.ReactionContent
@@ -68,8 +68,8 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
         case 200 | 201 => fromJson[T](is)
         case success if 202 until 206 contains success => ().asInstanceOf[T]
-        case 401 | 403 | 415 | 422 => throw DoNotRetryException(s"${headers("Status").head}")
-        case _ => throw ArtifactSourceException(s"${headers("Status").head}, ${IOUtils.toString(is, Charset.defaultCharset)}")
+        case 401 | 403 | 415 | 422 => throw DoNotRetryException(s"${headers("Status").head}, ${IOUtils.toString(is, defaultCharset)}")
+        case _ => throw ArtifactSourceException(s"${headers("Status").head}, ${IOUtils.toString(is, defaultCharset)}")
       }).body
 
   override def sourceFor(id: GitHubArtifactSourceLocator): ArtifactSource = TreeGitHubArtifactSource(id, this)
@@ -89,11 +89,24 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                        privateFlag: Boolean = false,
                        issues: Boolean = true,
                        autoInit: Boolean = false): Repository = {
-    val data = toJson(Map("name" -> repo, "description" -> description, "private" -> privateFlag,
-      "has_issues" -> issues, "auto_init" -> autoInit))
-    retry("createRepository") {
-      httpRequestOption[Repository](s"$api/orgs/$owner/repos", Post, Some(data))
-        .getOrElse(httpRequest[Repository](s"$api/user/repos", Post, Some(data)))
+    val data = toJson(Map("name" -> repo,
+      "description" -> description,
+      "private" -> privateFlag,
+      "has_issues" -> issues,
+      "auto_init" -> autoInit))
+
+    Try(retry("createOrganizationRepository") {
+      httpRequest[Repository](s"$api/orgs/$owner/repos", Post, Some(data))
+    }) match {
+      case Success(repository) => repository
+      case Failure(e) =>
+        logger.warn(s"Failed to create organization repository: ${e.getMessage}. Attempting to create user repository ...")
+        Try(retry("createRepository") {
+          httpRequest[Repository](s"$api/user/repos", Post, Some(data))
+        }) match {
+          case Success(repository) => repository
+          case Failure(ex) => throw ArtifactSourceException(s"Failed to create $owner/$repo", ex)
+        }
     }
   }
 
@@ -104,8 +117,13 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   def getBranch(repo: String, owner: String, branch: String): Option[Branch] =
-    retry("getBranch") {
-      httpRequestOption[Branch](s"$api/repos/$owner/$repo/branches/$branch")
+    Try(retry("getBranch") {
+      httpRequest[Branch](s"$api/repos/$owner/$repo/branches/$branch")
+    }) match {
+      case Success(br) => Some(br)
+      case Failure(e) =>
+        logger.warn(e.getMessage)
+        None
     }
 
   def listBranches(repo: String, owner: String): Seq[Branch] =
@@ -113,7 +131,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   @throws[ArtifactSourceException]
   def createBranch(repo: String, owner: String, branchName: String, fromBranch: String): Reference =
-    Try(httpRequest[Reference](s"$api/repos/$owner/$repo/git/refs/heads/$fromBranch")) match {
+    Try(retry("createBranch") {
+      httpRequest[Reference](s"$api/repos/$owner/$repo/git/refs/heads/$fromBranch")
+    }) match {
       case Success(fromRef) => createReference(repo, owner, branchName, fromRef.`object`.sha)
       case Failure(e) => throw e
     }
@@ -197,8 +217,13 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   }
 
   def getPullRequest(repo: String, owner: String, number: Int): Option[PullRequest] =
-    retry("getPullRequest") {
-      httpRequestOption[PullRequest](s"$api/repos/$owner/$repo/pulls/$number")
+    Try(retry("getPullRequest") {
+      httpRequest[PullRequest](s"$api/repos/$owner/$repo/pulls/$number")
+    }) match {
+      case Success(pr) => Some(pr)
+      case Failure(e) =>
+        logger.warn(e.getMessage)
+        None
     }
 
   def listPullRequests(repo: String,
@@ -322,13 +347,23 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   }
 
   def getFileContents(repo: String, owner: String, path: String): Seq[Content] =
-    retry("getFileContents") {
-      httpRequestOption[Seq[Content]](s"$api/repos/$owner/$repo/contents/$path").getOrElse(Nil)
+    Try(retry("getFileContents") {
+      httpRequest[Seq[Content]](s"$api/repos/$owner/$repo/contents/$path")
+    }) match {
+      case Success(contents) => contents
+      case Failure(e) =>
+        logger.warn(e.getMessage)
+        Nil
     }
 
   def getCommit(repo: String, owner: String, sha: String): Option[Commit] =
-    retry("getCommit") {
-      httpRequestOption[Commit](s"$api/repos/$owner/$repo/git/commits/$sha")
+    Try(retry("getCommit") {
+      httpRequest[Commit](s"$api/repos/$owner/$repo/git/commits/$sha")
+    }) match {
+      case Success(commit) => Some(commit)
+      case Failure(e) =>
+        logger.warn(e.getMessage)
+        None
     }
 
   def listCommits(repo: String, owner: String, sha: Option[String] = None): Seq[Commit] = {
@@ -395,31 +430,41 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     createWebhook(s"$api/orgs/$owner/hooks", name, url, contentType, active, events)
 
   def testWebhook(repo: String, owner: String, id: Int): Unit =
-    httpRequestOption[Unit](s"$api/repos/$owner/$repo/hooks/$id/tests", Post, Some("".getBytes))
+    Try(retry("testWebhook") {
+      httpRequest[Unit](s"$api/repos/$owner/$repo/hooks/$id/tests", Post, Some("".getBytes))
+    }) match {
+      case Success(_) =>
+      case Failure(e) => logger.warn(e.getMessage)
+    }
 
   @throws[ArtifactSourceException]
   def deleteWebhook(repo: String, owner: String, id: Int): Unit =
     retry("deleteWebhook") {
-      httpRequestOption[Unit](s"$api/repos/$owner/$repo/hooks/$id", Delete)
+      httpRequest[Unit](s"$api/repos/$owner/$repo/hooks/$id", Delete)
     }
 
   @throws[ArtifactSourceException]
   def deleteOrganizationWebhook(owner: String, id: Int): Unit =
     retry("deleteOrganizationWebhook") {
-      httpRequestOption[Unit](s"$api/orgs/$owner/hooks/$id", Delete)
+      httpRequest[Unit](s"$api/orgs/$owner/hooks/$id", Delete)
     }
 
   @throws[ArtifactSourceException]
   def addCollaborator(repo: String, owner: String, collaborator: String): Unit = {
     val params = Map("permission" -> "push")
     retry("addCollaborator") {
-      httpRequestOption[Unit](s"$api/repos/$owner/$repo/collaborators/$collaborator", Put, params = params)
+      httpRequest[Unit](s"$api/repos/$owner/$repo/collaborators/$collaborator", Put, params = params)
     }
   }
 
   def getIssue(repo: String, owner: String, number: Int): Option[Issue] =
-    retry("getIssue") {
-      httpRequestOption[Issue](s"$api/repos/$owner/$repo/issues/$number")
+    Try(retry("getIssue") {
+      httpRequest[Issue](s"$api/repos/$owner/$repo/issues/$number")
+    }) match {
+      case Success(issue) => Some(issue)
+      case Failure(e) =>
+        logger.warn(e.getMessage)
+        None
     }
 
   def listIssues(params: Map[String, String] = Map("per_page" -> "100")): Seq[Issue] =
@@ -578,17 +623,6 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     paginateResults[Reaction](url, params)
   }
 
-  private def httpRequestOption[T](url: String,
-                                   method: HttpMethod = Get,
-                                   data: Option[Array[Byte]] = None,
-                                   params: Map[String, String] = Map.empty)(implicit m: Manifest[T]): Option[T] =
-    Try(httpRequest(url, method, data, params)) match {
-      case Success(result) => Some(result)
-      case Failure(e) =>
-        logger.warn(e.getMessage, e)
-        None
-    }
-
   private def paginateResults[T](url: String,
                                  params: Map[String, String] = Map("per_page" -> "100"))
                                 (implicit m: Manifest[T]): Seq[T] = {
@@ -640,7 +674,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     resp.header("Link").flatMap(parseLinkHeader(_).get("last"))
 
   private def getPage(url: String): Int =
-    URLEncodedUtils.parse(url, Charset.defaultCharset()).asScala
+    URLEncodedUtils.parse(url, defaultCharset()).asScala
       .find(_.getName == "page")
       .map(_.getValue)
       .getOrElse("0")
