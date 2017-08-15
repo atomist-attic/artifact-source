@@ -68,8 +68,15 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
         case 200 | 201 => fromJson[T](is)
         case success if 202 until 206 contains success => ().asInstanceOf[T]
-        case 401 | 403 | 415 | 422 => throw DoNotRetryException(s"${headers("Status").head}, ${IOUtils.toString(is, defaultCharset)}")
-        case _ => throw ArtifactSourceException(s"${headers("Status").head}, ${IOUtils.toString(is, defaultCharset)}")
+        case 304 => ().asInstanceOf[T]
+        case 401 | 403 | 415 | 422 =>
+          val msg = IOUtils.toString(is, defaultCharset)
+          logger.warn(s"${headers("Status").head}, $msg")
+          throw DoNotRetryException(msg)
+        case _ =>
+          val msg = IOUtils.toString(is, defaultCharset)
+          logger.warn(s"${headers("Status").head}, $msg")
+          throw ArtifactSourceException(msg)
       }).body
 
   override def sourceFor(id: GitHubArtifactSourceLocator): ArtifactSource = TreeGitHubArtifactSource(id, this)
