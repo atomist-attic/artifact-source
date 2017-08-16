@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.0-m.17] - 2017-08-16
+
+[1.0.0-m.17]: https://github.com/atomist/artifact-source/compare/1.0.0-m.16...1.0.0-m.17
+
+### Fixed
+
+-   Fixed `methods using httpRequestOption are not retried` [#46][46]
+
+[46]: https://github.com/atomist/artifact-source/issues/46
+
+### Changed
+
+-   GitRepositoryCloner `clone` method now returns a `File` object and throws an 
+    ArtifactSourceException in the event of a failure instead of returning an
+    `Option[File]` [#47][47]
+
+[47]: https://github.com/atomist/artifact-source/issues/47
+
 ## [1.0.0-m.16] - 2017-08-02
 
 [1.0.0-m.16]: https://github.com/atomist/artifact-source/compare/1.0.0-m.15...1.0.0-m.16
