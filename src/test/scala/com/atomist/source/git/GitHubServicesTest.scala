@@ -6,7 +6,6 @@ import com.atomist.source.git.GitArtifactSourceLocator.MasterBranch
 import com.atomist.source.git.TestConstants._
 import com.atomist.source.git.domain.ReactionContent._
 import com.atomist.source.git.domain.{PullRequest, PullRequestRequest, ReactionContent}
-import com.atomist.util.DoNotRetryException
 import org.apache.commons.codec.binary.Base64
 
 class GitHubServicesTest extends GitHubMutatorTest(Token) {
@@ -256,6 +255,10 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
   it should "create webhook in an organization" in {
     val url = "http://example.com/webhook"
     val org = "atomisthqtest"
+    ghs.listOrganizationWebhooks(org)
+      .find(_.config.url == url)
+      .foreach(wh => ghs.deleteOrganizationWebhook(org, wh.id))
+
     val webhook = ghs.createOrganizationWebhook(org, "web", url, "json", active = true, Array("*"))
     webhook.name should equal("web")
     webhook.config.url should equal(url)
@@ -268,8 +271,12 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
   it should "fail to create duplicate webhook in an organization" in {
     val url = "http://example.com/webhook"
     val org = "atomisthqtest"
+    ghs.listOrganizationWebhooks(org)
+      .find(_.config.url == url)
+      .foreach(wh => ghs.deleteOrganizationWebhook(org, wh.id))
+
     val webhook = ghs.createOrganizationWebhook(org, "web", url, "json", active = true, Array("*"))
-    an[DoNotRetryException] should be thrownBy ghs.createOrganizationWebhook(org, "web", url, "json", active = true, Array("*"))
+    an[ArtifactSourceException] should be thrownBy ghs.createOrganizationWebhook(org, "web", url, "json", active = true, Array("*"))
     ghs.deleteOrganizationWebhook(org, webhook.id)
   }
 

@@ -1,5 +1,6 @@
-package com.atomist.util
+package com.atomist.source.git
 
+import com.atomist.source.ArtifactSourceException
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.annotation.tailrec
@@ -29,7 +30,7 @@ object Retry extends LazyLogging {
     Thread.sleep(wait)
     Try(fn) match {
       case Success(x) => x
-      case Failure(e: DoNotRetryException) => throw e
+      case Failure(e: DoNotRetryException) => throw ArtifactSourceException(e.getMessage, e)
       case Failure(e) if n > 0 =>
         logger.warn(s"$opName attempt failed (${e.getMessage}), $n attempts left", e)
         retry(opName, n - 1, wait * 2L + Rnd.nextInt(100))(fn)
@@ -38,9 +39,9 @@ object Retry extends LazyLogging {
   }
 }
 
-case class DoNotRetryException(msg: String, cause: Throwable) extends RuntimeException(msg, cause)
+private[git] case class DoNotRetryException(msg: String, cause: Throwable) extends RuntimeException(msg, cause)
 
-object DoNotRetryException {
+private[git] object DoNotRetryException {
 
   def apply(msg: String): DoNotRetryException =
     DoNotRetryException(msg, null)

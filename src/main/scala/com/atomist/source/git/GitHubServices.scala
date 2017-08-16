@@ -4,14 +4,14 @@ import java.io.InputStream
 import java.nio.charset.Charset.defaultCharset
 import java.util.{List => JList}
 
+import com.atomist.source.git.Retry.retry
 import com.atomist.source.git.domain.ReactionContent.ReactionContent
 import com.atomist.source.git.domain._
 import com.atomist.source.{ArtifactSourceException, FileArtifact, _}
 import com.atomist.util.HttpMethod._
 import com.atomist.util.JsonUtils.{fromJson, toJson}
 import com.atomist.util.Octal.intToOctal
-import com.atomist.util.Retry.retry
-import com.atomist.util.{DoNotRetryException, RestGateway}
+import com.atomist.util.RestGateway
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.IOUtils
 import org.apache.http.client.utils.URLEncodedUtils
@@ -455,6 +455,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     retry("deleteOrganizationWebhook") {
       httpRequest[Unit](s"$api/orgs/$owner/hooks/$id", Delete)
     }
+
+  def listWebhooks(repo: String, owner: String, params: Map[String, String] = Map("per_page" -> "100")): Seq[Webhook] =
+    paginateResults[Webhook](s"$api/repos/$owner/$repo/hooks", params)
+
+  def listOrganizationWebhooks(owner: String, params: Map[String, String] = Map("per_page" -> "100")): Seq[Webhook] =
+    paginateResults[Webhook](s"$api/orgs/$owner/hooks", params)
 
   @throws[ArtifactSourceException]
   def addCollaborator(repo: String, owner: String, collaborator: String): Unit = {
