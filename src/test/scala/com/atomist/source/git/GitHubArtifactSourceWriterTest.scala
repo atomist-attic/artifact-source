@@ -21,9 +21,11 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
 
   "GitHubArtifactSourceWriter" should "create repository and copy contents in root directory only" in {
     val newTempRepo = newTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
 
     val helloWorldProject = ClassPathArtifactSource.toArtifactSource("java-source/HelloWorldService.java")
-    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
+    val cri = SimpleCloudRepoId(repo, owner)
     val ghid = GitHubArtifactSourceLocator(cri)
     val fa = gitHubWriter.write(helloWorldProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
     fa.size shouldEqual 1
@@ -32,18 +34,24 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
     Thread sleep 1000
     val read = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
     ArtifactSourceTest.validateCopy(helloWorldProject, read)
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "create repository and write contents in many directories" in {
     val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
 
     val springBootProject = ZipFileArtifactSourceReader fromZipSource springBootZipFileId
-    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
+    val cri = SimpleCloudRepoId(repo, owner)
     val ghid = GitHubArtifactSourceLocator(cri)
     val artifacts = gitHubWriter.write(springBootProject, GitHubSourceUpdateInfo(ghid, getClass.getName))
     artifacts.size should be > 1
     val read = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
     ArtifactSourceTest.validateCopyAllowingExtras(springBootProject, read)
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "clone a remote repository, push contents to a new repository, and verify contents" in {

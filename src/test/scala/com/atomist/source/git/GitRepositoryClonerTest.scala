@@ -21,11 +21,6 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     cloneAndVerify(None, None, Some(repoDir))
   }
 
-  it should "fail to clone unknown repo" in {
-    val grc = GitRepositoryCloner()
-    an[ArtifactSourceException] should be thrownBy grc.clone("foobar", "atomist")
-  }
-
   it should "clone remote repo to specified directory and clone again to same directory" in {
     val repoDir = createRepoDir
     cloneAndVerify(None, None, Some(repoDir))
@@ -61,6 +56,7 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
+
     val cri = SimpleCloudRepoId(repo, owner)
     val files = testFiles :+ StringFileArtifact("somethingOrOther.txt", testFileContents) // Duplicate
 
@@ -82,6 +78,8 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
     val outLogger = ProcessLogger(sw.write, sw.write)
     Process("git rev-parse HEAD", cloned) ! outLogger
     sw.toString shouldEqual sha
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "clone remote repo and verify file contents" in {
@@ -124,7 +122,7 @@ class GitRepositoryClonerTest extends GitHubMutatorTest(Token) {
 
   it should "fail to clone repo due to malformed git url" in {
     val grc = GitRepositoryCloner("", Some("foo://github.com"))
-    grc.clone("rug", "atomist")
+    an[ArtifactSourceException] should be thrownBy grc.clone("rug", "atomist")
   }
 
   private def createRepoDir = {

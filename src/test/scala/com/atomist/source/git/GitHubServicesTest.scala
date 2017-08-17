@@ -28,6 +28,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val branches = ghs.listBranches(repo, owner)
     branches.size shouldBe 2
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "create and delete branch" in {
@@ -42,6 +44,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.deleteBranch(repo, owner, branchName)
     ghs.getBranch(repo, owner, branchName) shouldBe empty
     ghs.listBranches(repo, owner) should have size 1 // "master"
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "fail to find unknown branch" in {
@@ -50,6 +53,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val owner = newTempRepo.ownerName
 
     ghs.getBranch(repo, owner, "foobar") shouldBe empty
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "delete files with valid path in multi file commit" in {
@@ -93,12 +97,15 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
       commitsAfter should have size 3
     }
     commitsAfter.map(_.commit.message) should contain(multiFileCommitMessage)
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "create new branch and create and delete pull request via create pull request from delta" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
+
     createContent(repo, owner)
 
     val cri = SimpleCloudRepoId(repo, owner)
@@ -147,6 +154,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val endAs = ghs sourceFor GitHubArtifactSourceLocator(cri, MasterBranch)
     endAs.allFiles.size shouldBe 4
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "clone remote repository, create and edit a new file, and create a pull request" in {
@@ -189,22 +198,27 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val f1 = newAs.findFile(path1)
     f1 shouldBe defined
     f1.get.content shouldEqual newContent1
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "create repo, update, delete files, and create a pull request from deltas" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
+
     createContent(repo, owner)
 
     val newBranchName = "add-multi-files-branch"
     populateAndVerify(repo, owner, newBranchName)
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "create repo, add, update, delete files, and create a pull request from deltas" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
+
     createContent(repo, owner)
 
     val newBranchName = "add-multi-files-branch"
@@ -213,6 +227,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.addOrUpdateFile(repo, owner, newBranchName, "new file 3", StringFileArtifact("alan.txt", "alan stewart"))
 
     populateAndVerify(repo, owner, newBranchName)
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "list all commits in a repository" in {
@@ -250,34 +265,33 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     ghs.testWebhook(repo, owner, webhook.id)
     ghs.deleteWebhook(repo, owner, webhook.id)
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "create webhook in an organization" in {
-    val url = "http://example.com/webhook"
-    val org = "atomisthqtest"
-    ghs.listOrganizationWebhooks(org)
-      .find(_.config.url == url)
-      .foreach(wh => ghs.deleteOrganizationWebhook(org, wh.id))
+    val webHookUrl = testWebHookUrl
+    ghs.listOrganizationWebhooks(TestOrg)
+      .find(_.config.url == webHookUrl)
+      .foreach(wh => ghs.deleteOrganizationWebhook(TestOrg, wh.id))
 
-    val webhook = ghs.createOrganizationWebhook(org, "web", url, "json", active = true, Array("*"))
+    val webhook = ghs.createOrganizationWebhook(TestOrg, "web", webHookUrl, "json", active = true, Array("*"))
     webhook.name should equal("web")
-    webhook.config.url should equal(url)
+    webhook.config.url should equal(webHookUrl)
     webhook.id should be > 0
     webhook.active shouldBe true
     webhook.events should contain only "*"
-    ghs.deleteOrganizationWebhook(org, webhook.id)
+    ghs.deleteOrganizationWebhook(TestOrg, webhook.id)
   }
 
   it should "fail to create duplicate webhook in an organization" in {
-    val url = "http://example.com/webhook"
-    val org = "atomisthqtest"
-    ghs.listOrganizationWebhooks(org)
-      .find(_.config.url == url)
-      .foreach(wh => ghs.deleteOrganizationWebhook(org, wh.id))
+    val webHookUrl = testWebHookUrl
+    ghs.listOrganizationWebhooks(TestOrg)
+      .find(_.config.url == webHookUrl)
+      .foreach(wh => ghs.deleteOrganizationWebhook(TestOrg, wh.id))
 
-    val webhook = ghs.createOrganizationWebhook(org, "web", url, "json", active = true, Array("*"))
-    an[ArtifactSourceException] should be thrownBy ghs.createOrganizationWebhook(org, "web", url, "json", active = true, Array("*"))
-    ghs.deleteOrganizationWebhook(org, webhook.id)
+    val webhook = ghs.createOrganizationWebhook(TestOrg, "web", webHookUrl, "json", active = true, Array("*"))
+    an[ArtifactSourceException] should be thrownBy ghs.createOrganizationWebhook(TestOrg, "web", webHookUrl, "json", active = true, Array("*"))
+    ghs.deleteOrganizationWebhook(TestOrg, webhook.id)
   }
 
   it should "add a collaborator to a repository" in {
@@ -286,6 +300,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val owner = newTempRepo.ownerName
 
     ghs.addCollaborator(repo, owner, "alankstewart")
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "create, edit issue, and create issue comment in a repository" in {
@@ -321,6 +336,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val results = ghs.searchIssues(Map("q" -> s"repo:$owner/$repo state:closed", "per_page" -> "100", "page" -> "1"))
     results.items.size should be > 0
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "list issues with search criteria" in {
@@ -360,6 +377,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val reactions = ghs.listCommitCommentReactions(repo, owner, commitComment.id, Some(ReactionContent.PlusOne))
     reactions.size shouldEqual 1
     reactions.head.content shouldEqual ReactionContent.PlusOne
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "get file contents" in {
@@ -370,6 +389,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val readme = ghs.getFileContents(repo, owner, "README.md")
     readme should have size 1
     new String(Base64.decodeBase64(readme.head.content)) should include("temporary test repository")
+
+    ghs.deleteRepository(repo, owner)
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {

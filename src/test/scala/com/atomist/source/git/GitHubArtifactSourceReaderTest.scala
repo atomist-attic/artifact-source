@@ -61,8 +61,10 @@ class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
 
   it should "support addition" in {
     val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
 
-    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
+    val cri = SimpleCloudRepoId(repo, owner)
     val startAs = ghs sourceFor GitHubArtifactSourceLocator(cri, branch = MasterBranch)
     startAs.findFile(testFiles(1).path) shouldBe empty
     val withAddedFiles = startAs + testFiles
@@ -73,28 +75,36 @@ class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
     withAddedFiles.findFile(testFiles(1).path) shouldBe defined
 
     (withAddedFiles Δ startAs).deltas.isEmpty shouldBe false
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "read org code from root in master" in {
     val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
 
-    val read = ghs sourceFor fromStrings(newTempRepo.name, newTempRepo.ownerName)
+    val read = ghs sourceFor fromStrings(repo, owner)
     withClue("known repository must be non-empty: ") {
       read.allFiles.nonEmpty shouldBe true
     }
     withClue("known repository must be non-empty: ") {
       read.empty shouldBe false
     }
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "read from branch other than master" in {
     val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
 
     val branch = "test_branch"
-    ghs.createBranch(newTempRepo.name, newTempRepo.ownerName, branch, MasterBranch)
-    ghs.commitFiles(newTempRepo.name, newTempRepo.ownerName, branch, "new files", testFiles, Seq.empty)
+    ghs.createBranch(repo, owner, branch, MasterBranch)
+    ghs.commitFiles(repo, owner, branch, "new files", testFiles, Seq.empty)
 
-    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
+    val cri = SimpleCloudRepoId(repo, owner)
     val readMaster = ghs sourceFor GitHubArtifactSourceLocator(cri, MasterBranch)
     withClue("known repository master must contain more files") {
       readMaster.allFiles.nonEmpty shouldBe true
@@ -103,13 +113,20 @@ class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
     withClue(s"branch $branch must contain more files than master") {
       readBranch.allFiles.size should be > readMaster.allFiles.size
     }
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "not find non-existent branch" in {
     val newTempRepo = newPopulatedTemporaryRepo()
-    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    val cri = SimpleCloudRepoId(repo, owner)
     an[ArtifactSourceException] should be thrownBy
       (ghs sourceFor GitHubArtifactSourceLocator(cri, "this-is-complete-nonsense"))
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "not find non-existent repository" in {
@@ -163,8 +180,13 @@ class GitHubArtifactSourceReaderTest extends GitHubMutatorTest(Token) {
 
   it should "not find non-existent sha" in {
     val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
     an[ArtifactSourceException] should be thrownBy
-      (ghs treeFor GitHubShaIdentifier(newTempRepo.name, newTempRepo.ownerName, "strongMenAlsoCry"))
+      (ghs treeFor GitHubShaIdentifier(repo, owner, "strongMenAlsoCry"))
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "find existing sha" in { // Slow

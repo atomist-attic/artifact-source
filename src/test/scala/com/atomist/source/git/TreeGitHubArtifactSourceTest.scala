@@ -19,24 +19,34 @@ class TreeGitHubArtifactSourceTest extends GitHubMutatorTest(Token) {
 
   "file retrieval" should "work" in {
     val newTempRepo = newPopulatedTemporaryRepo()
-    ghs.commitFiles(newTempRepo.name, newTempRepo.ownerName, MasterBranch, "new files", testFiles, Seq.empty)
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
 
-    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
+    ghs.commitFiles(repo, owner, MasterBranch, "new files", testFiles, Seq.empty)
+
+    val cri = SimpleCloudRepoId(repo, owner)
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs)
     val files = tghas.allFiles
     files.size should be > 1
     files.foreach(_.path should not be null)
+
+    ghs.deleteRepository(repo, owner)
   }
 
   "file retrieval and filter" should "work" in {
     val newTempRepo = newPopulatedTemporaryRepo()
-    ghs.commitFiles(newTempRepo.name, newTempRepo.ownerName, MasterBranch, "new files", testFiles, Seq.empty)
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
 
-    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
+    ghs.commitFiles(repo, owner, MasterBranch, "new files", testFiles, Seq.empty)
+
+    val cri = SimpleCloudRepoId(repo, owner)
     val tghas = TreeGitHubArtifactSource(GitHubArtifactSourceLocator(cri), ghs, new MarkdownFilter)
     val files = tghas.allFiles
     files.size should be > 0
     files.foreach(_.path should not be null)
+
+    ghs.deleteRepository(repo, owner)
   }
 
   "file retrieval for larger repository" should "work" in {
@@ -48,9 +58,11 @@ class TreeGitHubArtifactSourceTest extends GitHubMutatorTest(Token) {
 
   "file retrieval and edit" should "work" in {
     val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
 
     val commitMessage1 = s"file commit 1"
-    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
+    val cri = SimpleCloudRepoId(repo, owner)
     val branchSource = GitHubArtifactSourceLocator(cri, "master")
     ghs.commitFiles(GitHubSourceUpdateInfo(branchSource, commitMessage1), testFiles, Seq.empty)
 
@@ -67,6 +79,8 @@ class TreeGitHubArtifactSourceTest extends GitHubMutatorTest(Token) {
     val f = edited.findFile("src/main/java/com/example/DemoApplication.java")
     f shouldBe defined
     f.get.content should equal(newContent)
+
+    ghs.deleteRepository(repo, owner)
   }
 }
 

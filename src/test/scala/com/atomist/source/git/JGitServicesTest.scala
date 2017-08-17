@@ -50,22 +50,27 @@ class JGitServicesTest extends GitHubMutatorTest(Token) {
     val f1 = newAs.findFile(path1)
     f1 shouldBe defined
     f1.get.content shouldEqual newContent1
+
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "clone repo, update, delete files, and create a pull request from deltas" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
+
     createContent(repo, owner)
 
     val newBranchName = "add-multi-files-branch"
     populateAndVerify(repo, owner, newBranchName)
+    ghs.deleteRepository(repo, owner)
   }
 
   it should "clone repo, add, update, delete files, and create a pull request from deltas" in {
     val newTempRepo = newPopulatedTemporaryRepo()
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
+
     createContent(repo, owner)
 
     val newBranchName = "add-multi-files-branch"
@@ -73,6 +78,7 @@ class JGitServicesTest extends GitHubMutatorTest(Token) {
     ghs.addOrUpdateFile(repo, owner, newBranchName, "new file 3", StringFileArtifact("alan.txt", "alan stewart"))
 
     populateAndVerify(repo, owner, newBranchName)
+    ghs.deleteRepository(repo, owner)
   }
 
   private def populateAndVerify(repo: String, owner: String, newBranchName: String) = {

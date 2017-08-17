@@ -8,6 +8,8 @@ object TestConstants {
 
   val TemporaryRepoPrefix = "TEST_CAN_DELETE_"
 
+  val TestWebHookUrlBase = "http://artifact-source-test.atomist.com/webhook/"
+
   /**
     * We will create and delete repos here.
     */
