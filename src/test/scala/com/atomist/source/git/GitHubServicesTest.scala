@@ -291,6 +291,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val webhook = ghs.createOrganizationWebhook(TestOrg, "web", webHookUrl, "json", active = true, Array("*"))
     an[ArtifactSourceException] should be thrownBy ghs.createOrganizationWebhook(TestOrg, "web", webHookUrl, "json", active = true, Array("*"))
+
     ghs.deleteOrganizationWebhook(TestOrg, webhook.id)
   }
 
@@ -333,9 +334,6 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val issues = ghs.listIssues()
     issues.size should be > 0
-
-    val results = ghs.searchIssues(Map("q" -> s"repo:$owner/$repo state:closed", "per_page" -> "100", "page" -> "1"))
-    results.items.size should be > 0
 
     ghs.deleteRepository(repo, owner)
   }
