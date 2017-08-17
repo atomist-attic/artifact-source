@@ -57,12 +57,14 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
   it should "clone a remote repository, push contents to a new repository, and verify contents" in {
     val grc = GitRepositoryCloner(Token)
     val cloned = grc.clone("spring-rest-seed", "atomist-seeds")
-    val repo = "atomist-seeds/spring-rest-seed"
-    val id = NamedFileSystemArtifactSourceIdentifier(repo, cloned)
+    val id = NamedFileSystemArtifactSourceIdentifier("atomist-seeds/spring-rest-seed", cloned)
     val as = FileSystemGitArtifactSource(id)
 
     val newTempRepo = newPopulatedTemporaryRepo()
-    val cri = SimpleCloudRepoId(newTempRepo.name, newTempRepo.ownerName)
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    val cri = SimpleCloudRepoId(repo, owner)
     gitHubWriter.write(as, GitHubSourceUpdateInfo(GitHubArtifactSourceLocator(cri), "new project from seed"))
 
     val clonedSeed = grc.clone(cri.repo, cri.owner)
@@ -79,5 +81,7 @@ class GitHubArtifactSourceWriterTest extends GitHubMutatorTest(Token) {
     val jid = ZipFileInput(Paths.get(clonedAs.id.rootFile.getPath, jarFile.path).toFile)
     val jarSource = ZipFileArtifactSourceReader.fromZipSource(jid)
     jarSource.findFile("META-INF/MANIFEST.MF") shouldBe defined
+
+    ghs.deleteRepository(repo, owner)
   }
 }
