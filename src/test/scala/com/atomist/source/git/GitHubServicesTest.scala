@@ -398,6 +398,11 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.deleteRepository(repo, owner)
   }
 
+  ignore should "delete all temporary test repos" in {
+    ghs.searchRepositories(Map("q" -> s"org:$TestOrg in:name $TemporaryRepoPrefix", "per_page" -> "100")).items
+      .foreach(repo => ghs.deleteRepository(repo.name, repo.ownerName))
+  }
+
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {
     val files: Seq[FileArtifact] = Seq(
       StringFileArtifact(placeholderFilename("tempFile1"), testFileContents),
