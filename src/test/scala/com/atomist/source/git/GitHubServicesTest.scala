@@ -352,7 +352,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
   it should "list issues with specified page number" in {
     val results = ghs.listIssues(Map("per_page" -> "10", "sort" -> "updated", "direction" -> "asc", "page" -> "1"))
-    results.size shouldEqual 10
+    results.size should be > 0
   }
 
   it should "search issues with search criteria" in {
