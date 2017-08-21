@@ -315,6 +315,9 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     issue.state shouldBe "open"
     issue.closedAt shouldBe empty
 
+    ghs.addOrUpdateFile(repo, owner, MasterBranch, s"new file 1 #${issue.number}", StringFileArtifact("src/test.txt", "some text"))
+    ghs.addOrUpdateFile(repo, owner, MasterBranch, s"new file 2 #${issue.number}", StringFileArtifact("src/test2.txt", "some other text"))
+
     val retrievedIssue = ghs.getIssue(repo, owner, issue.number)
     retrievedIssue shouldBe defined
     val iss = retrievedIssue.get
@@ -335,6 +338,10 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val issues = ghs.listIssues()
     issues.size should be > 0
 
+    val events = ghs.listIssueEvents(repo, owner, issue.number)
+    events.size should be > 0
+    events.filter(_.commitId.isDefined).size shouldEqual 2
+
     ghs.deleteRepository(repo, owner)
   }
 
@@ -354,7 +361,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
   }
 
   it should "search issues with specified page number" in {
-    val results = ghs.searchIssues(Map("q" -> s"repo:atomist/artifact-source", "per_page" -> "10", "page" -> "2"))
+    val results = ghs.searchIssues(Map("q" -> s"repo:atomist/artifact-source", "per_page" -> "10", "page" -> "2", "state" -> "closed"))
     results.items.size shouldEqual 10
   }
 

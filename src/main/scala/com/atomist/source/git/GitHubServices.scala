@@ -576,6 +576,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                                             content: Option[ReactionContent] = None): Seq[Reaction] =
     listReactions(s"$api/repos/$owner/$repo/pulls/comments/$id/reactions", content)
 
+  def listIssueEvents(repo: String,
+                      owner: String,
+                      number: Int,
+                      params: Map[String, String] = Map("per_page" -> "100")): Seq[IssueEvent] =
+    paginateResults[IssueEvent](s"$api/repos/$owner/$repo/issues/$number/events", params)
+
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
     val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
     val data = toJson(Map("content" -> content, "encoding" -> "base64"))
