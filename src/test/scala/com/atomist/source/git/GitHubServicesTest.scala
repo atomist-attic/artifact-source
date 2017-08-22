@@ -230,6 +230,22 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.deleteRepository(repo, owner)
   }
 
+  it should "get a single commit" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    val fa = ghs.addOrUpdateFile(repo, owner, MasterBranch, "new file 1", StringFileArtifact("src/test.txt", "some text"))
+    fa.uniqueId match {
+      case Some(sha) =>
+        val commit = ghs.getCommit(repo, owner, sha)
+        commit shouldBe defined
+      case None => fail()
+    }
+
+    ghs.deleteRepository(repo, owner)
+  }
+
   it should "list all commits in a repository" in {
     val commits = ghs.listCommits("artifact-source", "atomist")
     commits.size should be > 200

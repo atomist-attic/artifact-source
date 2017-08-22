@@ -87,7 +87,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     searchRepositories(Map("q" -> s"repo:$owner/$repo")).items.size == 1
 
   def searchRepositories(params: Map[String, String] = Map("per_page" -> "100")): SearchResult[Repository] =
-    paginateSearchResults[Repository](s"$api/search/repositories", params)
+    retry("searchRepositories") {
+      paginateSearchResults[Repository](s"$api/search/repositories", params)
+    }
 
   @throws[ArtifactSourceException]
   def createRepository(repo: String,
@@ -134,7 +136,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   def listBranches(repo: String, owner: String): Seq[Branch] =
-    paginateResults[Branch](s"$api/repos/$owner/$repo/branches")
+    retry("listBranches") {
+      paginateResults[Branch](s"$api/repos/$owner/$repo/branches")
+    }
 
   @throws[ArtifactSourceException]
   def createBranch(repo: String, owner: String, branchName: String, fromBranch: String): Reference =
@@ -347,7 +351,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       fa.uniqueId.map(sha => Seq("sha" -> sha)).getOrElse(Nil))
     retry("addOrUpdateFile") {
       Try(httpRequest[CreateOrUpdateFileResponse](s"$api/repos/$owner/$repo/contents/${fa.path}", Put, Some(data))) match {
-        case Success(cfr) => fa.withUniqueId(cfr.content.sha)
+        case Success(cfr) => fa.withUniqueId(cfr.commit.sha)
         case Failure(e) => throw e
       }
     }
@@ -381,7 +385,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   }
 
   def searchCommits(params: Map[String, String] = Map("per_page" -> "100")): SearchResult[Commit] =
-    paginateSearchResults[Commit](s"$api/search/commits", params)
+    retry("searchCommits") {
+      paginateSearchResults[Commit](s"$api/search/commits", params)
+    }
 
   @throws[ArtifactSourceException]
   def createCommitComment(repo: String,
@@ -457,10 +463,14 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   def listWebhooks(repo: String, owner: String, params: Map[String, String] = Map("per_page" -> "100")): Seq[Webhook] =
-    paginateResults[Webhook](s"$api/repos/$owner/$repo/hooks", params)
+    retry("listWebhooks") {
+      paginateResults[Webhook](s"$api/repos/$owner/$repo/hooks", params)
+    }
 
   def listOrganizationWebhooks(owner: String, params: Map[String, String] = Map("per_page" -> "100")): Seq[Webhook] =
-    paginateResults[Webhook](s"$api/orgs/$owner/hooks", params)
+    retry("listOrganizationWebhooks") {
+      paginateResults[Webhook](s"$api/orgs/$owner/hooks", params)
+    }
 
   @throws[ArtifactSourceException]
   def addCollaborator(repo: String, owner: String, collaborator: String): Unit = {
@@ -481,10 +491,14 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   def listIssues(params: Map[String, String] = Map("per_page" -> "100")): Seq[Issue] =
-    paginateResults[Issue](s"$api/issues", params)
+    retry("listIssues") {
+      paginateResults[Issue](s"$api/issues", params)
+    }
 
   def searchIssues(params: Map[String, String] = Map("per_page" -> "100")): SearchResult[Issue] =
-    paginateSearchResults[Issue](s"$api/search/issues", params)
+    retry("searchIssues") {
+      paginateSearchResults[Issue](s"$api/search/issues", params)
+    }
 
   @throws[ArtifactSourceException]
   def createIssue(repo: String,
@@ -580,7 +594,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                       owner: String,
                       number: Int,
                       params: Map[String, String] = Map("per_page" -> "100")): Seq[IssueEvent] =
-    paginateResults[IssueEvent](s"$api/repos/$owner/$repo/issues/$number/events", params)
+    retry("listIssueEvents") {
+      paginateResults[IssueEvent](s"$api/repos/$owner/$repo/issues/$number/events", params)
+    }
 
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
     val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
@@ -639,22 +655,19 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   private def listReactions(url: String, content: Option[ReactionContent] = None): Seq[Reaction] = {
     val params = content.map(rc => Map("content" -> rc.toString)).getOrElse(Map.empty) + ("per_page" -> "100")
-    paginateResults[Reaction](url, params)
+    retry("listReactions") {
+      paginateResults[Reaction](url, params)
+    }
   }
 
   private def paginateResults[T](url: String,
                                  params: Map[String, String] = Map("per_page" -> "100"))
                                 (implicit m: Manifest[T]): Seq[T] = {
     def nextPage(url: String, accumulator: Seq[T]): Seq[T] = {
-      val resp = Http(url).headers(headers).params(params).asString
-      if (resp.isSuccess) {
-        val pages = accumulator ++ fromJson[Seq[T]](resp.body)
-        if (params.keySet.contains("page")) pages
-        else getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
-      } else {
-        logger.warn(s"${resp.code} ${resp.body}")
-        Seq.empty
-      }
+      val resp = Http(url).headers(headers).params(params).asString.throwError
+      val pages = accumulator ++ fromJson[Seq[T]](resp.body)
+      if (params.keySet.contains("page")) pages
+      else getNextUrl(resp).map(nextPage(_, pages)).getOrElse(pages)
     }
 
     nextPage(url, Seq.empty)
@@ -664,23 +677,18 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                                        params: Map[String, String] = Map("per_page" -> "100"))
                                       (implicit m: Manifest[T]): SearchResult[T] = {
     def nextPage(url: String, accumulator: Seq[T]): SearchResult[T] = {
-      val resp = Http(url).headers(headers).params(params).asString
-      if (resp.isSuccess) {
-        val result = fromJson[SearchResult[T]](resp.body)
-        val pages = accumulator ++ result.items
-        val nextUrl = getNextUrl(resp)
-        val nextPageNumber = nextUrl.map(getPage).getOrElse(0)
-        val lastPageNumber = getLastUrl(resp).map(getPage).getOrElse(0)
+      val resp = Http(url).headers(headers).params(params).asString.throwError
+      val result = fromJson[SearchResult[T]](resp.body)
+      val pages = accumulator ++ result.items
+      val nextUrl = getNextUrl(resp)
+      val nextPageNumber = nextUrl.map(getPage).getOrElse(0)
+      val lastPageNumber = getLastUrl(resp).map(getPage).getOrElse(0)
 
-        if (params.keySet.contains("page"))
-          SearchResult(result.totalCount, result.incompleteResults, nextPageNumber, lastPageNumber, pages)
-        else
-          nextUrl.map(nextPage(_, pages))
-            .getOrElse(SearchResult(result.totalCount, result.incompleteResults, nextPageNumber, lastPageNumber, pages))
-      } else {
-        logger.warn(s"${resp.code} ${resp.body}")
-        SearchResult(0, incompleteResults = true, 0, 0, Seq.empty)
-      }
+      if (params.keySet.contains("page"))
+        SearchResult(result.totalCount, result.incompleteResults, nextPageNumber, lastPageNumber, pages)
+      else
+        nextUrl.map(nextPage(_, pages))
+          .getOrElse(SearchResult(result.totalCount, result.incompleteResults, nextPageNumber, lastPageNumber, pages))
     }
 
     nextPage(url, Seq.empty)
