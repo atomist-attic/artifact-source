@@ -356,7 +356,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   def getCommit(repo: String, owner: String, sha: String): Option[Commit] =
-    Try(httpRequest[Commit](s"$api/repos/$owner/$repo/git/commits/$sha")) match {
+    Try(httpRequest[Commit](s"$api/repos/$owner/$repo/commits/$sha")) match {
       case Success(commit) => Some(commit)
       case Failure(e) =>
         logger.debug(e.getMessage)
