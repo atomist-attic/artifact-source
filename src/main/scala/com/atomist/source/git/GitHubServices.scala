@@ -55,7 +55,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                               body: Option[Array[Byte]] = None,
                               params: Map[String, String] = Map.empty,
                               headers: Map[String, String] = headers)(implicit m: Manifest[T]): T =
-    retry("httpRequest") {
+    retry(url) {
       (body match {
         case Some(data) => method match {
           case Post => Http(url).postData(data)
@@ -575,7 +575,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                                  params: Map[String, String] = Map("per_page" -> "100"))
                                 (implicit m: Manifest[T]): Seq[T] = {
     def nextPage(url: String, accumulator: Seq[T]): Seq[T] = {
-      retry("paginateResults") {
+      retry(url) {
         val resp = Http(url).headers(headers).params(params).asString.throwError
         val pages = accumulator ++ fromJson[Seq[T]](resp.body)
         if (params.keySet.contains("page")) pages
@@ -590,7 +590,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                                        params: Map[String, String] = Map("per_page" -> "100"))
                                       (implicit m: Manifest[T]): SearchResult[T] = {
     def nextPage(url: String, accumulator: Seq[T]): SearchResult[T] = {
-      retry("paginateSearchResults") {
+      retry(url) {
         val resp = Http(url).headers(headers).params(params).asString.throwError
         val result = fromJson[SearchResult[T]](resp.body)
         val pages = accumulator ++ result.items
