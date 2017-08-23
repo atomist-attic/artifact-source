@@ -18,7 +18,7 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
 
   import GitRepositoryCloner._
 
-  private val outLogger = ProcessLogger(out => logger.info(out), err => logger.warn(err))
+  private val outLogger = ProcessLogger(out => logger.debug(out), err => logger.debug(err))
 
   @throws[ArtifactSourceException]
   def clone(repo: String,
@@ -45,15 +45,18 @@ case class GitRepositoryCloner(oAuthToken: String = "", remoteUrl: Option[String
   def cleanRepoDirectory(dir: File): Unit = FileUtils.cleanDirectory(dir)
 
   private def createRepoDirectory(repo: String, owner: String, dir: Option[File]): File =
-    dir.map(file =>
-      try {
-        Files.createDirectory(file.toPath).toFile
-      } catch {
-        case e: FileAlreadyExistsException =>
-          logger.warn(s"Directory ${file.getPath} already exists, deleting directory content: ${e.getMessage}")
-          cleanRepoDirectory(file)
-          file
-      }).getOrElse(Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile)
+    dir match {
+      case Some(file) =>
+        try {
+          Files.createDirectory(file.toPath).toFile
+        } catch {
+          case e: FileAlreadyExistsException =>
+            cleanRepoDirectory(file)
+            logger.debug(s"Directory ${file.getPath} already exists, deleted directory content: ${e.getMessage}")
+            file
+        }
+      case None => Files.createTempDirectory(s"${owner}_${repo}_${System.currentTimeMillis}").toFile
+    }
 
   private def resetToSha(sha: String, repoDir: File) =
     if (Process(s"git reset --hard $sha", repoDir) ! outLogger != 0) {

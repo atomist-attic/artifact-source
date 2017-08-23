@@ -15,7 +15,7 @@ case class Issue(number: Int,
                  milestone: Option[Milestone],
                  state: String,
                  @JsonProperty("pull_request") pullRequest: Option[IssuePullRequest],
-                 repository: Option[IssueRepository],
+                 repository: Option[Repository],
                  @JsonProperty("created_at") createdAt: OffsetDateTime,
                  @JsonProperty("updated_at") updatedAt: OffsetDateTime,
                  @JsonProperty("closed_at") closedAt: Option[OffsetDateTime],
@@ -29,8 +29,6 @@ case class IssuePullRequest(url: String,
                             @JsonProperty("html_url") htmlUrl: String,
                             @JsonProperty("diff_url") diffUrl: String,
                             @JsonProperty("patch_url") patchUrl: String)
-
-case class IssueRepository(@JsonProperty("pushed_at") pushedAt: OffsetDateTime)
 
 case class Comment(id: Int,
                    url: String,

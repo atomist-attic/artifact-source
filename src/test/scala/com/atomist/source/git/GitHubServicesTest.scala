@@ -230,6 +230,22 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.deleteRepository(repo, owner)
   }
 
+  it should "get a single commit" in {
+    val newTempRepo = newPopulatedTemporaryRepo()
+    val repo = newTempRepo.name
+    val owner = newTempRepo.ownerName
+
+    val fa = ghs.addOrUpdateFile(repo, owner, MasterBranch, "new file 1", StringFileArtifact("src/test.txt", "some text"))
+    fa.uniqueId match {
+      case Some(sha) =>
+        val commit = ghs.getCommit(repo, owner, sha)
+        commit shouldBe defined
+      case None => fail()
+    }
+
+    ghs.deleteRepository(repo, owner)
+  }
+
   it should "list all commits in a repository" in {
     val commits = ghs.listCommits("artifact-source", "atomist")
     commits.size should be > 200
@@ -315,6 +331,9 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     issue.state shouldBe "open"
     issue.closedAt shouldBe empty
 
+    ghs.addOrUpdateFile(repo, owner, MasterBranch, s"new file 1 #${issue.number}", StringFileArtifact("src/test.txt", "some text"))
+    ghs.addOrUpdateFile(repo, owner, MasterBranch, s"new file 2 #${issue.number}", StringFileArtifact("src/test2.txt", "some other text"))
+
     val retrievedIssue = ghs.getIssue(repo, owner, issue.number)
     retrievedIssue shouldBe defined
     val iss = retrievedIssue.get
@@ -335,6 +354,10 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val issues = ghs.listIssues()
     issues.size should be > 0
 
+    val events = ghs.listIssueEvents(repo, owner, issue.number)
+    events.size should be > 0
+    events.filter(_.commitId.isDefined).size shouldEqual 2
+
     ghs.deleteRepository(repo, owner)
   }
 
@@ -345,7 +368,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
   it should "list issues with specified page number" in {
     val results = ghs.listIssues(Map("per_page" -> "10", "sort" -> "updated", "direction" -> "asc", "page" -> "1"))
-    results.size shouldEqual 10
+    results.size should be > 0
   }
 
   it should "search issues with search criteria" in {
@@ -354,8 +377,8 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
   }
 
   it should "search issues with specified page number" in {
-    val results = ghs.searchIssues(Map("q" -> s"repo:atomist/artifact-source", "per_page" -> "10", "page" -> "2"))
-    results.items.size shouldEqual 10
+    val results = ghs.searchIssues(Map("q" -> s"repo:atomist/artifact-source", "per_page" -> "10", "page" -> "2", "state" -> "closed"))
+    results.items.size should be > 0
   }
 
   it should "create commit comment and reaction" in {
@@ -389,6 +412,11 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     new String(Base64.decodeBase64(readme.head.content)) should include("temporary test repository")
 
     ghs.deleteRepository(repo, owner)
+  }
+
+  ignore should "delete all temporary test repos" in {
+    ghs.searchRepositories(Map("q" -> s"org:$TestOrg in:name $TemporaryRepoPrefix", "per_page" -> "100")).items
+      .foreach(repo => ghs.deleteRepository(repo.name, repo.ownerName))
   }
 
   private def createTempFiles(newBranchSource: GitHubArtifactSourceLocator): Seq[FileArtifact] = {

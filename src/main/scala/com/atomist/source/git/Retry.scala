@@ -32,7 +32,7 @@ object Retry extends LazyLogging {
       case Success(x) => x
       case Failure(e: DoNotRetryException) => throw ArtifactSourceException(e.getMessage, e)
       case Failure(e) if n > 0 =>
-        logger.warn(s"$opName attempt failed (${e.getMessage}), $n attempts left", e)
+        logger.debug(s"$opName attempt failed (${e.getMessage}), $n attempts left", e)
         retry(opName, n - 1, wait * 2L + Rnd.nextInt(100))(fn)
       case Failure(e) => throw e
     }
