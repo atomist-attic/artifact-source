@@ -86,7 +86,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   override def treeFor(id: GitHubShaIdentifier): ArtifactSource = TreeGitHubArtifactSource(id, this)
 
   def hasRepository(repo: String, owner: String): Boolean =
-    searchRepositories(Map("q" -> s"repo:$owner/$repo")).items.size == 1
+    Try(searchRepositories(Map("q" -> s"repo:$owner/$repo"))) match {
+      case Success(result) => result.items.size == 1
+      case Failure(e) =>
+        logger.debug(e.getMessage)
+        false
+    }
 
   def searchRepositories(params: Map[String, String] = Map("per_page" -> "100")): SearchResult[Repository] =
     paginateSearchResults[Repository](s"$api/search/repositories", params)
@@ -128,7 +133,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   def listBranches(repo: String, owner: String): Seq[Branch] =
-    paginateResults[Branch](s"$api/repos/$owner/$repo/branches")
+    Try(paginateResults[Branch](s"$api/repos/$owner/$repo/branches")) match {
+      case Success(results) => results
+      case Failure(e) =>
+        logger.debug(e.getMessage)
+        Nil
+    }
 
   @throws[ArtifactSourceException]
   def createBranch(repo: String, owner: String, branchName: String, fromBranch: String): Reference =
@@ -223,7 +233,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                        sort: String = "created",
                        direction: String = "asc"): Seq[PullRequest] = {
     val params = Map("state" -> state, "sort" -> sort, "direction" -> direction, "per_page" -> "100")
-    paginateResults[PullRequest](s"$api/repos/$owner/$repo/pulls", params)
+    Try(paginateResults[PullRequest](s"$api/repos/$owner/$repo/pulls", params)) match {
+      case Success(results) => results
+      case Failure(e) =>
+        logger.debug(e.getMessage)
+        Nil
+    }
   }
 
   @throws[ArtifactSourceException]
@@ -350,7 +365,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   def listCommits(repo: String, owner: String, sha: Option[String] = None): Seq[Commit] = {
     val params = sha.map(s => Map("sha" -> s)).getOrElse(Map.empty) + ("per_page" -> "100")
-    paginateResults[Commit](s"$api/repos/$owner/$repo/commits", params)
+    Try(paginateResults[Commit](s"$api/repos/$owner/$repo/commits", params)) match {
+      case Success(results) => results
+      case Failure(e) =>
+        logger.debug(e.getMessage)
+        Nil
+    }
   }
 
   def searchCommits(params: Map[String, String] = Map("per_page" -> "100")): SearchResult[Commit] =
@@ -420,10 +440,20 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     httpRequest[Unit](s"$api/orgs/$owner/hooks/$id", Delete)
 
   def listWebhooks(repo: String, owner: String, params: Map[String, String] = Map("per_page" -> "100")): Seq[Webhook] =
-    paginateResults[Webhook](s"$api/repos/$owner/$repo/hooks", params)
+    Try(paginateResults[Webhook](s"$api/repos/$owner/$repo/hooks", params)) match {
+      case Success(results) => results
+      case Failure(e) =>
+        logger.debug(e.getMessage)
+        Nil
+    }
 
   def listOrganizationWebhooks(owner: String, params: Map[String, String] = Map("per_page" -> "100")): Seq[Webhook] =
-    paginateResults[Webhook](s"$api/orgs/$owner/hooks", params)
+    Try(paginateResults[Webhook](s"$api/orgs/$owner/hooks", params)) match {
+      case Success(results) => results
+      case Failure(e) =>
+        logger.debug(e.getMessage)
+        Nil
+    }
 
   @throws[ArtifactSourceException]
   def addCollaborator(repo: String, owner: String, collaborator: String): Unit =
@@ -438,7 +468,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
 
   def listIssues(params: Map[String, String] = Map("per_page" -> "100")): Seq[Issue] =
-    paginateResults[Issue](s"$api/issues", params)
+    Try(paginateResults[Issue](s"$api/issues", params)) match {
+      case Success(results) => results
+      case Failure(e) =>
+        logger.debug(e.getMessage)
+        Nil
+    }
 
   def searchIssues(params: Map[String, String] = Map("per_page" -> "100")): SearchResult[Issue] =
     paginateSearchResults[Issue](s"$api/search/issues", params)
@@ -525,7 +560,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                       owner: String,
                       number: Int,
                       params: Map[String, String] = Map("per_page" -> "100")): Seq[IssueEvent] =
-    paginateResults[IssueEvent](s"$api/repos/$owner/$repo/issues/$number/events", params)
+    Try(paginateResults[IssueEvent](s"$api/repos/$owner/$repo/issues/$number/events", params)) match {
+      case Success(results) => results
+      case Failure(e) =>
+        logger.debug(e.getMessage)
+        Nil
+    }
 
   private def createBlob(repo: String, owner: String, message: String, branch: String, fa: FileArtifact): GitHubRef = {
     val content = managed(fa.inputStream()).acquireAndGet(is => new String(Base64.encode(IOUtils.toByteArray(is))))
@@ -570,7 +610,12 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   private def listReactions(url: String, content: Option[ReactionContent] = None): Seq[Reaction] = {
     val params = content.map(rc => Map("content" -> rc.toString)).getOrElse(Map.empty) + ("per_page" -> "100")
-    paginateResults[Reaction](url, params)
+    Try(paginateResults[Reaction](url, params)) match {
+      case Success(results) => results
+      case Failure(e) =>
+        logger.debug(e.getMessage)
+        Nil
+    }
   }
 
   private def paginateResults[T](url: String,
@@ -585,7 +630,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       }
     }
 
-    nextPage(url, Seq.empty)
+    nextPage(url, Nil)
   }
 
   private def paginateSearchResults[T](url: String,
@@ -610,7 +655,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       }
     }
 
-    nextPage(url, Seq.empty)
+    nextPage(url, Nil)
   }
 
   private def getNextUrl(resp: HttpResponse[String]): Option[String] =
@@ -636,7 +681,8 @@ object GitHubServices {
     new GitHubServices(oAuthToken, apiUrl)
 
   def parseLinkHeader(linkHeader: String): Map[String, String] =
-    if (linkHeader == null || linkHeader.isEmpty) Map.empty
+    if (linkHeader == null || linkHeader.isEmpty)
+      Map.empty
     else
       linkHeader.split(',').map { part =>
         val section = part.split(';')
