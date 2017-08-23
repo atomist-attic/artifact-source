@@ -154,9 +154,11 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       val filesToUpdate = deltas.deltas.collect {
         case fud: FileUpdateDelta => fud.updatedFile
       }
+
       val filesToAdd = deltas.deltas.collect {
         case fad: FileAdditionDelta if !filesToUpdate.exists(_.path == fad.path) => fad.newFile
       }
+
       val files = filesToUpdate ++ filesToAdd
 
       val filesToDelete = deltas.deltas.collect {
@@ -595,14 +597,16 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
         val result = fromJson[SearchResult[T]](resp.body)
         val pages = accumulator ++ result.items
         val nextUrl = getNextUrl(resp)
-        val nextPageNumber = nextUrl.map(getPage).getOrElse(0)
-        val lastPageNumber = getLastUrl(resp).map(getPage).getOrElse(0)
+        val nextPageNum = nextUrl.map(getPage).getOrElse(0)
+        val lastPageNum = getLastUrl(resp).map(getPage).getOrElse(0)
 
         if (params.keySet.contains("page"))
-          SearchResult(result.totalCount, result.incompleteResults, nextPageNumber, lastPageNumber, pages)
+          SearchResult(result.totalCount, result.incompleteResults, nextPageNum, lastPageNum, pages)
         else
-          nextUrl.map(nextPage(_, pages))
-            .getOrElse(SearchResult(result.totalCount, result.incompleteResults, nextPageNumber, lastPageNumber, pages))
+          nextUrl match {
+            case Some(nextPageUrl) => nextPage(nextPageUrl, pages)
+            case None => SearchResult(result.totalCount, result.incompleteResults, nextPageNum, lastPageNum, pages)
+          }
       }
     }
 
@@ -633,13 +637,11 @@ object GitHubServices {
 
   def parseLinkHeader(linkHeader: String): Map[String, String] =
     if (linkHeader == null || linkHeader.isEmpty) Map.empty
-    else {
-      val map = linkHeader.split(',').map { part =>
+    else
+      linkHeader.split(',').map { part =>
         val section = part.split(';')
         val url = section(0).replace("<", "").replace(">", "").trim
         val name = section(1).replace(" rel=\"", "").replace("\"", "").trim
         (name, url)
       }.toMap
-      map
-    }
 }
