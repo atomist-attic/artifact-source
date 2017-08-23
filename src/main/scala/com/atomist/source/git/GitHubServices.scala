@@ -72,11 +72,11 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
           case 304 => ().asInstanceOf[T]
           case 401 | 403 | 415 | 422 =>
             val msg = IOUtils.toString(is, defaultCharset)
-            logger.warn(s"${headers("Status").head}, $msg")
+            logger.debug(s"${headers("Status").head}, $msg")
             throw DoNotRetryException(msg)
           case _ =>
             val msg = IOUtils.toString(is, defaultCharset)
-            logger.warn(s"${headers("Status").head}, $msg")
+            logger.debug(s"${headers("Status").head}, $msg")
             throw ArtifactSourceException(msg)
         }).body
     }
@@ -107,7 +107,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     Try(httpRequest[Repository](s"$api/orgs/$owner/repos", Post, Some(data))) match {
       case Success(repository) => repository
       case Failure(e) =>
-        logger.warn(s"Failed to create organization repository: ${e.getMessage}. Attempting to create user repository ...")
+        logger.debug(s"Failed to create organization repository: ${e.getMessage}. Attempting to create user repository ...")
         Try(httpRequest[Repository](s"$api/user/repos", Post, Some(data))) match {
           case Success(repository) => repository
           case Failure(ex) => throw ArtifactSourceException(s"Failed to create $owner/$repo", ex)
@@ -123,7 +123,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     Try(httpRequest[Branch](s"$api/repos/$owner/$repo/branches/$branch")) match {
       case Success(br) => Some(br)
       case Failure(e) =>
-        logger.warn(e.getMessage)
+        logger.debug(e.getMessage)
         None
     }
 
@@ -211,7 +211,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     Try(httpRequest[PullRequest](s"$api/repos/$owner/$repo/pulls/$number")) match {
       case Success(pr) => Some(pr)
       case Failure(e) =>
-        logger.warn(e.getMessage)
+        logger.debug(e.getMessage)
         None
     }
 
@@ -334,7 +334,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     Try(httpRequest[Seq[Content]](s"$api/repos/$owner/$repo/contents/$path")) match {
       case Success(contents) => contents
       case Failure(e) =>
-        logger.warn(e.getMessage)
+        logger.debug(e.getMessage)
         Nil
     }
 
@@ -342,7 +342,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     Try(httpRequest[Commit](s"$api/repos/$owner/$repo/git/commits/$sha")) match {
       case Success(commit) => Some(commit)
       case Failure(e) =>
-        logger.warn(e.getMessage)
+        logger.debug(e.getMessage)
         None
     }
 
@@ -406,7 +406,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   def testWebhook(repo: String, owner: String, id: Int): Unit =
     Try(httpRequest[Unit](s"$api/repos/$owner/$repo/hooks/$id/tests", Post, Some("".getBytes))) match {
       case Success(_) =>
-      case Failure(e) => logger.warn(e.getMessage)
+      case Failure(e) => logger.debug(e.getMessage)
     }
 
   @throws[ArtifactSourceException]
@@ -431,7 +431,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     Try(httpRequest[Issue](s"$api/repos/$owner/$repo/issues/$number")) match {
       case Success(issue) => Some(issue)
       case Failure(e) =>
-        logger.warn(e.getMessage)
+        logger.debug(e.getMessage)
         None
     }
 
