@@ -17,7 +17,7 @@ class JGitServicesTest extends GitHubMutatorTest(Token) {
     val cri = SimpleCloudRepoId(repo, owner)
     val startAs = ghs sourceFor GitHubArtifactSourceLocator(cri, branch = MasterBranch)
 
-    val start = System.currentTimeMillis()
+    // val start = System.currentTimeMillis()
 
     val path1 = "test.json"
     val newFile1 = StringFileArtifact(path1, "test content")
@@ -44,7 +44,7 @@ class JGitServicesTest extends GitHubMutatorTest(Token) {
     val pr = ghs.createPullRequest(repo, owner, prr)
     val merged = ghs.mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
     merged.merged shouldBe true
-    println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
+    // println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
 
     val newAs = ghs sourceFor GitHubArtifactSourceLocator.rootOfMaster(repo, owner)
     val f1 = newAs.findFile(path1)
@@ -102,10 +102,10 @@ class JGitServicesTest extends GitHubMutatorTest(Token) {
     val prBody = "This is the body of my pull request"
     val prr = PullRequestRequest(prTitle, newBranchName, MasterBranch, prBody)
 
-    val start = System.currentTimeMillis
+    // val start = System.currentTimeMillis
     gs.createBranchFromChanges(repo, owner, newBranchName, startAs, modifiedAs, multiFileCommitMessage)
     val pr = ghs.createPullRequest(repo, owner, prr)
-    println(s"Elapsed time to create pull request from deltas = ${System.currentTimeMillis() - start} ms")
+    // println(s"Elapsed time to create pull request from deltas = ${System.currentTimeMillis() - start} ms")
 
     val merged = ghs.mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
     merged.merged shouldBe true

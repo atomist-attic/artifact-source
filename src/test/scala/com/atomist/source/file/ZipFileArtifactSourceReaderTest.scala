@@ -5,6 +5,7 @@ import java.io._
 import com.atomist.source._
 import com.atomist.source.file.ClassPathArtifactSource.classPathResourceToFile
 import com.atomist.util.BinaryDecider
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -12,7 +13,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.concurrent.{Await, Future}
 
-class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
+class ZipFileArtifactSourceReaderTest
+  extends FlatSpec
+    with Matchers
+    with LazyLogging {
 
   import ZipFileArtifactSourceReaderTest._
 
@@ -109,7 +113,7 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
   }
 
   ignore should "handle multiple zip files at the same time" in {
-    val start = System.currentTimeMillis()
+    // val start = System.currentTimeMillis()
     val f1: Future[ArtifactSource] = Future {
       ZipFileArtifactSourceReader.fromZipSource(travisRugsZip)
     }
@@ -135,8 +139,8 @@ class ZipFileArtifactSourceReaderTest extends FlatSpec with Matchers {
     }
 
     Await.result(Future.sequence(Seq(f1, f2, f3, f4, f5, f6)), Duration(60, SECONDS))
-      .map(_.id.name).foreach(println(_))
-    println(s"elapsed time = ${System.currentTimeMillis() - start} ms")
+      .map(_.id.name).foreach(logger.debug(_))
+    // println(s"elapsed time = ${System.currentTimeMillis() - start} ms")
   }
 }
 

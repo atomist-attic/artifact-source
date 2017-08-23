@@ -163,7 +163,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
-    val start = System.currentTimeMillis()
+    // val start = System.currentTimeMillis()
     val cloned = grc.clone(repo, owner)
     val startAs = FileSystemGitArtifactSource(NamedFileSystemArtifactSourceIdentifier(repo, cloned))
 
@@ -192,7 +192,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val merged = ghs.mergePullRequest(repo, owner, pr.number, pr.title, "Merged PR")
     merged.merged shouldBe true
-    println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
+    // println(s"Elapsed time = ${System.currentTimeMillis() - start} ms")
 
     val newAs = ghs sourceFor GitHubArtifactSourceLocator.rootOfMaster(repo, owner)
     val f1 = newAs.findFile(path1)
@@ -452,9 +452,9 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val prBody = "This is the body of my pull request"
     val prr = PullRequestRequest(prTitle, newBranchName, MasterBranch, prBody)
 
-    val start = System.currentTimeMillis
+    // val start = System.currentTimeMillis
     val pr = ghs.createPullRequestFromChanges(repo, owner, prr, startAs, modifiedAs, multiFileCommitMessage)
-    println(s"Elapsed time to create pull request from deltas = ${System.currentTimeMillis() - start} ms")
+    // println(s"Elapsed time to create pull request from deltas = ${System.currentTimeMillis() - start} ms")
 
     ghs.createPullRequestReviewComment(repo, owner, pr.number, "comment body", pr.head.sha, "test2.json", 1)
 
