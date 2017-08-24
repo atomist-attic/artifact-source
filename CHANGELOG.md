@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.0-m.19] - 2017-08-24
+
+[1.0.0-m.19]: https://github.com/atomist/artifact-source/compare/1.0.0-m.18...1.0.0-m.19
+
+### Fixed
+
+-   Added a null check for the InputStream returned in a 200 or 201 response, as it appears the GitHub API
+    is now not returning a 204 when a collaborator is added to a repository [#51][51]
+    
+[51]: https://github.com/atomist/artifact-source/issues/51
+
 ## [1.0.0-m.18] - 2017-08-23
 
 [1.0.0-m.18]: https://github.com/atomist/artifact-source/compare/1.0.0-m.17...1.0.0-m.18
