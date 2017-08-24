@@ -67,7 +67,9 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
       }).headers(headers)
         .params(params)
         .exec((code: Int, headers: Map[String, IndexedSeq[String]], is: InputStream) => code match {
-          case 200 | 201 => fromJson[T](is)
+          case 200 | 201 =>
+            if (is == null) ().asInstanceOf[T]
+            else fromJson[T](is)
           case success if 202 until 206 contains success => ().asInstanceOf[T]
           case 304 => ().asInstanceOf[T]
           case 401 | 403 | 415 | 422 =>
