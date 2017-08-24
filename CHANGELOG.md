@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.0-m.18] - 2017-08-23
+
+[1.0.0-m.18]: https://github.com/atomist/artifact-source/compare/1.0.0-m.17...1.0.0-m.18
+
+### Added
+
+-   `Add function for listing issue events` [#49][49]
+
+[49]: https://github.com/atomist/artifact-source/issues/49
+
+### Changed
+
+-   Simplified retrying of calls
+-   All logging is now `debug`
+
 ## [1.0.0-m.17] - 2017-08-16
 
 [1.0.0-m.17]: https://github.com/atomist/artifact-source/compare/1.0.0-m.16...1.0.0-m.17
