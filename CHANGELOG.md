@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.0-m.20] - 2017-08-30
+
+[1.0.0-m.20]: https://github.com/atomist/artifact-source/compare/1.0.0-m.19...1.0.0-m.20
+
+### Added
+
+-   Added `html_url` and `repository_url` to issue and commit response objects where possible
+
 ## [1.0.0-m.19] - 2017-08-24
 
 [1.0.0-m.19]: https://github.com/atomist/artifact-source/compare/1.0.0-m.18...1.0.0-m.19
