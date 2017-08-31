@@ -215,7 +215,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
                        number: Int,
                        title: String,
                        message: String,
-                       mergeMethod: String = "squash"): PullRequestMerged = {
+                       mergeMethod: String = "merge"): PullRequestMerged = {
     val data = toJson(Map("commit_title" -> title, "commit_message" -> message, "merge_method" -> mergeMethod))
     httpRequest[PullRequestMerged](s"$api/repos/$owner/$repo/pulls/$number/merge", Put, Some(data))
   }

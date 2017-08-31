@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased][]
+
+[Unreleased]: https://github.com/atomist/artifact-source/compare/1.0.0-m.20...HEAD
+
+## Changed
+
+-   Default PR merge method is now "merge", the GitHub default
+
 ## [1.0.0-m.20] - 2017-08-30
 
 [1.0.0-m.20]: https://github.com/atomist/artifact-source/compare/1.0.0-m.19...1.0.0-m.20
