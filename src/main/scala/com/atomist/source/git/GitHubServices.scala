@@ -242,6 +242,16 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
     }
   }
 
+  def listPullRequestCommits(repo: String,
+                             owner: String,
+                             number: Int): Seq[Commit] =
+    Try(paginateResults[Commit](s"$api/repos/$owner/$repo/pulls/$number/commits", Map("per_page" -> "100"))) match {
+      case Success(results) => results
+      case Failure(e) =>
+        logger.debug(e.getMessage)
+        Nil
+    }
+
   @throws[ArtifactSourceException]
   def createPullRequestReviewComment(repo: String,
                                      owner: String,

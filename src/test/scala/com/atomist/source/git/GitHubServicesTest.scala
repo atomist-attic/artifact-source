@@ -130,6 +130,9 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     pr.body should equal(prBody)
     pr.htmlUrl.length should be > 0
 
+    // Create another commit
+    ghs.addOrUpdateFile(repo, owner, updatedBranch, "new file 3", StringFileArtifact("alan.txt", "alan stewart"))
+
     val rc = ghs.createPullRequestReviewComment(repo, owner, pr.number, "comment body", pr.head.sha, "somethingOrOther.txt", 1)
     rc.body should equal("comment body")
 
@@ -139,21 +142,25 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
 
     val pr2 = ghs.getPullRequest(repo, owner, pr.number)
     pr2 shouldBe defined
-    val pr1 = pr2.get
-    pr1.number should equal(pr.number)
-    pr1.base.ref should equal(prr.base)
-    pr1.head.ref should equal(prr.head)
-    pr1.htmlUrl should not be null
+    val pr0 = pr2.get
+    pr0.number should equal(pr.number)
+    pr0.base.ref should equal(prr.base)
+    pr0.head.ref should equal(prr.head)
+    pr0.htmlUrl should not be null
 
-    val merged = ghs.mergePullRequest(repo, owner, pr1.number, pr1.title, "Merged PR")
+    val prCommits = ghs.listPullRequestCommits(repo, owner, pr0.number)
+    prCommits.isEmpty shouldBe false
+    val msg = prCommits.map(_.commit.message).mkString("\n")
+
+    val merged = ghs.mergePullRequest(repo, owner, pr0.number, pr0.title, msg, "squash")
     merged.merged shouldBe true
 
-    val pr3 = ghs.getPullRequest(repo, owner, pr1.number)
+    val pr3 = ghs.getPullRequest(repo, owner, pr0.number)
     pr3 shouldBe defined
     pr3.get.merged shouldBe true
 
     val endAs = ghs sourceFor GitHubArtifactSourceLocator(cri, MasterBranch)
-    endAs.allFiles.size shouldBe 4
+    endAs.allFiles.size shouldBe files.size + 1
 
     ghs.deleteRepository(repo, owner)
   }
