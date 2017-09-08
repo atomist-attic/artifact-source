@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased][]
 
-[Unreleased]: https://github.com/atomist/artifact-source/compare/1.0.0-m.20...HEAD
+[Unreleased]: https://github.com/atomist/artifact-source/compare/1.0.0-m.21...HEAD
+
+## [1.0.0-m.21] - 2017-09-08
+
+[1.0.0-m.21]: https://github.com/atomist/artifact-source/compare/1.0.0-m.20...1.0.0-m.21
+
+### Added
+
+-   Added list commits on a pull request
 
 ## Changed
 
