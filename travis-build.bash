@@ -38,7 +38,7 @@ function main() {
         fi
     fi
 
-    if ! $mvn install -Dmaven.javadoc.skip=true; then
+    if ! $mvn install -Dmaven.javadoc.skip=true -DskipTests; then
         err "maven install failed"
         return 1
     fi
