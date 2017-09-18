@@ -7,9 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased][]
 
-[Unreleased]: https://github.com/atomist/artifact-source/compare/1.0.0-m.21...HEAD
+[Unreleased]: https://github.com/atomist/artifact-source/compare/1.0.0-m.22...HEAD
 
-## [1.0.0-m.21] - 2017-09-08
+## [1.0.0-m.22][] - 2017-09-18
+
+[1.0.0-m.22]: https://github.com/atomist/artifact-source/compare/1.0.0-m.20...1.0.0-m.22
+
+Ref release
+
+### Fixed
+
+-   Allow any type of git reference to be created
+
+## [1.0.0-m.21][] - 2017-09-08
 
 [1.0.0-m.21]: https://github.com/atomist/artifact-source/compare/1.0.0-m.20...1.0.0-m.21
 
@@ -37,7 +47,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 -   Added a null check for the InputStream returned in a 200 or 201 response, as it appears the GitHub API
     is now not returning a 204 when a collaborator is added to a repository [#51][51]
-    
+
 [51]: https://github.com/atomist/artifact-source/issues/51
 
 ## [1.0.0-m.18] - 2017-08-23
@@ -67,7 +77,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
--   GitRepositoryCloner `clone` method now returns a `File` object and throws an 
+-   GitRepositoryCloner `clone` method now returns a `File` object and throws an
     ArtifactSourceException in the event of a failure instead of returning an
     `Option[File]` [#47][47]
 
@@ -95,7 +105,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 [1.0.0-m.14]: https://github.com/atomist/artifact-source/compare/1.0.0-m.13...1.0.0-m.14
 
 ### Added
-    
+
 -   Retry of all GitHub API calls
 
 ### Fixed
@@ -170,9 +180,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 -   Added RepoArtifactSourceLocator, RepoBranchAndPath, GitArtifactSourceLocator,
-    and GitArtifactSourceIdentifierwhich were previously in the 
+    and GitArtifactSourceIdentifierwhich were previously in the
     github-artifact-source repo
-    
+
 [Unreleased]: https://github.com/atomist/artifact-source/compare/0.14.4...HEAD
 
 ## [0.14.4]

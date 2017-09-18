@@ -144,7 +144,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
   @throws[ArtifactSourceException]
   def createBranch(repo: String, owner: String, branchName: String, fromBranch: String): Reference =
     Try(httpRequest[Reference](s"$api/repos/$owner/$repo/git/refs/heads/$fromBranch")) match {
-      case Success(fromRef) => createReference(repo, owner, branchName, fromRef.`object`.sha)
+      case Success(fromRef) => createReference(repo, owner, s"refs/heads/$branchName", fromRef.`object`.sha)
       case Failure(e) => throw e
     }
 
@@ -188,7 +188,7 @@ case class GitHubServices(oAuthToken: String, apiUrl: Option[String] = None)
 
   @throws[ArtifactSourceException]
   def createReference(repo: String, owner: String, ref: String, sha: String): Reference = {
-    val data = toJson(Map("ref" -> s"refs/heads/$ref", "sha" -> sha))
+    val data = toJson(Map("ref" -> ref, "sha" -> sha))
     httpRequest[Reference](s"$api/repos/$owner/$repo/git/refs", Post, Some(data))
   }
 

@@ -323,7 +323,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     val repo = newTempRepo.name
     val owner = newTempRepo.ownerName
 
-    ghs.addCollaborator(repo, owner, "alankstewart")
+    ghs.addCollaborator(repo, owner, "atomist-travisorg")
     ghs.deleteRepository(repo, owner)
   }
 
@@ -353,7 +353,7 @@ class GitHubServicesTest extends GitHubMutatorTest(Token) {
     ghs.createIssueCommentReaction(repo, owner, comment.id, PlusOne)
 
     val editedIssue = ghs.editIssue(repo, owner, iss.number, iss.title, iss.body, state = "closed",
-      labels = Seq("bug", "feature"), assignees = Seq("alankstewart"))
+      labels = Seq("bug", "feature"), assignees = Seq("atomist-travisorg"))
     editedIssue.state shouldBe "closed"
     editedIssue.closedAt shouldBe defined
     editedIssue.assignees should have size 1
